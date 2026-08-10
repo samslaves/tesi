@@ -1,0 +1,393 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[italian]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{geometry}
+\usepackage{hyperref}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{tcolorbox}
+\usepackage{fancyhdr}
+\usepackage{xcolor}
+
+\geometry{margin=2.6cm}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, urlcolor=blue!50!black, citecolor=blue!50!black}
+
+\tcbuselibrary{skins,breakable}
+
+\newtcolorbox{nota}[1][]{%
+  colback=blue!4!white, colframe=blue!45!black,
+  fonttitle=\bfseries, title=Nota di verifica,
+  breakable, boxrule=0.5pt, arc=1.5mm, left=6pt, right=6pt, top=4pt, bottom=4pt, #1
+}
+
+\newtcolorbox{sintesi}[1][]{%
+  colback=gray!6!white, colframe=gray!55!black,
+  fonttitle=\bfseries, title=Sintesi,
+  breakable, boxrule=0.5pt, arc=1.5mm, left=6pt, right=6pt, top=4pt, bottom=4pt, #1
+}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{Lo spin dell'elettrone: formalismo matriciale e indeterminazione}
+\fancyhead[R]{\thepage}
+
+\titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{1em}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{1em}{}
+
+\newcommand{\ket}[1]{\left|#1\right\rangle}
+\newcommand{\bra}[1]{\left\langle#1\right|}
+\newcommand{\braket}[2]{\left\langle#1\middle|#2\right\rangle}
+
+\title{\textbf{Lo Spin dell'Elettrone: dall'Operatore Vettoriale \\ alle Matrici di Pauli, al Momento Magnetico \\ e al Principio di Indeterminazione}}
+\author{Documento di sintesi e verifica}
+\date{}
+
+\begin{document}
+
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent Il presente documento raccoglie e armonizza, in un'unica trattazione organica, i contenuti relativi all'operatore di spin per una particella a spin $1/2$: la sua rappresentazione in termini di matrici di Pauli $2\times 2$, la relazione con il momento magnetico intrinseco, la risoluzione esplicita del problema agli autovalori per le componenti cartesiane e l'applicazione del principio di indeterminazione di Heisenberg. Ogni passaggio è stato verificato dal punto di vista del calcolo e della coerenza fisica; le correzioni e i chiarimenti introdotti rispetto ai materiali originali sono segnalati esplicitamente nei riquadri \emph{Nota di verifica}.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Introduzione: spin e momento magnetico}
+% =====================================================================
+
+Lo spin è il momento angolare intrinseco posseduto da una particella elementare per il solo fatto di esistere, indipendentemente da qualunque moto orbitale. Per una particella carica, lo spin è sempre accompagnato da un momento magnetico intrinseco $\boldsymbol{\mu}_s$, legato al vettore operatore di spin $\mathbf{S}$ dalla relazione
+
+\begin{equation}
+\boldsymbol{\mu}_s = -g_s\,\frac{e}{2m}\,\mathbf{S},
+\label{eq:momento-magnetico}
+\end{equation}
+
+dove:
+\begin{itemize}[nosep]
+  \item $g_s$ è il fattore giromagnetico dello spin (per l'elettrone $g_s \simeq 2$, con correzioni radiative dell'ordine di $\alpha/\pi$ previste dall'elettrodinamica quantistica);
+  \item $e$ è la carica elementare (positiva, per convenzione);
+  \item $m$ è la massa della particella.
+\end{itemize}
+
+Definendo il rapporto giromagnetico $\gamma \equiv -g_s e/(2m)$, la relazione \eqref{eq:momento-magnetico} si inverte immediatamente:
+\begin{equation}
+\mathbf{S} = -\frac{2m}{g_s e}\,\boldsymbol{\mu}_s = \frac{\boldsymbol{\mu}_s}{\gamma}.
+\label{eq:S-da-mu}
+\end{equation}
+
+Questa relazione mostra che l'operatore di spin è, a meno di una costante moltiplicativa reale, lo stesso oggetto matematico del momento magnetico intrinseco: le due grandezze condividono spettro di autostati e proprietà algebriche, e differiscono solo per un fattore di scala e di segno.
+
+% =====================================================================
+\section{Perché lo spazio di Hilbert ha dimensione 2}
+% =====================================================================
+
+La necessità di rappresentare $\mathbf{S}$ mediante matrici $2\times 2$ non è una scelta arbitraria, ma discende direttamente dall'evidenza sperimentale.
+
+\subsection{L'esperimento di Stern-Gerlach}
+
+Quando un fascio di elettroni (o, storicamente, di atomi d'argento) attraversa un campo magnetico disomogeneo orientato lungo un asse qualunque — convenzionalmente l'asse $z$ — il fascio non si allarga con continuità, ma si divide in \emph{due} sole componenti discrete. La componente dello spin lungo l'asse di misura può quindi assumere solamente due valori:
+\[
+S_z = +\frac{\hbar}{2} \qquad \text{oppure} \qquad S_z = -\frac{\hbar}{2}.
+\]
+
+\subsection{Conseguenza strutturale}
+
+In meccanica quantistica:
+\begin{itemize}[nosep]
+  \item ogni stato fisico è rappresentato da un vettore in uno spazio vettoriale complesso, lo spazio di Hilbert $\mathcal{H}$;
+  \item poiché gli esiti possibili di una misura di spin lungo un asse qualsiasi sono esattamente due, lo spazio di Hilbert che descrive lo spin di un elettrone ha dimensione $\dim\mathcal{H}=2$;
+  \item le osservabili fisiche — in particolare le componenti $S_x, S_y, S_z$ — sono operatori lineari hermitiani agenti su $\mathcal{H}$, e un operatore lineare su uno spazio a due dimensioni è rappresentato, in una base fissata, da una matrice complessa $2\times 2$.
+\end{itemize}
+
+È questa la ragione profonda per cui l'operatore vettoriale astratto $\mathbf{S}=(S_x,S_y,S_z)$, pur descrivendo una grandezza fisica intrinsecamente tridimensionale (uno spin che può essere orientato in qualunque direzione dello spazio ordinario), viene rappresentato da matrici $2\times2$: la dimensionalità dello spazio di rappresentazione (2) e la dimensionalità dello spazio fisico delle direzioni (3) sono concettualmente distinte e non vanno confuse.
+
+% =====================================================================
+\section{I vincoli fisici per la costruzione delle matrici}
+% =====================================================================
+
+Per determinare la forma esplicita delle matrici associate a $S_x, S_y, S_z$ è conveniente introdurre l'operatore adimensionale di Pauli $\boldsymbol{\sigma}=(\sigma_x,\sigma_y,\sigma_z)$ tramite
+\begin{equation}
+\mathbf{S} = \frac{\hbar}{2}\,\boldsymbol{\sigma}.
+\label{eq:S-sigma}
+\end{equation}
+
+La forma delle matrici $\sigma_i$ è univocamente determinata dall'imposizione di tre vincoli fisici indipendenti.
+
+\subsection*{Vincolo A --- Lo spettro degli autovalori}
+
+Qualunque sia l'asse cartesiano scelto, una misura di spin deve restituire solo $\pm\hbar/2$ (Stern-Gerlach, \S 2). Di conseguenza ciascuna matrice $S_i$ deve avere autovalori $\lambda=\pm\hbar/2$, e ciascuna $\sigma_i$ autovalori adimensionali $\lambda=\pm 1$.
+
+\subsection*{Vincolo B --- L'hermiticità}
+
+I valori di aspettazione delle grandezze osservabili devono essere reali. Questo impone che gli operatori associati siano hermitiani, cioè uguali alla propria trasposta coniugata:
+\begin{equation}
+S_i = S_i^\dagger \quad\Longleftrightarrow\quad \sigma_i=\sigma_i^\dagger, \qquad i=x,y,z.
+\label{eq:hermiticita}
+\end{equation}
+
+\subsection*{Vincolo C --- L'algebra del momento angolare}
+
+Le componenti dello spin, in quanto generatrici delle rotazioni nello spazio fisico tridimensionale, devono soddisfare le relazioni di commutazione canoniche del momento angolare:
+\begin{equation}
+[S_x,S_y]=i\hbar S_z, \qquad [S_y,S_z]=i\hbar S_x, \qquad [S_z,S_x]=i\hbar S_y.
+\label{eq:commutatori-S}
+\end{equation}
+
+Sostituendo $S_i=\frac{\hbar}{2}\sigma_i$ in \eqref{eq:commutatori-S}, l'algebra delle matrici di Pauli diventa
+\begin{equation}
+[\sigma_x,\sigma_y]=2i\sigma_z, \qquad [\sigma_y,\sigma_z]=2i\sigma_x, \qquad [\sigma_z,\sigma_x]=2i\sigma_y.
+\label{eq:commutatori-sigma}
+\end{equation}
+
+I tre vincoli A, B, C, insieme alla scelta di una base, fissano in modo univoco (a meno di trasformazioni unitarie di base, ossia a meno della scelta dell'asse di quantizzazione) la forma esplicita delle matrici, come mostrato nella sezione seguente.
+
+% =====================================================================
+\section{Derivazione esplicita delle matrici di Pauli}
+% =====================================================================
+
+\subsection{La base standard}
+
+Si sceglie la base degli autostati di $S_z$ (base computazionale, o base ``Su/Giù'' lungo $z$):
+\begin{equation}
+\ket{\uparrow_z} = \begin{pmatrix}1\\0\end{pmatrix}, \qquad
+\ket{\downarrow_z} = \begin{pmatrix}0\\1\end{pmatrix}.
+\label{eq:base-z}
+\end{equation}
+
+\subsection{Determinazione di \texorpdfstring{$\sigma_z$}{sigma\_z}}
+
+Poiché la base è scelta in modo che $S_z$ (e quindi $\sigma_z$) sia diagonale in essa, i vettori di base sono autovettori di $\sigma_z$ con autovalori $+1$ e $-1$ rispettivamente:
+\[
+\sigma_z\begin{pmatrix}1\\0\end{pmatrix} = \begin{pmatrix}1\\0\end{pmatrix}, \qquad
+\sigma_z\begin{pmatrix}0\\1\end{pmatrix} = \begin{pmatrix}0\\-1\end{pmatrix}.
+\]
+L'unica matrice $2\times2$ compatibile con queste due condizioni è la matrice diagonale
+\begin{equation}
+\sigma_z = \begin{pmatrix}1&0\\0&-1\end{pmatrix}
+\quad\Longrightarrow\quad
+S_z = \frac{\hbar}{2}\begin{pmatrix}1&0\\0&-1\end{pmatrix}.
+\label{eq:sigma-z}
+\end{equation}
+
+\subsection{Gli operatori di scala}
+
+Si introducono gli operatori di innalzamento e abbassamento
+\begin{equation}
+S_\pm \equiv S_x \pm iS_y,
+\label{eq:scala-def}
+\end{equation}
+che hanno la proprietà di trasformare un autostato di $S_z$ nell'altro:
+\[
+S_+\ket{\downarrow_z} = \hbar\ket{\uparrow_z}, \qquad
+S_-\ket{\uparrow_z} = \hbar\ket{\downarrow_z}, \qquad
+S_+\ket{\uparrow_z}=0, \qquad S_-\ket{\downarrow_z}=0.
+\]
+In forma matriciale, rispetto alla base \eqref{eq:base-z}:
+\begin{equation}
+S_+ = \hbar\begin{pmatrix}0&1\\0&0\end{pmatrix}, \qquad
+S_- = \hbar\begin{pmatrix}0&0\\1&0\end{pmatrix}.
+\label{eq:scala-matrici}
+\end{equation}
+
+\begin{nota}
+Le matrici \eqref{eq:scala-matrici} sono l'una la trasposta coniugata dell'altra, $S_-=S_+^\dagger$, come deve essere affinché $S_x=\tfrac12(S_++S_-)$ e $S_y=\tfrac{1}{2i}(S_+-S_-)$, ricavati di seguito, risultino operatori hermitiani, in accordo con il Vincolo B. La convenzione di fase adottata (coefficiente reale positivo $\hbar$, anziché una fase complessa arbitraria $\hbar e^{i\phi}$) è la scelta standard nei testi di meccanica quantistica e non ha conseguenze fisiche osservabili.
+\end{nota}
+
+\subsection{Isolamento di \texorpdfstring{$S_x$}{Sx} e \texorpdfstring{$S_y$}{Sy}}
+
+Dalla definizione \eqref{eq:scala-def} segue immediatamente, per somma e differenza,
+\[
+S_+ + S_- = 2S_x \ \Longrightarrow\ S_x=\frac12(S_++S_-), \qquad
+S_+ - S_- = 2iS_y \ \Longrightarrow\ S_y = \frac{1}{2i}(S_+-S_-) = -\frac{i}{2}(S_+-S_-).
+\]
+
+Sostituendo le matrici \eqref{eq:scala-matrici}:
+\begin{equation}
+S_x = \frac12\left[\hbar\begin{pmatrix}0&1\\0&0\end{pmatrix}+\hbar\begin{pmatrix}0&0\\1&0\end{pmatrix}\right]
+= \frac{\hbar}{2}\begin{pmatrix}0&1\\1&0\end{pmatrix},
+\label{eq:Sx}
+\end{equation}
+\begin{equation}
+S_y = -\frac{i}{2}\left[\hbar\begin{pmatrix}0&1\\0&0\end{pmatrix}-\hbar\begin{pmatrix}0&0\\1&0\end{pmatrix}\right]
+= \frac{\hbar}{2}\begin{pmatrix}0&-i\\i&0\end{pmatrix}.
+\label{eq:Sy}
+\end{equation}
+
+\subsection{Risultato: le matrici di Pauli}
+
+Raccogliendo le equazioni \eqref{eq:sigma-z}, \eqref{eq:Sx} e \eqref{eq:Sy}, l'operatore vettoriale di spin si scrive
+\begin{equation}
+\mathbf{S} = \frac{\hbar}{2}\boldsymbol{\sigma}, \qquad
+\sigma_x=\begin{pmatrix}0&1\\1&0\end{pmatrix}, \quad
+\sigma_y=\begin{pmatrix}0&-i\\i&0\end{pmatrix}, \quad
+\sigma_z=\begin{pmatrix}1&0\\0&-1\end{pmatrix}.
+\label{eq:pauli-finali}
+\end{equation}
+
+\begin{sintesi}
+Il passaggio dall'operatore astratto tridimensionale $\mathbf{S}$ alle matrici di Pauli è una conseguenza obbligata di tre fatti fisici indipendenti: (i) la natura dello spin $1/2$ confina la descrizione quantistica in uno spazio di Hilbert a due sole dimensioni (Stern-Gerlach); (ii) le osservabili fisiche devono essere rappresentate da operatori hermitiani a spettro $\pm\hbar/2$; (iii) le tre componenti devono soddisfare l'algebra di commutazione tridimensionale del momento angolare. L'imposizione simultanea di questi tre vincoli su uno spazio a due dimensioni forza univocamente la forma \eqref{eq:pauli-finali}.
+\end{sintesi}
+
+Si può verificare per calcolo diretto che le matrici \eqref{eq:pauli-finali} soddisfano effettivamente l'algebra \eqref{eq:commutatori-sigma} e sono hermitiane con autovalori $\pm1$, chiudendo così coerentemente la costruzione.
+
+% =====================================================================
+\section{Autovalori delle osservabili di spin}
+% =====================================================================
+
+Le proprietà quantizzate dello spin sono descritte dagli autovalori del quadrato del modulo $\mathbf{S}^2$ e della componente lungo l'asse di quantizzazione $z$:
+\begin{align}
+\mathbf{S}^2\ket{\psi} &= \hbar^2\,s(s+1)\,\ket{\psi}, & s&=\tfrac12 \ \text{per l'elettrone}, \label{eq:S2}\\
+S_z\ket{\psi} &= m_s\hbar\,\ket{\psi}, & m_s&=\pm\tfrac12. \label{eq:Sz-autoval}
+\end{align}
+
+Gli autostati di $S_z$ associati agli autovalori $\pm\hbar/2$ costituiscono la base standard già introdotta in \eqref{eq:base-z}.
+
+% =====================================================================
+\section{Il problema agli autovalori per \texorpdfstring{$S_x$}{Sx}}
+% =====================================================================
+
+Per determinare autovalori e autovettori di $S_x$ si impone l'equazione secolare
+\begin{equation}
+\det\left(S_x-\lambda\,\mathbb{1}\right)=0.
+\label{eq:secolare}
+\end{equation}
+
+Sostituendo la forma esplicita \eqref{eq:Sx}:
+\begin{equation}
+\det\begin{pmatrix}-\lambda & \hbar/2\\ \hbar/2 & -\lambda\end{pmatrix}=0
+\ \Longrightarrow\
+\lambda^2-\left(\frac{\hbar}{2}\right)^2=0
+\ \Longrightarrow\
+\lambda=\pm\frac{\hbar}{2},
+\label{eq:autovalori-Sx}
+\end{equation}
+coerentemente con il Vincolo A: anche $S_x$, come $S_z$, possiede spettro $\{+\hbar/2,-\hbar/2\}$.
+
+\subsection{Autovettore per \texorpdfstring{$\lambda_1=+\hbar/2$}{lambda1=+h/2}}
+
+Ponendo $\ket{\uparrow_x}=\binom{a}{b}$ e risolvendo $(S_x-\lambda_1\mathbb{1})\ket{\uparrow_x}=0$:
+\[
+\begin{pmatrix}-\hbar/2 & \hbar/2\\ \hbar/2 & -\hbar/2\end{pmatrix}\binom{a}{b}=\binom{0}{0}
+\ \Longrightarrow\ -\frac{\hbar}{2}a+\frac{\hbar}{2}b=0 \ \Longrightarrow\ a=b.
+\]
+Ponendo $a=1$ (quindi $b=1$) e normalizzando, $|a|^2+|b|^2=1$:
+\begin{equation}
+\ket{\uparrow_x} = \frac{1}{\sqrt2}\begin{pmatrix}1\\1\end{pmatrix}.
+\label{eq:up-x}
+\end{equation}
+
+\subsection{Autovettore per \texorpdfstring{$\lambda_2=-\hbar/2$}{lambda2=-h/2}}
+
+Analogamente, ponendo $\ket{\downarrow_x}=\binom{c}{d}$:
+\[
+\begin{pmatrix}\hbar/2 & \hbar/2\\ \hbar/2 & \hbar/2\end{pmatrix}\binom{c}{d}=\binom{0}{0}
+\ \Longrightarrow\ \frac{\hbar}{2}c+\frac{\hbar}{2}d=0 \ \Longrightarrow\ c=-d.
+\]
+Ponendo $c=1$ (quindi $d=-1$) e normalizzando:
+\begin{equation}
+\ket{\downarrow_x} = \frac{1}{\sqrt2}\begin{pmatrix}1\\-1\end{pmatrix}.
+\label{eq:down-x}
+\end{equation}
+
+% =====================================================================
+\section{Cambio di base: sovrapposizione tra autostati di \texorpdfstring{$S_z$}{Sz} e \texorpdfstring{$S_x$}{Sx}}
+% =====================================================================
+
+Sommando membro a membro le equazioni \eqref{eq:up-x} e \eqref{eq:down-x}:
+\begin{equation}
+\ket{\uparrow_x}+\ket{\downarrow_x}
+= \frac{1}{\sqrt2}\binom{1}{1}+\frac{1}{\sqrt2}\binom{1}{-1}
+= \frac{1}{\sqrt2}\binom{2}{0}
+= \sqrt2\begin{pmatrix}1\\0\end{pmatrix}
+= \sqrt2\,\ket{\uparrow_z}.
+\label{eq:somma-autostati}
+\end{equation}
+
+Dividendo entrambi i membri per $\sqrt2$ si ottiene l'identità cercata, che esprime lo stato $\ket{\uparrow_z}$ come sovrapposizione simmetrica degli autostati di $S_x$:
+\begin{equation}
+\boxed{\ \ket{\uparrow_z} = \frac{1}{\sqrt2}\ket{\uparrow_x}+\frac{1}{\sqrt2}\ket{\downarrow_x}\ }.
+\label{eq:identita-cambio-base}
+\end{equation}
+
+Questa relazione è il cuore concettuale del fenomeno dell'incompatibilità tra osservabili di spin lungo assi diversi: uno stato con valore definito lungo $z$ non ha valore definito lungo $x$, ma è una loro sovrapposizione a coefficienti uguali.
+
+% =====================================================================
+\section{Il principio di indeterminazione applicato allo spin}
+% =====================================================================
+
+\subsection{La relazione di Robertson}
+
+Le relazioni di commutazione non nulle \eqref{eq:commutatori-S} implicano che le componenti cartesiane dello spin non ammettono, in generale, una base comune di autostati. La relazione generale di Robertson per due osservabili $A,B$,
+\[
+\Delta A\,\Delta B \ \ge\ \frac12\left|\langle[A,B]\rangle\right|,
+\]
+applicata alla coppia $(S_x,S_y)$ con $[S_x,S_y]=i\hbar S_z$, fornisce
+\begin{equation}
+\Delta S_x\,\Delta S_y \ \ge\ \frac{\hbar}{2}\left|\langle S_z\rangle\right|.
+\label{eq:robertson-spin}
+\end{equation}
+
+\subsection{Applicazione allo stato \texorpdfstring{$\ket{\uparrow_z}$}{|up\_z>}}
+
+Se l'elettrone è preparato nello stato puro $\ket{\uparrow_z}$, la componente $S_z$ è perfettamente determinata, $\Delta S_z=0$, con valore medio massimo $\langle S_z\rangle=\hbar/2$. La disuguaglianza \eqref{eq:robertson-spin} diventa allora
+\begin{equation}
+\Delta S_x\,\Delta S_y \ \ge\ \frac{\hbar}{2}\cdot\frac{\hbar}{2} = \frac{\hbar^2}{4}.
+\label{eq:robertson-numerica}
+\end{equation}
+
+\begin{nota}
+Nel materiale originale il valore numerico del vincolo \eqref{eq:robertson-numerica} risultava riportato in forma incompleta (con l'esponente sulla $\hbar$ non correttamente specificato). Il passaggio corretto è: da $\langle S_z\rangle=\hbar/2$ e dalla relazione \eqref{eq:robertson-spin}, si ottiene $\Delta S_x\,\Delta S_y \ge (\hbar/2)(\hbar/2)=\hbar^2/4$, come riportato sopra. Il contenuto fisico — l'esistenza di un limite inferiore, non nullo, al prodotto delle indeterminazioni su $S_x$ e $S_y$ quando $S_z$ è definito — è corretto in entrambe le fonti; qui se ne fornisce solo l'espressione numerica esplicita e completa.
+\end{nota}
+
+\subsection{Regola di Born e collasso dello stato}
+
+Effettuando una misura di spin lungo l'asse $x$ sullo stato iniziale $\ket{\uparrow_z}$, le probabilità dei due possibili esiti si calcolano, per la regola di Born, come il modulo quadro della proiezione sui rispettivi autostati, utilizzando l'identità \eqref{eq:identita-cambio-base}:
+\begin{align}
+P(\uparrow_x) &= \left|\braket{\uparrow_x}{\uparrow_z}\right|^2 = \left|\frac{1}{\sqrt2}\right|^2 = \frac12 = 50\%, \label{eq:born-up}\\
+P(\downarrow_x) &= \left|\braket{\downarrow_x}{\uparrow_z}\right|^2 = \left|\frac{1}{\sqrt2}\right|^2 = \frac12 = 50\%. \label{eq:born-down}
+\end{align}
+
+Il principio di indeterminazione si manifesta qui non solo nella forma statistica \eqref{eq:robertson-numerica}, ma anche nell'atto stesso della misura: se lo strumento rivela spin ``su'' lungo $x$, lo stato collassa istantaneamente in $\ket{\uparrow_x}$. Poiché
+\begin{equation}
+\ket{\uparrow_x} = \frac{1}{\sqrt2}\ket{\uparrow_z}+\frac{1}{\sqrt2}\ket{\downarrow_z},
+\label{eq:up-x-in-base-z}
+\end{equation}
+una successiva misura lungo $z$ restituirà nuovamente esiti casuali, con probabilità $50\%$ per ciascun risultato. La misura lungo $x$ ha quindi irreversibilmente distrutto l'informazione precedentemente immagazzinata lungo l'asse $z$: le due osservabili $S_x$ e $S_z$ sono incompatibili nel senso quantistico del termine.
+
+\begin{nota}
+L'equazione \eqref{eq:up-x-in-base-z} è la relazione simmetrica e complementare della \eqref{eq:identita-cambio-base}, ottenibile risolvendo lo stesso sistema di due equazioni in due incognite per il coefficiente di $\ket{\downarrow_x}$ anziché di $\ket{\uparrow_x}$; è stata resa esplicita qui per chiarezza espositiva, poiché nel materiale di partenza era enunciata ma non derivata esplicitamente.
+\end{nota}
+
+% =====================================================================
+\section{Sintesi delle equazioni chiave}
+% =====================================================================
+
+\begin{sintesi}
+\begin{align*}
+&\mathbf{S} = \frac{\boldsymbol{\mu}_s}{\gamma} = \frac{\hbar}{2}\boldsymbol{\sigma},
+\qquad
+\sigma_x=\begin{pmatrix}0&1\\1&0\end{pmatrix}, \ \
+\sigma_y=\begin{pmatrix}0&-i\\i&0\end{pmatrix}, \ \
+\sigma_z=\begin{pmatrix}1&0\\0&-1\end{pmatrix};\\[4pt]
+&\mathbf{S}^2\ket{\psi}=\hbar^2 s(s+1)\ket{\psi}, \quad s=\tfrac12; \qquad
+S_z\ket{\psi}=m_s\hbar\ket{\psi}, \quad m_s=\pm\tfrac12;\\[4pt]
+&\ket{\uparrow_x}=\tfrac{1}{\sqrt2}\binom{1}{1}, \qquad \ket{\downarrow_x}=\tfrac{1}{\sqrt2}\binom{1}{-1};\\[4pt]
+&\ket{\uparrow_z} = \tfrac{1}{\sqrt2}\ket{\uparrow_x}+\tfrac{1}{\sqrt2}\ket{\downarrow_x}, \qquad
+P(\uparrow_x)=P(\downarrow_x)=50\%;\\[4pt]
+&[S_x,S_y]=i\hbar S_z \ (\text{e permutazioni cicliche}), \qquad \Delta S_x\,\Delta S_y \ge \frac{\hbar^2}{4} \ \text{su } \ket{\uparrow_z}.
+\end{align*}
+\end{sintesi}
+
+% =====================================================================
+\section{Conclusioni}
+% =====================================================================
+
+I due filoni di analisi qui riuniti sono in realtà due facce dello stesso fenomeno fisico. Da un lato, la struttura algebrica dello spin $1/2$ — vincolata dallo spettro $\pm\hbar/2$, dall'hermiticità e dalle regole di commutazione del momento angolare — costringe l'operatore vettoriale $\mathbf{S}$ ad assumere la forma delle matrici di Pauli in uno spazio di Hilbert bidimensionale. Dall'altro, proprio questa struttura non commutativa è la radice del principio di indeterminazione per lo spin: componenti lungo assi diversi non sono simultaneamente definibili, come mostrato sia dalla disuguaglianza di Robertson sia, in modo operativo, dal collasso dello stato osservato in una sequenza di misure lungo assi diversi. La relazione con il momento magnetico intrinseco, $\mathbf{S}=\boldsymbol{\mu}_s/\gamma$, garantisce infine che tutte le proprietà quantistiche qui derivate per $\mathbf{S}$ si trasferiscano direttamente alle grandezze effettivamente misurate negli esperimenti di risonanza magnetica e di tipo Stern-Gerlach.
+
+\end{document}

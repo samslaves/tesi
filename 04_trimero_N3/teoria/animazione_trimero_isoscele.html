@@ -1,0 +1,394 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Trimero isoscele — spettro in campo</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f7f7f5; --border:#d8d6cd; --text:#2c2c2a; --muted:#6b6a63;
+    --colA:#ba7517; --colB:#185fa5; --colC:#0f6e56; --accent:#993c1d;
+    --afm:#a53d3d; --fm:#2f6fb0; --zero:#9a988e;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1c1c1a; --panel:#242422; --border:#45443e; --text:#e7e5da; --muted:#a6a498;
+      --colA:#f2b06a; --colB:#7fb2e8; --colC:#5dcaa5; --accent:#e8a087;
+      --afm:#e08585; --fm:#7fb2e8; --zero:#8c8a80;
+    }
+  }
+  body{
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:var(--bg); color:var(--text); margin:0; padding:24px;
+  }
+  h1{font-size:20px; font-weight:500; margin:0 0 4px;}
+  p.sub{color:var(--muted); font-size:14px; margin:0 0 20px;}
+  .wrap{max-width:920px; margin:0 auto;}
+  .layout{display:flex; gap:24px; flex-wrap:wrap;}
+  .plotcol{flex:1 1 560px; min-width:320px;}
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:16px 20px; margin-bottom:16px;
+  }
+  .controls{flex:0 0 300px; min-width:260px;}
+  label{display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;}
+  label span.val{font-variant-numeric:tabular-nums; color:var(--accent); font-weight:500;}
+  input[type=range]{width:100%; margin-bottom:16px;}
+  .presets{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;}
+  button{
+    font-family:inherit; font-size:12px; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--border); background:var(--bg); color:var(--text); cursor:pointer;
+  }
+  button:hover{border-color:var(--accent);}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; margin-top:10px; color:var(--muted);}
+  .legend .dot{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:middle;}
+  .status{font-size:13px; line-height:1.6;}
+  .status b{color:var(--text);}
+  svg{width:100%; height:auto; display:block;}
+  .axis line{stroke:var(--muted); stroke-width:1;}
+  .axis text{fill:var(--muted); font-size:11px;}
+  .gridline{stroke:var(--border); stroke-width:0.5;}
+  .lineA{stroke:var(--colA);}
+  .lineB{stroke:var(--colB);}
+  .lineC{stroke:var(--colC);}
+  .crossdot{fill:var(--text);}
+  .crosslabel{fill:var(--text); font-size:12px;}
+  .obsline{stroke:var(--accent); stroke-width:1; stroke-dasharray:3,3; opacity:0.75;}
+  .obsdot{stroke:var(--bg); stroke-width:1.5;}
+  .obslabel{fill:var(--accent); font-size:11px; font-weight:500;}
+  .qn{color:var(--muted); font-size:11px; margin-top:2px;}
+  .note{color:var(--muted); font-size:12px; margin-top:10px; line-height:1.5;}
+  hr.sep{border:none; border-top:1px solid var(--border); margin:12px 0;}
+  .subpanels{display:flex; gap:16px; flex-wrap:wrap;}
+  .subpanels .panel{flex:1 1 240px; min-width:220px; margin-bottom:0;}
+  .subpanels h3{font-size:12.5px; font-weight:600; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:0.02em;}
+  .bondAFM{stroke:var(--afm);}
+  .bondFM{stroke:var(--fm);}
+  .bondZero{stroke:var(--zero); stroke-dasharray:2,2;}
+  .sitedot{fill:var(--bg); stroke:var(--text); stroke-width:1.5;}
+  .sitelabel{fill:var(--text); font-size:11px;}
+  .bondlabel{font-size:10.5px;}
+  .bondlabel.afm{fill:var(--afm);}
+  .bondlabel.fm{fill:var(--fm);}
+  .bondlabel.zero{fill:var(--zero);}
+  .pm-region-B{fill:var(--colB); opacity:0.12;}
+  .pm-region-C{fill:var(--colC); opacity:0.14;}
+  .pm-region-A{fill:var(--colA); opacity:0.12;}
+  .pm-bound{stroke:var(--muted); stroke-width:1;}
+  .pm-axis{stroke:var(--muted); stroke-width:1;}
+  .pm-tick{fill:var(--muted); font-size:9px;}
+  .pm-label{font-size:11px; font-weight:600;}
+  .pm-dot{stroke:var(--bg); stroke-width:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trimero a triangolo isoscele: spettro in campo</h1>
+  <p class="sub">Otto livelli E(S12,S,M) al variare del campo b, per J e J' regolabili (con segno). Il pallino nero segna l'incrocio del fondamentale, se esiste; la linea tratteggiata verticale mostra lo stato al campo osservato.</p>
+
+  <div class="layout">
+    <div class="plotcol">
+      <div class="panel">
+        <svg id="plot" viewBox="0 0 560 420" role="img" aria-label="Grafico dello spettro in campo"></svg>
+      </div>
+      <div class="panel">
+        <div class="legend">
+          <span><span class="dot" style="background:var(--colA)"></span>A: S12=1, S=3/2 (quadrupletto)</span>
+          <span><span class="dot" style="background:var(--colB)"></span>B: S12=1, S=1/2 (doppietto)</span>
+          <span><span class="dot" style="background:var(--colC)"></span>C: S12=0, S=1/2 (doppietto, da singoletto di base)</span>
+        </div>
+        <div class="note">
+          Tratto continuo = ramo M&lt;0 (rilevante per il fondamentale a b&gt;0); tratteggio corto = ramo M&gt;0.
+          Assi: <i>b</i> orizzontale, <i>E</i> verticale, entrambi nelle stesse unità di energia di J e J' (convenzione di Pauli, §1 della teoria: nessuna unità fisica fissata, solo il rapporto b/J ha significato).
+        </div>
+      </div>
+
+      <div class="subpanels">
+        <div class="panel">
+          <h3>Geometria e legami</h3>
+          <svg id="triangle" viewBox="0 0 200 175" role="img" aria-label="Triangolo isoscele con legami J e J'"></svg>
+        </div>
+        <div class="panel">
+          <h3>Posizione nel piano (J,J')</h3>
+          <svg id="phasemap" viewBox="0 0 200 200" role="img" aria-label="Mappa dei segni e posizione corrente"></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="panel">
+        <label>J <span class="val" id="Jval">1.00</span></label>
+        <input type="range" id="J" min="-3" max="3" step="0.05" value="1">
+        <label>J' <span class="val" id="Jpval">0.40</span></label>
+        <input type="range" id="Jp" min="-3" max="3" step="0.05" value="0.4">
+        <div class="presets">
+          <button data-j="1" data-jp="0.4">regione C</button>
+          <button data-j="1" data-jp="1.6">regione B</button>
+          <button data-j="1" data-jp="-2.5">regione A</button>
+          <button data-j="1" data-jp="1">equilatero</button>
+          <button data-j="1" data-jp="0">dimero (J'=0)</button>
+        </div>
+        <hr class="sep">
+        <label>b osservato <span class="val" id="bobsval">0.00</span></label>
+        <input type="range" id="bfrac" min="0" max="1" step="0.002" value="0.42">
+      </div>
+      <div class="panel status" id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const svg = document.getElementById('plot');
+const triSvg = document.getElementById('triangle');
+const pmSvg = document.getElementById('phasemap');
+const Jin = document.getElementById('J');
+const Jpin = document.getElementById('Jp');
+const Jval = document.getElementById('Jval');
+const Jpval = document.getElementById('Jpval');
+const bfracIn = document.getElementById('bfrac');
+const bobsval = document.getElementById('bobsval');
+const statusBox = document.getElementById('status');
+
+const W = 560, H = 420;
+const padL = 62, padR = 20, padT = 24, padB = 38;
+const plotW = W - padL - padR, plotH = H - padT - padB;
+
+const QN = {A:{S12:1, S:1.5}, B:{S12:1, S:0.5}, C:{S12:0, S:0.5}};
+
+function lines(J, Jp){
+  // ciascuna linea: {label, color, dash, M, base}
+  return [
+    {mult:'A', M:1.5,  base:J+2*Jp, cls:'lineA'},
+    {mult:'A', M:0.5,  base:J+2*Jp, cls:'lineA'},
+    {mult:'A', M:-0.5, base:J+2*Jp, cls:'lineA'},
+    {mult:'A', M:-1.5, base:J+2*Jp, cls:'lineA'},
+    {mult:'B', M:0.5,  base:J-4*Jp, cls:'lineB'},
+    {mult:'B', M:-0.5, base:J-4*Jp, cls:'lineB'},
+    {mult:'C', M:0.5,  base:-3*J,   cls:'lineC'},
+    {mult:'C', M:-0.5, base:-3*J,   cls:'lineC'},
+  ];
+}
+
+function stateAt(J, Jp, b){
+  // energia di tutte e otto le rette al campo b, ordinate
+  const es = lines(J,Jp).map(l=>({mult:l.mult, M:l.M, E:l.base+2*l.M*b, cls:l.cls}));
+  es.sort((a,c)=>a.E-c.E);
+  return {ground: es[0], gap: es[1].E-es[0].E};
+}
+
+function groundEnergyAt(J, Jp, b){
+  const EA = J+2*Jp-3*b, EB = J-4*Jp-b, EC = -3*J-b;
+  const vals = [['A',EA],['B',EB],['C',EC]];
+  vals.sort((a,b)=>a[1]-b[1]);
+  return vals[0]; // [mult, energy]
+}
+
+function findCrossing(J, Jp){
+  // fondamentale a b=0
+  const E0 = {A: J+2*Jp, B: J-4*Jp, C: -3*J};
+  let gs0 = Object.keys(E0).reduce((a,b)=>E0[a]<=E0[b]?a:b);
+  if (gs0 === 'A') return null; // A è già fondamentale, nessun crossing per b>0
+  const bc = gs0 === 'B' ? 3*Jp : 2*J+Jp;
+  if (bc <= 0) return null;
+  return {from: gs0, to: 'A', bc: bc};
+}
+
+function regionOf(J, Jp){
+  const E0 = {A: J+2*Jp, B: J-4*Jp, C: -3*J};
+  return Object.keys(E0).reduce((a,b)=>E0[a]<=E0[b]?a:b);
+}
+
+function bondClass(val){
+  if (val > 1e-9) return {cls:'bondAFM', tag:'afm', word:'AFM'};
+  if (val < -1e-9) return {cls:'bondFM', tag:'fm', word:'FM'};
+  return {cls:'bondZero', tag:'zero', word:'nullo'};
+}
+
+function drawTriangle(J, Jp){
+  const p1={x:34,y:145}, p2={x:166,y:145}, p3={x:100,y:22}; // siti 1,2,3
+  const wJ  = 1.5 + 4.5*Math.min(Math.abs(J)/3,1);
+  const wJp = 1.5 + 4.5*Math.min(Math.abs(Jp)/3,1);
+  const bJ = bondClass(J), bJp = bondClass(Jp);
+  let s = '';
+  // legami
+  s += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" class="${bJ.cls}" stroke-width="${wJ}"/>`;
+  s += `<line x1="${p2.x}" y1="${p2.y}" x2="${p3.x}" y2="${p3.y}" class="${bJp.cls}" stroke-width="${wJp}"/>`;
+  s += `<line x1="${p3.x}" y1="${p3.y}" x2="${p1.x}" y2="${p1.y}" class="${bJp.cls}" stroke-width="${wJp}"/>`;
+  // siti
+  [p1,p2,p3].forEach((p,i)=>{
+    s += `<circle cx="${p.x}" cy="${p.y}" r="6" class="sitedot"/>`;
+  });
+  s += `<text x="${p1.x-10}" y="${p1.y+16}" class="sitelabel" text-anchor="middle">1</text>`;
+  s += `<text x="${p2.x+10}" y="${p2.y+16}" class="sitelabel" text-anchor="middle">2</text>`;
+  s += `<text x="${p3.x}" y="${p3.y-11}" class="sitelabel" text-anchor="middle">3</text>`;
+  // etichette legami
+  s += `<text x="${(p1.x+p2.x)/2}" y="${p1.y+22}" text-anchor="middle" class="bondlabel ${bJ.tag}">J=${J.toFixed(2)} (${bJ.word})</text>`;
+  s += `<text x="${(p2.x+p3.x)/2+30}" y="${(p2.y+p3.y)/2-2}" text-anchor="start" class="bondlabel ${bJp.tag}">J'=${Jp.toFixed(2)}</text>`;
+  s += `<text x="${(p2.x+p3.x)/2+30}" y="${(p2.y+p3.y)/2+12}" text-anchor="start" class="bondlabel ${bJp.tag}">(${bJp.word})</text>`;
+  triSvg.innerHTML = s;
+}
+
+function drawPhaseMap(J, Jp){
+  const range = 3; // J,J' in [-range,range], stessa scala degli slider
+  const pl=28, pr=10, pt=10, pb=22, W2=200, H2=200;
+  const pw=W2-pl-pr, ph=H2-pt-pb;
+  const X = v => pl + (v+range)/(2*range)*pw;
+  const Y = v => pt + ph - (v+range)/(2*range)*ph;
+  let s='';
+  // regioni (approssimate, clippate al riquadro visibile)
+  // B: sopra il confine (J'=0 per J<0, J'=J per J>0)
+  s += `<polygon points="${X(-range)},${Y(0)} ${X(0)},${Y(0)} ${X(range)},${Y(range)} ${X(range)},${Y(range)+ (Y(0)-Y(range))*0} ${X(range)},${pt} ${X(-range)},${pt}" class="pm-region-B"/>`;
+  // C: cuneo fra J'=J e J'=-2J, solo per J>0, clippato a J'=-range
+  const Jstar = range/2; // dove J'=-2J tocca J'=-range
+  s += `<polygon points="${X(0)},${Y(0)} ${X(range)},${Y(range)} ${X(range)},${Y(-range)} ${X(Jstar)},${Y(-range)}" class="pm-region-C"/>`;
+  // A: sotto, sia per J<0 (J'<0) sia per J>0 sotto J'=-2J
+  s += `<polygon points="${X(-range)},${Y(0)} ${X(0)},${Y(0)} ${X(Jstar)},${Y(-range)} ${X(-range)},${Y(-range)}" class="pm-region-A"/>`;
+  // assi
+  s += `<line x1="${pl}" y1="${Y(0)}" x2="${W2-pr}" y2="${Y(0)}" class="pm-axis"/>`;
+  s += `<line x1="${X(0)}" y1="${pt}" x2="${X(0)}" y2="${H2-pb}" class="pm-axis"/>`;
+  // confini
+  s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(range)}" y2="${Y(range)}" class="pm-bound"/>`;
+  s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(Jstar)}" y2="${Y(-range)}" class="pm-bound"/>`;
+  s += `<line x1="${X(-range)}" y1="${Y(0)}" x2="${X(0)}" y2="${Y(0)}" class="pm-bound"/>`;
+  // tick agli estremi e all'origine
+  [-range,0,range].forEach(v=>{
+    s += `<text x="${X(v)}" y="${H2-pb+12}" text-anchor="middle" class="pm-tick">${v}</text>`;
+    s += `<text x="${pl-4}" y="${Y(v)+3}" text-anchor="end" class="pm-tick">${v}</text>`;
+  });
+  s += `<text x="${W2-pr}" y="${H2-pb+12}" text-anchor="end" font-style="italic" class="pm-tick">J</text>`;
+  s += `<text x="${pl-4}" y="${pt+2}" text-anchor="end" font-style="italic" class="pm-tick">J'</text>`;
+  // etichette regioni
+  s += `<text x="${X(-1.6)}" y="${Y(2.3)}" class="pm-label" fill="var(--colB)">B</text>`;
+  s += `<text x="${X(1.35)}" y="${Y(0.15)}" class="pm-label" fill="var(--colC)">C</text>`;
+  s += `<text x="${X(-1.6)}" y="${Y(-2.3)}" class="pm-label" fill="var(--colA)">A</text>`;
+  // posizione corrente
+  const Jc = Math.max(-range, Math.min(range, J));
+  const Jpc = Math.max(-range, Math.min(range, Jp));
+  const reg = regionOf(J,Jp);
+  const regColorVar = reg==='A' ? '--colA' : (reg==='B' ? '--colB' : '--colC');
+  s += `<line x1="${X(Jc)}" y1="${Y(Jpc)}" x2="${X(Jc)}" y2="${Y(0)}" stroke="var(--muted)" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+  s += `<line x1="${X(Jc)}" y1="${Y(Jpc)}" x2="${pl}" y2="${Y(Jpc)}" stroke="var(--muted)" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+  s += `<circle cx="${X(Jc)}" cy="${Y(Jpc)}" r="5" class="pm-dot" fill="var(${regColorVar})"/>`;
+  pmSvg.innerHTML = s;
+}
+
+function draw(){
+  const J = parseFloat(Jin.value);
+  const Jp = parseFloat(Jpin.value);
+  Jval.textContent = J.toFixed(2);
+  Jpval.textContent = Jp.toFixed(2);
+
+  drawTriangle(J, Jp);
+  drawPhaseMap(J, Jp);
+
+  const L = lines(J, Jp);
+  const cross = findCrossing(J, Jp);
+
+  // range b: da 0 a un massimo che mostri il crossing con un po' di margine, o comunque una finestra ragionevole
+  let bmax = cross ? cross.bc*1.35 : 4;
+  bmax = Math.max(bmax, 1.5);
+
+  // calcola range y su tutte le linee nel dominio [0,bmax]
+  let ymin = Infinity, ymax = -Infinity;
+  L.forEach(l=>{
+    const y0 = l.base + 2*l.M*0;
+    const y1 = l.base + 2*l.M*bmax;
+    ymin = Math.min(ymin,y0,y1); ymax = Math.max(ymax,y0,y1);
+  });
+  const pad = (ymax-ymin)*0.08 || 1;
+  ymin -= pad; ymax += pad;
+
+  function X(b){ return padL + (b/bmax)*plotW; }
+  function Y(e){ return padT + plotH - ((e-ymin)/(ymax-ymin))*plotH; }
+
+  let svgContent = '';
+
+  // griglia orizzontale + tick numerici sull'asse E
+  const nGrid = 5;
+  for(let i=0;i<=nGrid;i++){
+    const yy = ymin + (ymax-ymin)*i/nGrid;
+    svgContent += `<line class="gridline" x1="${padL}" y1="${Y(yy)}" x2="${W-padR}" y2="${Y(yy)}"/>`;
+  }
+
+  // assi
+  svgContent += `<g class="axis">`;
+  svgContent += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}"/>`;
+  svgContent += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/>`;
+  // tick numerici asse E (verticale)
+  for(let i=0;i<=nGrid;i++){
+    const yy = ymin + (ymax-ymin)*i/nGrid;
+    svgContent += `<line x1="${padL-4}" y1="${Y(yy)}" x2="${padL}" y2="${Y(yy)}"/>`;
+    svgContent += `<text x="${padL-7}" y="${Y(yy)+4}" text-anchor="end">${yy.toFixed(1)}</text>`;
+  }
+  // tick numerici asse b (orizzontale) — l'ultimo e' omesso per non collidere con l'etichetta
+  const nTicksX = 5;
+  for(let i=0;i<nTicksX;i++){
+    const bb = bmax*i/nTicksX;
+    svgContent += `<line x1="${X(bb)}" y1="${H-padB}" x2="${X(bb)}" y2="${H-padB+4}"/>`;
+    svgContent += `<text x="${X(bb)}" y="${H-padB+16}" text-anchor="middle">${bb.toFixed(1)}</text>`;
+  }
+  // etichette degli assi, in posizioni libere
+  svgContent += `<text x="${W-padR}" y="${H-padB+16}" text-anchor="end" font-style="italic" font-size="13">b</text>`;
+  svgContent += `<text x="${padL-7}" y="${padT-4}" text-anchor="end" font-style="italic" font-size="13">E</text>`;
+  svgContent += `</g>`;
+
+  // linee spettro
+  L.forEach(l=>{
+    const dash = l.M < 0 ? '' : '4,3';
+    const x1=X(0), y1=Y(l.base), x2=X(bmax), y2=Y(l.base+2*l.M*bmax);
+    svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${l.cls}" stroke-width="2" stroke-dasharray="${dash}" fill="none"/>`;
+  });
+
+  // punto di crossing
+  if(cross){
+    const yAtBc = J+2*Jp-3*cross.bc; // = energia comune a bc
+    svgContent += `<circle cx="${X(cross.bc)}" cy="${Y(yAtBc)}" r="4" class="crossdot"/>`;
+    svgContent += `<text x="${X(cross.bc)}" y="${Y(yAtBc)-10}" text-anchor="middle" class="crosslabel">b_c=${cross.bc.toFixed(2)}</text>`;
+  }
+
+  // campo osservato: linea guida verticale + marker sul fondamentale istantaneo
+  const frac = parseFloat(bfracIn.value);
+  const bObs = frac*bmax;
+  bobsval.textContent = bObs.toFixed(2);
+  const st = stateAt(J, Jp, bObs);
+  svgContent += `<line x1="${X(bObs)}" y1="${padT}" x2="${X(bObs)}" y2="${H-padB}" class="obsline"/>`;
+  svgContent += `<circle cx="${X(bObs)}" cy="${Y(st.ground.E)}" r="4.5" class="${st.ground.cls} obsdot" style="fill:currentColor"/>`;
+
+  svg.innerHTML = svgContent;
+  // il marker del fondamentale osservato eredita il colore dalla classe della retta (currentColor non basta in innerHTML statico) -> fisso via attributo
+  const obsCircle = svg.querySelector('.obsdot');
+  if(obsCircle){
+    const colorVar = st.ground.cls === 'lineA' ? '--colA' : (st.ground.cls === 'lineB' ? '--colB' : '--colC');
+    obsCircle.style.fill = getComputedStyle(document.documentElement).getPropertyValue(colorVar);
+  }
+
+  // stato testuale
+  const g = groundEnergyAt(J, Jp, 0);
+  let html = `<b>A b=0:</b> fondamentale ${g[0]} (S12=${QN[g[0]].S12}, S=${QN[g[0]].S}), E=${g[1].toFixed(2)}<br>`;
+  if(cross){
+    html += `<b>Incrocio:</b> ${cross.from} &rarr; ${cross.to} a b<sub>c</sub> = ${cross.bc.toFixed(3)}`;
+  } else {
+    html += `<b>Nessun incrocio</b> per b&gt;0: A è già fondamentale.`;
+  }
+  html += `<hr class="sep">`;
+  html += `<b>Al campo osservato b=${bObs.toFixed(2)}:</b><br>`;
+  html += `fondamentale ${st.ground.mult} (S12=${QN[st.ground.mult].S12}, S=${QN[st.ground.mult].S}, M=${st.ground.M})<br>`;
+  html += `gap al primo eccitato: &Delta;E=${st.gap.toFixed(3)}<br>`;
+  html += `magnetizzazione: &lang;S<sub>z</sub>&rang;=${st.ground.M} (${Math.round(Math.abs(st.ground.M)/1.5*100)}% della saturazione)`;
+  statusBox.innerHTML = html;
+}
+
+Jin.addEventListener('input', draw);
+Jpin.addEventListener('input', draw);
+bfracIn.addEventListener('input', draw);
+document.querySelectorAll('.presets button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    Jin.value = btn.dataset.j;
+    Jpin.value = btn.dataset.jp;
+    draw();
+  });
+});
+
+draw();
+</script>
+</body>
+</html>

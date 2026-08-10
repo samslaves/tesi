@@ -1,0 +1,6 @@
+name: qiskit
+channels:
+  - defaults
+dependencies:
+  - python=3.13
+prefix: /home/schiavi/miniconda3/envs/qiskit

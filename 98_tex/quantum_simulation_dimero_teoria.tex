@@ -1,0 +1,481 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\geometry{margin=2.7cm}
+
+\title{Quantum simulation del dimero: derivazione teorica completa\\
+\large Decomposizione di Suzuki--Trotter per l'Hamiltoniana con termine DM}
+\author{}
+\date{}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\bigskip
+\noindent Questo documento raccoglie in forma sistematica le derivazioni relative al task di \emph{quantum simulation} (evoluzione temporale reale $e^{-iHt}$) richiesto dal relatore sull'Hamiltoniana VQE del dimero, in vista dell'implementazione tramite decomposizione di Suzuki--Trotter. Ogni passaggio è riportato per esteso, senza salti logici.
+
+\section{Hamiltoniana e struttura generale}
+
+L'Hamiltoniana del dimero, in convenzione $s_i^\alpha = \sigma_i^\alpha/2$, è
+
+\begin{equation}
+H = b(s_{z1}+s_{z2}) + J\,\vec s_1\cdot\vec s_2 + D(s_{x1}s_{z2}-s_{z1}s_{x2}) = H_1 + H_2,
+\end{equation}
+
+dove si è scelto di raggruppare i termini in due blocchi:
+
+\begin{align}
+H_1 &= b(s_{z1}+s_{z2}) + J\,\vec s_1\cdot\vec s_2 \qquad \text{(campo + scambio isotropo, \emph{fisso}, indipendente da } D\text{)},\\
+H_2 &= D(s_{x1}s_{z2}-s_{z1}s_{x2}) \qquad \text{(solo termine DM, si annulla per } D=0\text{)}.
+\end{align}
+
+In generale, per $D\neq0$, i due blocchi non commutano: $[H_1,H_2]\neq 0$. Per $D=0$ si ha semplicemente $H=H_1$ e l'evoluzione temporale è \textbf{esatta}, senza alcuna approssimazione. Per $D\neq0$ è necessaria la decomposizione di Suzuki--Trotter, il cui errore verrà derivato nella Sezione~\ref{sec:trotter-error}.
+
+Lo scopo delle Sezioni~\ref{sec:UJ}--\ref{sec:U2} è mostrare che, sebbene $H_1$ e $H_2$ non commutino tra loro, ciascuno dei due blocchi si decompone \emph{esattamente} (senza errore di approssimazione) in un prodotto di rotazioni a uno e due qubit implementabili nativamente in Qiskit.
+
+\section{Decomposizione esatta di $U_J(t) = e^{-iJt\,\vec s_1\cdot\vec s_2}$}
+\label{sec:UJ}
+
+\subsection{Riscrittura in operatori di Pauli}
+
+Il prodotto scalare degli spin si scrive esplicitamente come
+
+\begin{equation}
+\vec s_1\cdot\vec s_2 = s_{x1}s_{x2} + s_{y1}s_{y2} + s_{z1}s_{z2}.
+\end{equation}
+
+Sostituendo $s_i^\alpha = \sigma_i^\alpha/2$ in ciascun termine:
+
+\begin{equation}
+\vec s_1\cdot\vec s_2 = \frac{X_1X_2}{4} + \frac{Y_1Y_2}{4} + \frac{Z_1Z_2}{4} = \frac{1}{4}\left(X_1X_2 + Y_1Y_2 + Z_1Z_2\right),
+\end{equation}
+
+dove si è abbreviato $X_1X_2 \equiv X\otimes X$ (analogamente per $Y,Z$). Il termine di scambio isotropo diventa quindi
+
+\begin{equation}
+J\,\vec s_1\cdot\vec s_2 = \frac{J}{4}\left(XX+YY+ZZ\right),
+\end{equation}
+
+e l'operatore di evoluzione corrispondente è
+
+\begin{equation}
+U_J(t) = \exp\!\left[-i\,\frac{Jt}{4}\left(XX+YY+ZZ\right)\right].
+\end{equation}
+
+Il fattore $1/4$ emerge automaticamente dal passaggio da spin $\vec s_i=\vec\sigma_i/2$ a Pauli: è lo stesso fattore-4 tracciato altrove nel progetto tra la convenzione $J_{\mathrm{code}}$ (che moltiplica direttamente gli operatori di Pauli) e $J_{\mathrm{Crippa}}$ (che moltiplica gli operatori di spin $\vec s_i$).
+
+\subsection{Commutatività di $XX$, $YY$, $ZZ$}
+\label{subsec:commXYZ}
+
+Si dimostra che i tre operatori a due qubit $XX$, $YY$, $ZZ$ commutano a due a due. La dimostrazione usa la proprietà del prodotto misto tra operatori su spazi tensoriali,
+
+\begin{equation}
+(A\otimes B)(C\otimes D) = (AC)\otimes(BD),
+\end{equation}
+
+e le relazioni di anticommutazione/prodotto delle matrici di Pauli su un singolo qubit:
+
+\begin{equation}
+XY = iZ,\quad YX=-iZ,\quad YZ=iX,\quad ZY=-iX,\quad ZX=iY,\quad XZ=-iY.
+\end{equation}
+
+\paragraph{Coppia $(XX,YY)$.}
+
+\begin{align}
+(X\otimes X)(Y\otimes Y) &= (XY)\otimes(XY) = (iZ)\otimes(iZ) = i^2\,(Z\otimes Z) = -(Z\otimes Z),\\
+(Y\otimes Y)(X\otimes X) &= (YX)\otimes(YX) = (-iZ)\otimes(-iZ) = (-i)^2\,(Z\otimes Z) = -(Z\otimes Z).
+\end{align}
+
+I due prodotti coincidono: $(XX)(YY) = (YY)(XX) = -ZZ$, dunque $[XX,YY]=0$.
+
+\paragraph{Coppia $(YY,ZZ)$.}
+
+\begin{align}
+(Y\otimes Y)(Z\otimes Z) &= (YZ)\otimes(YZ) = (iX)\otimes(iX) = -(X\otimes X),\\
+(Z\otimes Z)(Y\otimes Y) &= (ZY)\otimes(ZY) = (-iX)\otimes(-iX) = -(X\otimes X).
+\end{align}
+
+I due prodotti coincidono: $(YY)(ZZ)=(ZZ)(YY)=-XX$, dunque $[YY,ZZ]=0$.
+
+\paragraph{Coppia $(ZZ,XX)$.}
+
+\begin{align}
+(Z\otimes Z)(X\otimes X) &= (ZX)\otimes(ZX) = (iY)\otimes(iY) = -(Y\otimes Y),\\
+(X\otimes X)(Z\otimes Z) &= (XZ)\otimes(XZ) = (-iY)\otimes(-iY) = -(Y\otimes Y).
+\end{align}
+
+I due prodotti coincidono: $(ZZ)(XX)=(XX)(ZZ)=-YY$, dunque $[ZZ,XX]=0$.
+
+\medskip
+\noindent Essendo $[XX,YY]=[YY,ZZ]=[ZZ,XX]=0$, per l'argomento generale dimostrato nella Sezione~\ref{sec:BCH} l'esponenziale della somma fattorizza \textbf{esattamente} (in qualunque ordine dei tre fattori, senza alcun errore di troncamento):
+
+\begin{equation}
+U_J(t) = \exp\!\left(-i\tfrac{Jt}{4}XX\right)\exp\!\left(-i\tfrac{Jt}{4}YY\right)\exp\!\left(-i\tfrac{Jt}{4}ZZ\right).
+\end{equation}
+
+\subsection{Mappatura sui gate nativi Qiskit}
+
+Qiskit definisce, nella convenzione standard (\texttt{qiskit.circuit.library}, verificata numericamente su Qiskit 2.x tramite \texttt{RXXGate(0.7).to\_matrix()}):
+
+\begin{equation}
+R_{XX}(\theta) = e^{-i\frac{\theta}{2}XX}, \qquad R_{YY}(\theta) = e^{-i\frac{\theta}{2}YY}, \qquad R_{ZZ}(\theta) = e^{-i\frac{\theta}{2}ZZ}.
+\end{equation}
+
+La verifica numerica diretta per $\theta=0.7$ dà, sulla diagonale, $\cos(\theta/2)=\cos(0.35)=0.9394$ e, fuori diagonale (nel pattern proprio di $X\otimes X$), $-i\sin(\theta/2)=-i\sin(0.35)=-0.3429\,i$, in pieno accordo con la formula attesa.
+
+Confrontando l'esponente della definizione Qiskit, $\theta/2$, con l'esponente ottenuto nella Sezione~\ref{sec:UJ} per il singolo fattore, $Jt/4$, si ricava
+
+\begin{equation}
+\frac{\theta}{2} = \frac{Jt}{4} \quad\Longrightarrow\quad \theta = \frac{Jt}{2}.
+\end{equation}
+
+Si ottiene quindi il risultato finale per il blocco di scambio:
+
+\begin{equation}
+\boxed{U_J(t) = R_{XX}\!\left(\frac{Jt}{2}\right)\,R_{YY}\!\left(\frac{Jt}{2}\right)\,R_{ZZ}\!\left(\frac{Jt}{2}\right)}
+\end{equation}
+
+\section{Evoluzione completa di $H_1$ (campo + scambio isotropo)}
+\label{sec:H1}
+
+\subsection{Il campo commuta con lo scambio isotropo}
+
+Si introduce lo spin totale $\vec S = \vec s_1+\vec s_2$ e il relativo Casimir $S^2=\vec S\cdot\vec S$. Espandendo esplicitamente:
+
+\begin{equation}
+S^2 = (\vec s_1+\vec s_2)\cdot(\vec s_1+\vec s_2) = s_1^2 + s_2^2 + 2\,\vec s_1\cdot\vec s_2,
+\end{equation}
+
+da cui, isolando il prodotto scalare:
+
+\begin{equation}
+\vec s_1\cdot\vec s_2 = \frac{1}{2}\left(S^2 - s_1^2 - s_2^2\right).
+\label{eq:s1s2-casimir}
+\end{equation}
+
+Per un sistema di due spin-$1/2$ fissati, $s_1^2$ e $s_2^2$ sono costanti (autovalori fissi dell'operatore di Casimir di singolo spin), quindi il termine di scambio isotropo è, a meno di una costante additiva, proporzionale al Casimir $S^2$ dello spin totale.
+
+Il punto cruciale è che $S^2$, essendo il Casimir dell'algebra del momento angolare, è per costruzione uno \emph{scalare invariante sotto rotazioni}, mentre $S_z$ (componente $z$ dello spin totale, che compare nel termine di campo) è il \emph{generatore delle rotazioni attorno all'asse $z$}. Un operatore invariante per rotazioni commuta sempre con qualunque generatore di rotazione: è esattamente lo stesso motivo per cui, per un singolo spin, vale $[\vec s^{\,2},s_z]=0$. Formalmente:
+
+\begin{equation}
+[S^2, S_z] = 0 \qquad \text{(proprietà generale dell'algebra del momento angolare)}.
+\end{equation}
+
+Applicando questo risultato all'Eq.~\eqref{eq:s1s2-casimir}, con $S_z=s_{z1}+s_{z2}$:
+
+\begin{align}
+\left[J\,\vec s_1\cdot\vec s_2,\; b(s_{z1}+s_{z2})\right] &= \left[\frac{J}{2}\left(S^2-s_1^2-s_2^2\right),\, bS_z\right]\\
+&= \frac{Jb}{2}\underbrace{[S^2,S_z]}_{=0} - \frac{Jb}{2}\underbrace{[s_1^2+s_2^2,\,S_z]}_{=0\text{ (costanti)}}\\
+&= 0.
+\end{align}
+
+Si noti che questo argomento è concettualmente distinto (e più diretto) rispetto a un eventuale argomento basato sulla simmetria di scambio dei siti $1\leftrightarrow 2$: quest'ultima garantisce che $\vec s_1\cdot\vec s_2$ sia simmetrico sotto lo scambio delle particelle, ma non fornisce di per sé alcuna informazione sulla relazione di commutazione con $S_z$. La commutazione con il campo discende invece esclusivamente dal fatto che $S^2$ è il Casimir dell'algebra $\mathfrak{su}(2)$ dello spin totale.
+
+\subsection{Fattorizzazione esatta di $e^{-iH_1t}$}
+
+Poiché il campo e lo scambio isotropo commutano, per l'argomento generale della Sezione~\ref{sec:BCH} l'esponenziale della loro somma fattorizza esattamente:
+
+\begin{equation}
+e^{-iH_1t} = e^{-i\left[b(s_{z1}+s_{z2})+J\vec s_1\cdot\vec s_2\right]t} = e^{-ib\,s_{z1}t}\;e^{-ib\,s_{z2}t}\;e^{-iJt\,\vec s_1\cdot\vec s_2}.
+\end{equation}
+
+Per il pezzo di campo, usando $s_{zi}=\sigma_{zi}/2$:
+
+\begin{equation}
+e^{-ib\,s_{zi}t} = e^{-i\frac{bt}{2}Z_i}.
+\end{equation}
+
+Confrontando con la convenzione Qiskit per la rotazione a un qubit, $R_z(\phi)=e^{-i\frac{\phi}{2}Z}$ (stessa struttura, stesso fattore $1/2$, già verificata per $R_{XX}$ nella Sezione~\ref{sec:UJ}), si identifica $\phi=bt$:
+
+\begin{equation}
+e^{-ib\,s_{zi}t} = R_z^{(i)}(bt).
+\end{equation}
+
+Il risultato finale, valido in qualunque ordine tra i tre fattori (poiché tutti commutano a due a due), è:
+
+\begin{equation}
+\boxed{\ket{\psi(t)} = R_z^{(1)}(bt)\,R_z^{(2)}(bt)\,U_J(t)\,\ket{\psi(0)}}
+\end{equation}
+
+con $U_J(t)$ come derivato nella Sezione~\ref{sec:UJ}. Questa espressione è \textbf{esatta}: per $D=0$ non è presente alcun errore di approssimazione, indipendentemente dal tempo $t$ simulato.
+
+\section{Decomposizione esatta di $U_2(t) = e^{-iH_2t}$ (termine DM)}
+\label{sec:U2}
+
+\subsection{Riscrittura in operatori di Pauli}
+
+Sostituendo $s_i^\alpha=\sigma_i^\alpha/2$ nel termine DM:
+
+\begin{equation}
+H_2 = D(s_{x1}s_{z2}-s_{z1}s_{x2}) = D\left(\frac{X_1}{2}\frac{Z_2}{2} - \frac{Z_1}{2}\frac{X_2}{2}\right) = \frac{D}{4}\left(X_1Z_2 - Z_1X_2\right).
+\end{equation}
+
+Si definiscono, per brevità di notazione, i due operatori a due qubit
+
+\begin{equation}
+P_1 \equiv X_1Z_2 \quad(\text{$X$ sul qubit 1, $Z$ sul qubit 2}), \qquad P_2 \equiv Z_1X_2 \quad(\text{$Z$ sul qubit 1, $X$ sul qubit 2}),
+\end{equation}
+
+cosicché $H_2 = \dfrac{D}{4}(P_1-P_2)$.
+
+\subsection{Commutatività di $P_1$ e $P_2$}
+
+Si calcolano esplicitamente i due prodotti, usando ancora $(A\otimes B)(C\otimes D)=(AC)\otimes(BD)$ e le relazioni $XZ=-iY$, $ZX=iY$:
+
+\begin{align}
+P_1P_2 &= (X_1Z_2)(Z_1X_2) = (X_1Z_1)\otimes(Z_2X_2) = (-iY_1)\otimes(iY_2) = (-i)(i)\,Y_1Y_2 = Y_1Y_2,\\
+P_2P_1 &= (Z_1X_2)(X_1Z_2) = (Z_1X_1)\otimes(X_2Z_2) = (iY_1)\otimes(-iY_2) = (i)(-i)\,Y_1Y_2 = Y_1Y_2.
+\end{align}
+
+I due prodotti coincidono: $P_1P_2 = P_2P_1 = Y_1Y_2$, dunque $[P_1,P_2]=0$.
+
+Ponendo $\theta \equiv \dfrac{Dt}{4}$, per l'argomento generale della Sezione~\ref{sec:BCH} si ha, esattamente e senza approssimazione:
+
+\begin{equation}
+e^{-i\theta(P_1-P_2)} = e^{-i\theta P_1}\,e^{+i\theta P_2}.
+\label{eq:U2-factorized}
+\end{equation}
+
+\subsection{Circuito per i singoli termini: identità di Hadamard}
+
+Si sfrutta l'identità $HZH=X$ (l'Hadamard scambia le basi computazionale e $X$), che si dimostra per calcolo diretto delle matrici $2\times2$:
+
+\begin{equation}
+H = \frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}, \qquad Z=\begin{pmatrix}1&0\\0&-1\end{pmatrix}.
+\end{equation}
+
+Calcolando prima $ZH$:
+
+\begin{equation}
+ZH = \begin{pmatrix}1&0\\0&-1\end{pmatrix}\frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix} = \frac{1}{\sqrt2}\begin{pmatrix}1&1\\-1&1\end{pmatrix},
+\end{equation}
+
+e poi $H(ZH)$:
+
+\begin{equation}
+H(ZH) = \frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}\cdot\frac{1}{\sqrt2}\begin{pmatrix}1&1\\-1&1\end{pmatrix} = \frac{1}{2}\begin{pmatrix}1-1 & 1+1\\ 1+1 & 1-1\end{pmatrix} = \begin{pmatrix}0&1\\1&0\end{pmatrix} = X.
+\end{equation}
+
+Si conferma quindi $HZH=X$ (e, per la stessa identità applicata al contrario, $HXH=Z$, essendo $H^2=I$ e quindi $H$ auto-inversa).
+
+Applicando l'Hadamard \emph{solo al qubit che porta $X$} nel termine considerato (qubit 1 per $P_1=X_1Z_2$):
+
+\begin{equation}
+X_1Z_2 = (H_1\otimes I_2)\,Z_1Z_2\,(H_1\otimes I_2),
+\end{equation}
+
+da cui, per l'esponenziale (l'Hadamard, essendo unitaria e auto-inversa, si porta dentro e fuori dall'esponenziale in modo standard, $e^{U A U^\dagger}=U e^A U^\dagger$):
+
+\begin{equation}
+e^{-i\theta\,X_1Z_2} = (H_1\otimes I_2)\;e^{-i\theta\,Z_1Z_2}\;(H_1\otimes I_2).
+\end{equation}
+
+Usando la convenzione Qiskit $R_{ZZ}(\phi)=e^{-i\frac{\phi}{2}ZZ}$ (Sezione~\ref{sec:UJ}), l'angolo da passare al gate è $\phi=2\theta$:
+
+\begin{equation}
+e^{-i\theta\,X_1Z_2} = (H\otimes I)\;R_{ZZ}(2\theta)\;(H\otimes I).
+\label{eq:P1-circuit}
+\end{equation}
+
+Analogamente, per il secondo termine $P_2=Z_1X_2$, l'Hadamard va applicata al qubit 2 (che porta $X$):
+
+\begin{equation}
+Z_1X_2 = (I_1\otimes H_2)\,Z_1Z_2\,(I_1\otimes H_2) \quad\Longrightarrow\quad e^{+i\theta\,Z_1X_2} = (I\otimes H)\;R_{ZZ}(-2\theta)\;(I\otimes H),
+\label{eq:P2-circuit}
+\end{equation}
+
+dove il segno dell'angolo si inverte rispetto all'Eq.~\eqref{eq:P1-circuit} a causa del segno $+i\theta$ nell'Eq.~\eqref{eq:U2-factorized}.
+
+\subsection{Circuito completo per $U_2(t)$}
+
+Combinando le Eq.~\eqref{eq:P1-circuit} e~\eqref{eq:P2-circuit} secondo l'ordine dell'Eq.~\eqref{eq:U2-factorized}, e sostituendo $\theta=Dt/4$ (quindi $2\theta=Dt/2$):
+
+\begin{equation}
+\boxed{U_2(t) = \Big[(I\otimes H)\,R_{ZZ}\!\Big(-\dfrac{Dt}{2}\Big)\,(I\otimes H)\Big]\cdot\Big[(H\otimes I)\,R_{ZZ}\!\Big(\dfrac{Dt}{2}\Big)\,(H\otimes I)\Big]}
+\end{equation}
+
+Anche questo blocco, isolato, è \textbf{esatto}: l'unica fonte di errore di approssimazione nell'intera simulazione è, come mostrato nella Sezione~\ref{sec:trotter-error}, l'accoppiamento tra $H_1$ e $H_2$.
+
+\subsection{Nota sulla convenzione di segno del termine DM}
+
+Se il termine DM fosse definito con segno opposto rispetto alla convenzione adottata, cioè $H_2' = D(s_{z1}s_{x2}-s_{x1}s_{z2}) = -H_2$, allora
+
+\begin{equation}
+U_2'(t) = e^{-iH_2't} = e^{+iH_2t} = U_2(-t).
+\end{equation}
+
+Concretamente, questo significa che \emph{entrambi} gli angoli dei due gate $R_{ZZ}$ cambiano segno simultaneamente: il blocco che nella convenzione adottata porta $R_{ZZ}(-Dt/2)$ diventerebbe $R_{ZZ}(+Dt/2)$ e viceversa. La struttura del circuito (sequenza $H$--$R_{ZZ}$--$H$, l'assegnazione di quale Hadamard va su quale qubit) resta invece identica: cambia unicamente il segno dei parametri $\theta$ passati ai gate $R_{ZZ}$, non la topologia del circuito.
+
+\section{Perché $[A,B]=0$ implica fattorizzazione esatta}
+\label{sec:BCH}
+
+Tutte le fattorizzazioni derivate nelle Sezioni~\ref{sec:UJ}--\ref{sec:U2} si basano sullo stesso principio generale, che si dimostra qui una volta per tutte tramite la formula di Baker--Campbell--Hausdorff (BCH).
+
+Per due operatori generici $A,B$ (non necessariamente commutanti), la formula BCH afferma:
+
+\begin{equation}
+e^{A}e^{B} = \exp\left(A+B+\frac{1}{2}[A,B]+\frac{1}{12}\big[A,[A,B]\big]+\frac{1}{12}\big[B,[B,A]\big]+\cdots\right),
+\end{equation}
+
+dove tutti i termini indicati con i puntini sono commutatori annidati di ordine sempre più alto, coinvolgenti esclusivamente $A$, $B$ e i loro commutatori successivi.
+
+Se $[A,B]=0$, allora:
+\begin{itemize}
+\item il termine $\frac12[A,B]$ si annulla identicamente;
+\item ogni commutatore annidato successivo, essendo costruito a partire da $[A,B]$ (o da commutatori che a loro volta si annullano), si annulla anch'esso identicamente, per induzione sulla profondità di annidamento.
+\end{itemize}
+
+Di conseguenza, \emph{l'intera serie infinita di correzioni} collassa a zero, non solo il primo termine:
+
+\begin{equation}
+[A,B]=0 \quad\Longrightarrow\quad e^{A}e^{B} = e^{A+B} \quad \text{esattamente}.
+\end{equation}
+
+Questo è il motivo per cui:
+\begin{itemize}
+\item la fattorizzazione di $U_J(t)$ nei tre fattori $R_{XX}, R_{YY}, R_{ZZ}$ (Sezione~\ref{sec:UJ}) è esatta, poiché $[XX,YY]=[YY,ZZ]=[ZZ,XX]=0$;
+\item la fattorizzazione di $e^{-iH_1t}$ nel prodotto campo$\times$scambio (Sezione~\ref{sec:H1}) è esatta, poiché $[S^2,S_z]=0$;
+\item la fattorizzazione di $U_2(t)$ nei due blocchi $P_1,P_2$ (Sezione~\ref{sec:U2}) è esatta, poiché $[P_1,P_2]=0$.
+\end{itemize}
+
+Il caso di $H_1$ e $H_2$ è invece concettualmente diverso: per $D\neq0$ si ha $[H_1,H_2]\neq0$ (il termine DM rompe la conservazione di $M$, come già verificato numericamente nel lavoro sul dimero VQE), la serie BCH \emph{non} si tronca, e approssimare $e^{-i(H_1+H_2)t}\approx e^{-iH_1t}e^{-iH_2t}$ significa scartare il termine $-\frac12[H_1,H_2]t^2$ e tutti i termini di ordine superiore della serie. Da qui la necessità del prodotto di Suzuki--Trotter, il cui errore viene quantificato nella sezione seguente.
+
+\section{Derivazione dell'errore di Trotter}
+\label{sec:trotter-error}
+
+\subsection{Espansione in serie per un singolo passo}
+
+Si consideri un singolo passo di Trotter di durata $\tau = t/N$, dove $N$ è il numero totale di passi per simulare il tempo totale $t$. Si confrontano l'evoluzione esatta e quella approssimata su questo singolo passo:
+
+\begin{equation}
+U_{\text{esatto}}(\tau) = e^{-i(H_1+H_2)\tau}, \qquad U_{\text{Trotter}}(\tau) = e^{-iH_1\tau}\,e^{-iH_2\tau}.
+\end{equation}
+
+Espandendo entrambe in serie di Taylor fino al second'ordine in $\tau$:
+
+\begin{equation}
+U_{\text{esatto}}(\tau) = I - i\tau(H_1+H_2) - \frac{\tau^2}{2}(H_1+H_2)^2 + O(\tau^3).
+\end{equation}
+
+Per il prodotto Trotter, si espande ciascun fattore separatamente,
+
+\begin{equation}
+e^{-iH_1\tau} = I - i\tau H_1 - \frac{\tau^2}{2}H_1^2 + O(\tau^3), \qquad e^{-iH_2\tau} = I - i\tau H_2 - \frac{\tau^2}{2}H_2^2 + O(\tau^3),
+\end{equation}
+
+e si moltiplicano, mantenendo tutti i termini fino a $O(\tau^2)$:
+
+\begin{align}
+U_{\text{Trotter}}(\tau) &= \left[I-i\tau H_1-\frac{\tau^2}{2}H_1^2\right]\left[I-i\tau H_2-\frac{\tau^2}{2}H_2^2\right]+O(\tau^3)\\
+&= I - i\tau H_2 - \frac{\tau^2}{2}H_2^2 - i\tau H_1 + (-i\tau H_1)(-i\tau H_2) - \frac{\tau^2}{2}H_1^2 + O(\tau^3)\\
+&= I - i\tau(H_1+H_2) - \frac{\tau^2}{2}\left(H_1^2+H_2^2\right) - \tau^2 H_1H_2 + O(\tau^3)\\
+&= I - i\tau(H_1+H_2) - \frac{\tau^2}{2}\left(H_1^2+H_2^2+2H_1H_2\right) + O(\tau^3).
+\end{align}
+
+\subsection{Differenza tra le due espansioni}
+
+Si espande ora $(H_1+H_2)^2$ nell'espressione esatta:
+
+\begin{equation}
+(H_1+H_2)^2 = H_1^2 + H_1H_2 + H_2H_1 + H_2^2.
+\end{equation}
+
+Sottraendo le due espansioni termine a termine:
+
+\begin{align}
+U_{\text{esatto}}(\tau) - U_{\text{Trotter}}(\tau) &= -\frac{\tau^2}{2}\left(H_1^2+H_1H_2+H_2H_1+H_2^2\right) + \frac{\tau^2}{2}\left(H_1^2+H_2^2+2H_1H_2\right) + O(\tau^3)\\
+&= -\frac{\tau^2}{2}\left(H_1H_2+H_2H_1\right) + \frac{\tau^2}{2}\left(2H_1H_2\right) + O(\tau^3)\\
+&= \frac{\tau^2}{2}\left(2H_1H_2-H_1H_2-H_2H_1\right) + O(\tau^3)\\
+&= \frac{\tau^2}{2}\left(H_1H_2-H_2H_1\right) + O(\tau^3).
+\end{align}
+
+Riconoscendo $H_1H_2-H_2H_1=[H_1,H_2]$, si ottiene il risultato:
+
+\begin{equation}
+\boxed{U_{\text{esatto}}(\tau) - U_{\text{Trotter}}(\tau) = \frac{\tau^2}{2}\,[H_1,H_2] + O(\tau^3)}
+\end{equation}
+
+L'errore per singolo passo è dunque $O(\tau^2)=O\big((t/N)^2\big)$, in accordo con quanto riportato negli appunti del relatore, ed è proporzionale al commutatore $[H_1,H_2]$: coerentemente, per $D=0$ (dove $[H_1,H_2]=0$, si veda la Sezione~\ref{sec:H1}) l'errore si annulla identicamente, indipendentemente da $\tau$.
+
+\subsection{Errore totale su $N$ passi}
+
+L'evoluzione temporale completa fino al tempo $t$ è approssimata dal prodotto di $N$ passi identici:
+
+\begin{equation}
+U_{\text{Trotter}}(\tau)^N \approx U_{\text{esatto}}(t), \qquad \tau = t/N.
+\end{equation}
+
+Per stimare l'errore totale, si usa la disuguaglianza triangolare applicata alla norma operatoriale $\|\cdot\|$ (ad esempio la norma spettrale), che permette di limitare l'errore accumulato su $N$ passi con l'errore per singolo passo moltiplicato per $N$:
+
+\begin{equation}
+\left\|U_{\text{esatto}}(t) - U_{\text{Trotter}}(\tau)^N\right\| \;\lesssim\; N \cdot \left\|U_{\text{esatto}}(\tau)-U_{\text{Trotter}}(\tau)\right\| = N\cdot O(\tau^2).
+\end{equation}
+
+Sostituendo $\tau=t/N$:
+
+\begin{equation}
+\left\|U_{\text{esatto}}(t) - U_{\text{Trotter}}(\tau)^N\right\| \;\lesssim\; N\cdot O\!\left(\frac{t^2}{N^2}\right) = O\!\left(\frac{t^2}{N}\right).
+\end{equation}
+
+L'errore \textbf{totale} decresce quindi come $1/N$: si tratta di un metodo del prim'ordine. Raddoppiando il numero di passi $N$, a parità di tempo totale simulato $t$, l'errore totale si dimezza.
+
+\subsection{Scaling rispetto al tempo totale simulato}
+
+Dallo scaling $O(t^2/N)$ dell'errore totale derivato sopra, si ricavano due conseguenze pratiche:
+
+\begin{itemize}
+\item \textbf{A $N$ fisso}: raddoppiando il tempo totale di simulazione $t\to 2t$, l'errore scala come $(2t)^2/N = 4\cdot(t^2/N)$, ossia \textbf{quadruplica}.
+\item \textbf{A errore fisso}: per mantenere lo stesso errore totale mentre si raddoppia $t$, occorre che $t^2/N$ resti costante. Se $t\to2t$, allora $(2t)^2/N' = t^2/N$ implica $N' = 4N$: il numero di passi deve quadruplicare.
+\end{itemize}
+
+In generale, per mantenere l'errore costante al variare di $t$, il numero di passi deve scalare come $N\propto t^2$.
+
+\paragraph{Implicazione pratica.} Poiché il numero di gate nel circuito di Trotter è proporzionale al numero di passi $N$, il costo circuitale (profondità, numero di gate a due qubit) cresce \textbf{quadraticamente} con il tempo totale simulato, a errore fissato. Questo è uno dei limiti pratici noti del prodotto di Trotter al prim'ordine, e motiva l'uso, in letteratura, di schemi di ordine superiore (ad esempio il prodotto di Trotter simmetrico, o formule di Suzuki di ordine 2, con errore per passo $O(\tau^3)$ anziché $O(\tau^2)$) quando è necessario simulare tempi lunghi. Per il presente task, coerentemente con quanto richiesto dal relatore, ci si limita al prim'ordine.
+
+\subsection{Metodi di verifica numerica}
+
+La derivazione teorica dello scaling dell'errore può essere verificata numericamente con due approcci standard, entrambi compatibili con gli strumenti già impiegati nel resto del progetto:
+
+\begin{enumerate}
+\item \textbf{Norma operatoriale.} Si costruisce esplicitamente l'evoluzione esatta $U_{\text{esatto}}(t)=\exp(-iHt)$ (ad esempio tramite \texttt{scipy.linalg.expm}, oppure tramite gli strumenti di algebra lineare di Qiskit come \texttt{Operator}) e l'evoluzione di Trotter $U_{\text{Trotter}}(\tau)^N$ come prodotto esplicito di matrici. Si calcola quindi $\left\|U_{\text{esatto}}-U_{\text{Trotter}}^N\right\|$ (norma spettrale o di Frobenius) al variare di $N$, verificando che lo scaling numerico riproduca l'andamento teorico $\propto 1/N$.
+\item \textbf{Fidelity sullo stato evoluto.} Si applicano entrambe le evoluzioni a un medesimo stato iniziale $\ket{\psi_0}$, ottenendo $\ket{\psi_{\text{esatto}}(t)}$ e $\ket{\psi_{\text{Trotter}}(t)}$, e si calcola la fidelity
+\begin{equation}
+\mathcal F(t) = \left|\langle \psi_{\text{esatto}}(t) \,|\, \psi_{\text{Trotter}}(t) \rangle\right|,
+\end{equation}
+verificando che $1-\mathcal F(t) \propto t^2/N$ (a $t$ fissato, al variare di $N$). Questa è la stessa metodologia di fidelity già impiegata nella validazione del VQE nel resto del progetto, e si presta naturalmente al riutilizzo del codice esistente.
+\end{enumerate}
+
+\section{Riepilogo dei risultati}
+
+La Tabella~\ref{tab:riepilogo} riassume tutti i blocchi derivati, distinguendo quali sono esatti e quale introduce l'unico errore di approssimazione dell'intera costruzione.
+
+\begin{table}[h]
+\centering
+\begin{tabular}{@{}p{3.3cm}p{7.7cm}c@{}}
+\toprule
+\textbf{Blocco} & \textbf{Espressione} & \textbf{Natura} \\
+\midrule
+$U_J(t)$ (scambio) & $R_{XX}(Jt/2)\,R_{YY}(Jt/2)\,R_{ZZ}(Jt/2)$ & Esatta \\[4pt]
+$e^{-iH_1t}$ ($D=0$) & $R_z^{(1)}(bt)\,R_z^{(2)}(bt)\,U_J(t)$ & Esatta \\[4pt]
+$U_2(t)$ (termine DM) & $\big[(I\otimes H)R_{ZZ}(-Dt/2)(I\otimes H)\big]\cdot\big[(H\otimes I)R_{ZZ}(Dt/2)(H\otimes I)\big]$ & Esatta \\[4pt]
+$e^{-i(H_1+H_2)t}$, $D\neq0$ & $\left(e^{-iH_1t/N}\,e^{-iH_2t/N}\right)^N$ & Approssimata, errore $O(t^2/N)$ \\
+\bottomrule
+\end{tabular}
+\caption{Riepilogo dei blocchi di evoluzione temporale derivati per l'Hamiltoniana del dimero.}
+\label{tab:riepilogo}
+\end{table}
+
+\end{document}

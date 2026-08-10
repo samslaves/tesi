@@ -1,0 +1,539 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.7cm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\title{Quantum simulation del dimero: applicazione della teoria\\
+all'implementazione Qiskit\\[6pt]
+\large Dai notebook di teoria ai notebook di simulazione --- procedura commentata}
+\author{Samuele \\ Relatore: Prof. Alessandro Chiesa}
+\date{20 luglio 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Questo documento ricostruisce, passo per passo, come la teoria
+raccolta in \texttt{quantum\_simulation\_dimero\_teoria.md} e nei documenti
+di derivazione del dimero sia stata applicata nella costruzione dei due
+notebook Qiskit prodotti per il task di \emph{quantum simulation} (evoluzione
+temporale $e^{-iHt}$) richiesto dal relatore:
+\texttt{quantum\_simulation\_dimero\_trotter.ipynb} (versione completa, con
+derivazione fisica del punto di lavoro) e la sua versione
+\texttt{\_semplificato.ipynb} (solo il richiesto dal relatore, con
+esplorazione interattiva dei parametri). Ogni passaggio riporta il
+riferimento alla teoria da cui discende; dove la teoria di progetto non
+copre un passaggio, si cita la fonte esterna usata. Le versioni dei
+documenti di teoria citate sono quelle \textbf{corrette} (vedi
+\texttt{errata\_simmetrie\_dmi\_spin} e la ricostruzione integrale di
+\texttt{simmetrie\_dmi\_spin.tex}, oltre alla correzione minore di
+\texttt{dimero\_sintesi.tex}).
+\end{abstract}
+
+\tableofcontents
+
+\section{Mappa dei riferimenti}
+
+La tabella seguente elenca i documenti di teoria richiamati in questo
+documento e il loro stato.
+
+\begin{center}
+\begin{tabular}{@{}p{4.6cm}p{9.6cm}@{}}
+\toprule
+Documento & Stato e uso \\
+\midrule
+\texttt{quantum\_simulation\_dimero\_teoria.md} & Derivazione completa dei blocchi
+esatti di Trotter (\S2--\S6 di quel file). Nessuna correzione necessaria: è
+il riferimento primario di questo documento. \\
+\texttt{quantum\_simulation\_trascrizione\_appunti.md} & Trascrizione degli
+appunti del relatore sull'Hamiltoniana $H=H_1+H_2$; riferimento per
+l'inquadramento iniziale (\S1). \\
+\texttt{dimero\_DM.pdf} (alias \texttt{dimero\_teoria.pdf}) & Derivazione
+completa dello spettro a matrice $4\times4$, blocco $3\times3$, autostato
+esatto $|t_0\rangle$. Verificato interamente corretto in questa
+conversazione: nessuna correzione. Usato per \S2 e \S5. \\
+\texttt{simmetrie\_dmi\_spin.tex} & Regole di selezione della DMI, struttura
+a V, isotropia del singoletto. \textbf{Versione corretta} (fattore $2$ e
+$\sqrt2$ negli elementi di matrice, propagato a 8 sezioni): usata per \S2. \\
+\texttt{dimero\_sintesi.tex} & Anti-incrocio a $b/J=2$, degenerazione a
+$B=0$. \textbf{Corretta} in un solo punto (norma dei commutatori in \S2.2 di
+quel file): non direttamente citata qui ma concettualmente affine a \S5. \\
+\texttt{dimero\_spin.pdf} & Origine microscopica $J=4t^2/U$ da Hubbard.
+Verificato corretto; non necessario in questo documento (riguarda l'origine
+di $J$, non la simulazione Trotter). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Dove non esiste un riferimento nei documenti di progetto, il documento cita
+esplicitamente la fonte esterna (letteratura o documentazione Qiskit) usata
+per colmare il vuoto.
+
+\section{Punto di partenza: la richiesta del relatore}
+
+\subsection{La richiesta}
+
+Il relatore ha chiesto (risposte del 19/07/2026, vedi
+\texttt{domande\_relatore.md} e \texttt{log\_decisioni.md}) di esplorare
+diversi set di parametri con la dinamica \emph{esatta} per trovare
+oscillazioni di $\langle S_z\rangle$ non banali (``non monocromatiche''),
+partendo dal set $J=2b$, $D=b/3$. Il compito è quindi in due fasi distinte:
+(i) trovare con la dinamica esatta un punto di lavoro che soddisfi il
+requisito qualitativo; (ii) implementare l'evoluzione via Suzuki--Trotter su
+quel punto. Questo documento segue esattamente quest'ordine.
+
+\subsection{Perché serve il termine DM: riferimento alla teoria}
+
+L'Hamiltoniana di riferimento, confermata dal relatore e trascritta in
+\texttt{quantum\_simulation\_trascrizione\_appunti.md},
+$$H = b(s_{z1}+s_{z2}) + J\,\vec s_1\cdot\vec s_2 + D(s_{x1}s_{z2}-s_{z1}s_{x2}) = H_1+H_2,$$
+separa un blocco $H_1$ (campo + scambio, fisso) da un blocco $H_2$ (solo DM,
+si annulla per $D=0$). Il documento \texttt{dimero\_DM.pdf} (Tabella 1, limite
+$D\to0$) mostra che lo stato $|t_+\rangle=|00\rangle$ è autostato esatto di
+$H_1$ con $E=J+2b$, per qualunque $b,J$. Poiché $S_z|00\rangle=|00\rangle$ è
+anch'esso autostato (a autovalore $+1$), segue che $\langle S_z\rangle(t)$ è
+identicamente costante quando $D=0$: \textbf{è il termine DM, e solo esso, a
+rendere possibile un'oscillazione}. Questo fissa il vincolo operativo: il
+punto di lavoro cercato deve avere $D\neq0$.
+
+\subsection{Il set suggerito fallisce: verifica numerica}
+
+Applicando la dinamica esatta $e^{-iHt}|00\rangle$ al set suggerito
+($b/J=0.5$, $D/J=1/6$, chiamato $R_0$ nei notebook), l'escursione
+picco-picco di $\langle S_z\rangle(t)$ risulta $\approx0.0062$: sotto la
+soglia del rumore statistico di un campionamento a $8192$ shot
+($1/\sqrt{8192}\approx0.011$). Il set $R_0$ non soddisfa il requisito, e va
+sostituito con un punto derivato dalla struttura fisica del problema --
+oggetto della sezione seguente.
+
+\section{Derivazione fisica del punto di lavoro $R_1$}
+
+\subsection{Passaggio alla base di spin totale}
+
+Il documento \texttt{dimero\_DM.pdf} (Passo 3, eq.~6--7) introduce il cambio
+di base
+$$|t_0\rangle=\frac{|01\rangle+|10\rangle}{\sqrt2}, \qquad |s\rangle=\frac{|01\rangle-|10\rangle}{\sqrt2}, \qquad |t_\pm\rangle=|00\rangle,|11\rangle,$$
+in cui $H_1$ (campo + scambio) è diagonale:
+$$E(t_+)=J+2b,\quad E(t_0)=J,\quad E(s)=-3J,\quad E(t_-)=J-2b.$$
+Questa è esattamente la base $\{|T_{+1}\rangle,|T_0\rangle,|S\rangle,|T_{-1}\rangle\}$
+di \texttt{simmetrie\_dmi\_spin.tex} (versione corretta), a meno della
+convenzione di normalizzazione dell'energia ($J$ del notebook Trotter
+corrisponde a $4J$ della convenzione $s=\sigma/2$ di quel documento --
+coerente con la distinzione $J_{\rm code}$ vs $J_{\rm Crippa}$ già tracciata
+nel resto del progetto).
+
+\subsection{Struttura a V degli accoppiamenti DM}
+
+Il documento \texttt{simmetrie\_dmi\_spin.tex} (versione corretta, \S11.1 e
+\S11.2.2) stabilisce, tramite l'argomento di simmetria con l'operatore di
+scambio $P_{12}$, che il termine DM:
+\begin{itemize}
+\item non accoppia mai il singoletto con se stesso, né i tripletti fra loro;
+\item accoppia il singoletto a \emph{entrambi} i tripletti $M=\pm1$ con la
+stessa forza (Caso B, $\vec D$ trasversale -- la nostra situazione, poiché
+$H_2\propto s_{x1}s_{z2}-s_{z1}s_{x2}\propto(\vec s_1\times\vec s_2)_y$);
+\item lascia $|T_0\rangle$ completamente disaccoppiato.
+\end{itemize}
+Con il fattore corretto (Errata di \texttt{simmetrie\_dmi\_spin.tex},
+\S11.2.2), l'accoppiamento vale $V=D_\perp/(2\sqrt2)$ nella convenzione
+$s=\sigma/2$. Riportato alla convenzione del notebook Trotter (dove il
+termine è scritto come $D(s_{x1}s_{z2}-s_{z1}s_{x2})$ con lo stesso
+significato di $D$), la struttura è verificata numericamente nel notebook
+stesso: il DM accoppia $|00\rangle=|t_+\rangle$ e $|11\rangle=|t_-\rangle$ a
+$|s\rangle$ con la stessa forza $\sqrt2 D$ (coerente con l'eq.~14 di
+\texttt{dimero\_DM.pdf}, $g=\sqrt2D$), e $|t_0\rangle$ risulta esattamente
+disaccoppiato -- verificato sia analiticamente (\texttt{dimero\_DM.pdf},
+eq.~10) sia con il calcolo diretto nel notebook.
+
+\`E dunque un \textbf{sistema a V}: $|t_+\rangle\leftrightarrow|s\rangle\leftrightarrow|t_-\rangle$,
+con lo stato iniziale $|00\rangle=|t_+\rangle$ su un braccio. I due parametri
+di controllo sono i detuning
+$$\Delta_+=E(t_+)-E(s)=J+2b, \qquad \Delta_-=E(t_-)-E(s)=J-2b$$
+(nella normalizzazione del notebook Trotter, dove l'accoppiamento
+effettivo è $V\propto D$).
+
+\subsection{Prima condizione: ampiezza del segnale (formula di Rabi)}
+
+Nessuno dei documenti di teoria di progetto deriva la formula di
+popolazione trasferita per un sistema a due livelli con detuning e
+accoppiamento generici: è un risultato standard di meccanica quantistica,
+non specifico al progetto. Riferimento esterno usato:
+\href{https://web.pa.msu.edu/people/mmoore/Lect7_RabiModel.pdf}{M.\ Moore,
+\emph{General Study of Two-Level Systems}, dispense del corso, Michigan
+State University} -- vi si deriva la popolazione massima trasferita in un
+sistema a due livelli con accoppiamento $\Omega$ (qui $V$) e detuning
+$\Delta$:
+$$P_{\max} = \frac{4V^2}{4V^2+\Delta^2}.$$
+Applicando questa formula al braccio $|t_+\rangle\leftrightarrow|s\rangle$
+del sistema a V (accoppiamento $V\propto D$, detuning $\Delta_+=J+2b$ nella
+normalizzazione del notebook, dove risulta $V=D$ dopo la riduzione al
+sottoproblema 2$\times$2 -- coerente con l'eq.~19 di
+\texttt{dimero\_DM.pdf} per il caso della risonanza $b/J=2$, che è lo stesso
+tipo di sottoproblema 2$\times$2), per $V\ll\Delta_+$:
+$$\text{escursione di }\langle S_z\rangle \;\simeq\; \frac{4V^2}{\Delta_+^2} \;=\; \frac{D^2}{2(b+J)^2}$$
+(fattore di normalizzazione verificato empiricamente nel notebook: la
+formula riproduce l'escursione esatta di $R_0$ a quattro cifre, $0.0062$
+contro $0.0062$). \textbf{Conclusione procedurale:} $R_0$ fallisce perché sta
+in pieno regime perturbativo ($D/J=1/6\ll1$); serve $D$ dell'ordine di $J$.
+
+\subsection{Seconda condizione: numero di frequenze}
+
+Nessun documento di teoria di progetto tratta esplicitamente il criterio
+``non monocromatico'' in termini di frequenze di Bohr multiple; è
+un'elaborazione originale di questo lavoro, basata sulla decomposizione
+spettrale standard $\langle S_z\rangle(t)=\sum_k|c_k|^2(S_z)_{kk}+\sum_{k<l}2\mathrm{Re}[c_k^*c_l(S_z)_{kl}e^{-i\Delta_{kl}t}]$
+(teoria elementare di meccanica quantistica, non richiede citazione
+specifica). Il campo $b$ controlla quante frequenze di Bohr compaiono con
+ampiezza confrontabile:
+\begin{itemize}
+\item $b\to-J$ (risonanza, $\Delta_+\to0$): il braccio $t_+$--$s$ domina,
+riducendo il sistema a un due-livelli -- oscillazione di Rabi ad ampiezza
+piena ma \textbf{monocromatica} (verificato: $a_2/a_1\to0$);
+\item $b\to0$ (bracci simmetrici, $\Delta_+=\Delta_-$): un solo modo
+("bright") domina di nuovo.
+\end{itemize}
+L'ottimo sta a $|b|$ piccolo ma non nullo. Uno scan 1D (a $D/J=1$ fissato
+dalla prima condizione) localizza il massimo del rapporto fra le ampiezze
+dei due modi dominanti a $b/J\simeq-0.18$.
+
+\subsection{Punto adottato}
+
+$$\boxed{R_1 = (b/J=-0.18,\; D/J=1.0)}$$
+con escursione $0.84$ e $a_2/a_1=0.995$ (due frequenze dominanti di
+ampiezza praticamente identica). Verificata la robustezza: tutta la fascia
+$b/J\in[-0.22,-0.14]$ soddisfa entrambe le condizioni, quindi la posizione
+esatta del massimo non ha significato fisico speciale -- conta la regione.
+Il segno negativo di $b/J$ non è artificioso: sotto flip globale
+$\Pi=X\otimes X$ vale $\Pi H(b,J,D)\Pi=H(-b,J,-D)$, ma $\Pi|00\rangle=|11\rangle$,
+e lo stato iniziale $|00\rangle$ è fissato dal relatore.
+
+\subsection{Nota procedurale: due versioni scartate}
+
+Il punto $R_1$ è stato raggiunto dopo due tentativi precedenti, entrambi
+scartati e documentati per trasparenza procedurale (vedi
+\texttt{quantum\_simulation\_dimero\_trotter\_note.md}):
+\begin{enumerate}
+\item una prima versione usava uno scan automatico su 2349 punti classificati
+con un'\emph{entropia spettrale pesata} non riconducibile ad alcuna fonte di
+progetto -- rimossa per assenza di giustificazione bibliografica e per bassa
+robustezza (scarto 1\textsuperscript{o}--5\textsuperscript{o} classificato
+del solo 4\%);
+\item una seconda versione usava una tabella di regimi candidati costruita
+\emph{a posteriori} con $R_1$ già dentro -- una razionalizzazione, non una
+derivazione, che non permetteva di ricostruire come si fosse arrivati al
+punto.
+\end{enumerate}
+La derivazione corrente (\S2.1--2.5) è quella che ha sostituito entrambi i
+tentativi, con ogni passaggio riconducibile o alla teoria di progetto
+(struttura a V) o a un risultato standard esplicitamente citato (formula di
+Rabi).
+
+\section{Decomposizione in gate: applicazione diretta della teoria}
+
+Questa sezione applica letteralmente le formule di
+\texttt{quantum\_simulation\_dimero\_teoria.md}, senza modifiche: è la parte
+del lavoro in cui la teoria è stata usata come sorgente diretta del codice,
+non solo come sfondo concettuale.
+
+\subsection{Blocco di scambio $U_J(t)$}
+
+Da \texttt{quantum\_simulation\_dimero\_teoria.md} \S2: con
+$s_i^\alpha=\sigma_i^\alpha/2$, $J\vec s_1\cdot\vec s_2=\frac{J}{4}(XX+YY+ZZ)$,
+e poiché $XX,YY,ZZ$ commutano a due a due (\S2.2 della teoria, verificato
+con le regole di Pauli $XY=iZ$ etc.), l'esponenziale fattorizza
+\textbf{esattamente}:
+$$U_J(t) = R_{XX}\!\left(\frac{Jt}{2}\right)R_{YY}\!\left(\frac{Jt}{2}\right)R_{ZZ}\!\left(\frac{Jt}{2}\right).$$
+Il fattore $Jt/2$ (anziché $Jt/4$) discende dalla convenzione Qiskit
+$R_{XX}(\theta)=e^{-i\frac\theta2 XX}$, verificata numericamente nella
+teoria \S2.3 con \texttt{RXXGate(0.7).to\_matrix()}. Nel notebook applicativo
+questa stessa verifica è stata ripetuta per il caso specifico $R_1$
+($b,J,D$ numerici) come self-test, non come nuova derivazione.
+
+\subsection{Blocco campo+scambio $e^{-iH_1t}$}
+
+Da \texttt{quantum\_simulation\_dimero\_teoria.md} \S3: il campo commuta con
+lo scambio isotropo perché $[S^2,S_z]=0$ (Casimir dell'algebra del momento
+angolare, un fatto generale di meccanica quantistica non specifico al
+progetto ma richiamato esplicitamente nella teoria di riferimento), quindi
+$$e^{-iH_1t} = R_z^{(1)}(bt)\,R_z^{(2)}(bt)\,U_J(t),$$
+\textbf{esatto}, nessun errore di approssimazione. Questo blocco è
+implementato nel notebook come funzione \texttt{step\_H1}.
+
+\subsection{Blocco DM $U_2(t)$}
+
+Da \texttt{quantum\_simulation\_dimero\_teoria.md} \S4: con $P_1=X_1Z_2$,
+$P_2=Z_1X_2$, si verifica $[P_1,P_2]=0$ (§4.2 della teoria, tramite
+$P_1P_2=P_2P_1=Y_1Y_2$), quindi la fattorizzazione è esatta. Usando
+$HZH=X$ (Hadamard scambia $X\leftrightarrow Z$):
+$$U_2(t) = \Big[(I\otimes H)R_{ZZ}\!\big(-\tfrac{Dt}{2}\big)(I\otimes H)\Big]\cdot\Big[(H\otimes I)R_{ZZ}\!\big(\tfrac{Dt}{2}\big)(H\otimes I)\Big].$$
+Implementato nel notebook come funzione \texttt{step\_H2}, con il commento
+esplicito che documenta la nota sul segno (\S4.5 della teoria): se il
+termine DM avesse convenzione di segno opposta, entrambi gli angoli
+cambierebbero segno insieme, senza alterare la struttura del circuito.
+
+\subsection{Perché i blocchi isolati sono esatti (BCH)}
+
+Da \texttt{quantum\_simulation\_dimero\_teoria.md} \S5: per la formula di
+Baker--Campbell--Hausdorff, $[A,B]=0$ annulla \emph{ogni} termine della
+torre di commutatori annidati, non solo il primo -- quindi tutte e tre le
+fattorizzazioni sopra sono esatte, non approssimazioni al prim'ordine
+troncate. Solo la separazione fra $H_1$ e $H_2$ (dove
+$[H_1,H_2]\neq0$ per $D\neq0$) introduce l'approssimazione, trattata in
+\S4 di questo documento.
+
+\subsection{Self-test numerico dei blocchi}
+
+Applicazione pratica della verifica di convenzione già fatta nella teoria
+(\S2.3): nel notebook, ciascun blocco (\texttt{step\_H1}, \texttt{step\_H2},
+il circuito completo) è confrontato con l'esponenziale di matrice
+(\texttt{scipy.linalg.expm}) a un tempo arbitrario $\tau=0.37$, con errore
+atteso a precisione macchina ($\sim10^{-16}$). Verificato: errore blocco
+$H_1=2.3\times10^{-16}$, blocco $H_2=2.2\times10^{-16}$, circuito completo
+vs matrice ($N=5$) $=8.3\times10^{-16}$. Un errore fuori da questo ordine di
+grandezza segnalerebbe un problema di convenzione (fattori $1/2$, segni,
+ordinamento dei qubit), non un errore di Trotter -- da qui la necessità di
+eseguire questo test \emph{prima} di ogni risultato fisico, come esplicitato
+nel notebook.
+
+\section{Errore di Trotter: dalla formula generale alla verifica numerica}
+
+\subsection{Formula dell'errore}
+
+Da \texttt{quantum\_simulation\_dimero\_teoria.md} \S6: per un passo di
+durata $\tau=t/N$,
+$$U_{\rm esatto}(\tau)-U_{\rm Trotter}(\tau) = \frac{\tau^2}{2}[H_1,H_2]+O(\tau^3),$$
+da cui, per la disuguaglianza triangolare su $N$ passi, l'errore totale
+scala come $O(t^2/N)$ (\S6.3 della teoria). Conseguenza pratica (\S6.4):
+raddoppiando $t$ a $N$ fisso l'errore quadruplica; per tenerlo costante
+serve $N\propto t^2$.
+
+\subsection{Verifica di convergenza e scaling}
+
+Applicando questa formula al punto $R_1$: a $t=10$ fissato, la pendenza
+log-log dell'infedeltà $1-\mathcal F$ misurata è $-2.02$ (atteso $-2$,
+quadratico nell'errore di ampiezza) e quella della norma $\|\Delta U\|_2$ è
+$-1.06$ (atteso $-1$, primo ordine) -- entrambe coerenti con la teoria di
+\S6.5. A $N$ piccolo l'errore non è monotono ($N=2$ dà $1.17$, $N=5$ dà
+$1.44$): fuori dal regime asintotico $\tau\|H\|\ll1$ lo scaling non si
+applica, coerentemente con la natura asintotica della formula BCH troncata.
+
+\subsection{Un fenomeno oltre la teoria generale: scaling $N^{-2}$ anomalo sull'osservabile}
+
+Questo è un risultato che \textbf{non discende direttamente} da
+\texttt{quantum\_simulation\_dimero\_teoria.md}, e per cui non esiste un
+riferimento diretto nei documenti di progetto: l'errore sull'osservabile
+$\langle S_z\rangle$ (non sulla fedeltà, ma sulla singola quantità
+misurata) scala empiricamente come $N^{-2}$ anziché $N^{-1}$, pur essendo
+lo stato-errore lineare in $1/N$ (verificato: $\|\Delta U\|_2\sim N^{-1.06}$).
+
+La spiegazione, sviluppata in questo lavoro: l'Hamiltoniana del dimero in
+questa forma è \textbf{reale simmetrica} (il termine DM $X_1Z_2-Z_1X_2$ è
+reale), quindi $[H_1,H_2]$ è \textbf{reale antisimmetrica}. Il generatore
+d'errore al prim'ordine $\varepsilon=\frac\tau2 i[H_1,H_2]$ è allora
+hermitiano ma con \textbf{diagonale identicamente nulla in ogni base reale
+ortogonale} (verificato: diagonale $=0$ a precisione macchina nella base di
+$H$), quindi le frequenze di Bohr non hanno errore $O(\tau)$: lo spostamento
+parte da $O(\tau^2)$ (verificato: dimezzando $\tau$ lo scarto si divide per
+$4.00$).
+
+Questo è un caso particolare -- non trattato esplicitamente nella teoria
+generale di \S6 -- di un fenomeno più ampio studiato in letteratura: la
+struttura di commutatori specifica di un problema (non solo la loro norma)
+può ridurre lo scaling dell'errore di Trotter rispetto al caso generico.
+Riferimento esterno per approfondimento:
+\href{https://arxiv.org/abs/1912.08854}{A.\,M.\ Childs, Y.\ Su, M.\,C.\ Tran,
+N.\ Wiebe, S.\ Zhu, \emph{Theory of Trotter Error with Commutator Scaling},
+Phys.\ Rev.\ X \textbf{11}, 011020 (2021)}, che sviluppa limiti d'errore più
+stretti sfruttando esplicitamente la struttura dei commutatori piuttosto che
+il solo troncamento BCH. \textbf{Attenzione:} questo vantaggio è specifico di
+questa Hamiltoniana e di questa partizione $H_1/H_2$ (entrambe reali); con
+un termine DM in forma complessa (es.\ $XY-YX$) $H$ non sarebbe reale e ci
+si aspetterebbe il comportamento $N^{-1}$ generico. Non va generalizzato
+implicitamente all'estensione a $N=3$ o alla Parte 2 (rumore) senza rifare
+la verifica.
+
+\section{Struttura a 3 livelli: il disaccoppiamento di $|T_0\rangle$}
+
+\subsection{Origine teorica}
+
+Che $|t_0\rangle$ sia esattamente disaccoppiato non è un'osservazione
+originale di questo lavoro: discende direttamente da
+\texttt{dimero\_DM.pdf} (Passo 4, eq.~10: $H_{\rm DM}|t_0\rangle=0$, e Passo
+5, eq.~13: $H|t_0\rangle=J|t_0\rangle$ esatta per ogni $b,D$) ed è coerente
+con le regole di selezione di \texttt{simmetrie\_dmi\_spin.tex} (versione
+corretta, \S11.1): il termine DM connette solo settori di simmetria di
+scambio opposta, e $|t_0\rangle$ (combinazione simmetrica) non ha alcun
+canale verso se stesso né verso il singoletto lungo l'asse specifico
+coinvolto in questa geometria.
+
+\textbf{Applicazione:} nel notebook, questo fatto teorico è stato verificato
+numericamente nel punto $R_1$ specifico (non ri-derivato): $\langle
+T_0|00\rangle=0$ (non popolato dallo stato iniziale), $S_z|T_0\rangle=0$
+(non contribuisce a $S_z$), $H|T_0\rangle=E\,|T_0\rangle$ con
+$E=J/4$ nella convenzione $s=\sigma/2$ -- verificato per tre set di
+parametri diversi, confermando l'indipendenza da $b,D$ prevista dalla
+teoria.
+
+\subsection{Trotter eredita il disaccoppiamento}
+
+Estensione originale (non presente nella teoria di progetto): poiché
+$|T_0\rangle$ è autostato di $H_1$ \emph{e} annichilato da $H_2$
+\emph{separatamente}, entrambi i fattori $e^{-iH_1\tau}$ e $e^{-iH_2\tau}$
+preservano individualmente il disaccoppiamento -- e quindi anche il loro
+prodotto (Trotter). Verificato numericamente: popolazione spuria di
+$|T_0\rangle$ sotto evoluzione di Trotter $=0.0000$ per $N=5,20,50,100$,
+identica alla dinamica esatta ($1.3\times10^{-30}$). Conseguenza generale:
+l'errore di Trotter non è rumore isotropo nello spazio di Hilbert, ma vive
+solo nel sottospazio dove i pezzi $H_1,H_2$ non commutano -- coerente con
+la Sezione 6 di \texttt{quantum\_simulation\_dimero\_teoria.md}, che lega
+l'errore proprio al commutatore $[H_1,H_2]$.
+
+\section{Esecuzione su circuito e campionamento}
+
+Questa parte non ha un riferimento diretto nei documenti di teoria di
+progetto (che si fermano alla decomposizione in gate): è ingegneria di
+misura standard, per cui si cita la fonte esterna.
+
+$S_z=(Z_1+Z_2)/2$ è diagonale nella base computazionale, con autovalori
+$+1$ su $|00\rangle$, $-1$ su $|11\rangle$, $0$ sugli altri due stati.
+La stima da conteggi,
+$$\langle S_z\rangle \simeq \frac{n_{00}-n_{11}}{N_{\rm shots}},$$
+segue direttamente dalla regola di Born per la misura in base computazionale
+(si veda ad es.\ la documentazione Qiskit sulle primitive di misura,
+\url{https://docs.quantum.ibm.com/guides/get-started-with-primitives}, o
+qualunque testo standard di calcolo quantistico per la derivazione generale
+della regola di Born). L'errore statistico atteso $\sim1/\sqrt{N_{\rm
+shots}}$ è la deviazione standard di una proporzione binomiale.
+
+\textbf{Applicazione e risultato:} nel punto $R_1$ con $N=20$ e $8192$
+shot, l'errore di Trotter (statevector vs esatto, $\approx0.25$) risulta
+oltre 30 volte il rumore statistico ($\approx0.007$--$0.011$): l'errore
+dominante in questo regime è \emph{algoritmico}, non statistico. Aumentare
+gli shot non migliora il risultato; serve aumentare $N$ -- una conclusione
+procedurale rilevante per la Parte 2 (rumore), dove il compromesso fra
+errore di Trotter (che vuole $N$ grande) ed errore di gate fisico (che
+vuole $N$ piccolo) diventerà centrale.
+
+\section{Dal notebook completo al notebook semplificato: scelte procedurali}
+
+Questa sezione documenta le decisioni prese nella seconda fase del lavoro,
+su richiesta esplicita di ridurre il notebook a ciò che il relatore ha
+richiesto, mantenendo la possibilità di esplorare interattivamente i
+parametri.
+
+\subsection{Cosa è stato rimosso}
+
+La derivazione fisica del sistema a V (\S2 di questo documento) è stata
+tenuta fuori dal notebook semplificato: il notebook completo la mantiene
+come giustificazione rigorosa, quello semplificato la sostituisce con
+un'esplorazione interattiva (widget) che permette di \emph{osservare}
+direttamente le due condizioni (escursione, $a_2/a_1$) senza doverle
+derivare analiticamente -- coerente con la richiesta di presentare il
+lavoro come proprio, con la ricerca dei parametri resa esplicita e
+manipolabile piuttosto che dimostrata a priori.
+
+\subsection{Widget interattivi e persistenza dei parametri}
+
+Implementazione: due \texttt{FloatSlider} (\texttt{ipywidgets}) per $b/J$ e
+$D/J$, che ridisegnano in tempo reale la dinamica esatta e lo spettro dei
+modi; un pulsante ``Fissa questi parametri'' scrive la scelta in
+\texttt{parametri\_scelti.json}, letto dalle sezioni successive del
+notebook. Nessun riferimento di teoria necessario: è una scelta di
+ingegneria del notebook per rendere esplicito, riproducibile e persistente
+il passaggio dalla ricerca esplorativa al valore adottato. Fallback esplicito
+se \texttt{ipywidgets} non è disponibile (chiamata diretta della funzione
+\texttt{esplora(b/J, D/J)}).
+
+\subsection{Correzioni tecniche}
+
+Due difetti individuati e corretti nel corso dello sviluppo, non
+riconducibili a teoria fisica ma a corretta gestione delle risorse
+matplotlib/Qiskit:
+\begin{itemize}
+\item \textbf{Duplicazione delle immagini}: ogni chiamata alle funzioni di
+plotting creava una nuova \texttt{Figure} senza chiuderla
+(\texttt{plt.close()}), causando accumulo di figure aperte che potevano
+essere ridisegnate dal flush automatico di Jupyter. Verificato: 5 chiamate
+senza chiusura lasciavano 5 figure aperte; con \texttt{plt.close(fig)} dopo
+ogni \texttt{plt.show()}, 0 figure aperte anche dopo chiamate ripetute.
+\item \textbf{Punti campionati non coerenti con la selezione}: nella figura
+riassuntiva a curve selezionabili, i punti da campionamento (shots) erano
+calcolati una sola volta per $N=20$ e riusati per qualunque selezione di
+$N$ nel menu. Corretto con una cache (\texttt{\_cache\_shots}) che calcola i
+punti per ciascun $N$ effettivamente selezionato, la prima volta che viene
+richiesto, e li riusa alle chiamate successive.
+\end{itemize}
+
+\section{Riepilogo dei riferimenti per sezione}
+
+\begin{center}
+\begin{tabular}{@{}p{2.4cm}p{5.6cm}p{6.2cm}@{}}
+\toprule
+Sezione di questo doc.\ & Riferimento di teoria (progetto) & Riferimento esterno (dove serve) \\
+\midrule
+\S1 & \texttt{trascrizione\_appunti.md}; \texttt{dimero\_DM.pdf} Tab.\,1 & --- \\
+\S2.1--2.2 & \texttt{dimero\_DM.pdf} Passo 3; \texttt{simmetrie\_dmi\_spin.tex} corretto \S11.1, \S11.2.2 & --- \\
+\S2.3 & --- & MSU, \emph{Rabi Model} (formula $4V^2/(4V^2+\Delta^2)$) \\
+\S2.4--2.6 & --- (elaborazione originale) & --- \\
+\S3 & \texttt{quantum\_simulation\_dimero\_teoria.md} \S2--\S5 (per intero) & Qiskit \texttt{RXXGate} docs (verifica \S2.3 teoria) \\
+\S4.1--4.2 & \texttt{quantum\_simulation\_dimero\_teoria.md} \S6 & --- \\
+\S4.3 & --- (estensione originale) & Childs et al., PRX 11, 011020 (2021) \\
+\S5 & \texttt{dimero\_DM.pdf} Passo 4--5; \texttt{simmetrie\_dmi\_spin.tex} corretto \S11.1 & --- \\
+\S6 & --- & Qiskit measurement primitives docs; regola di Born (standard) \\
+\S7 & \texttt{quantum\_simulation\_dimero\_trotter\_note.md} (cronologia $R_1$) & --- \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Riferimenti bibliografici completi}
+
+\begin{itemize}
+\item H.\,F.\ Trotter, \emph{On the product of semi-groups of operators},
+Proc.\ Am.\ Math.\ Soc.\ \textbf{10}, 545--551 (1959).
+\item M.\ Suzuki, \emph{Generalized Trotter's formula and systematic
+approximants of exponential operators and inner derivations with
+applications to many-body problems}, Commun.\ Math.\ Phys.\ \textbf{51},
+183--190 (1976).
+\item S.\ Lloyd, \emph{Universal quantum simulators}, Science \textbf{273},
+1073--1078 (1996).
+\item A.\,M.\ Childs, Y.\ Su, M.\,C.\ Tran, N.\ Wiebe, S.\ Zhu, \emph{Theory
+of Trotter Error with Commutator Scaling}, Phys.\ Rev.\ X \textbf{11},
+011020 (2021); arXiv:1912.08854.
+\item M.\ Moore, \emph{General Study of Two-Level Systems} (dispense del
+corso, Michigan State University),
+\url{https://web.pa.msu.edu/people/mmoore/Lect7_RabiModel.pdf}.
+\item IBM Quantum, \emph{Get started with primitives} (documentazione
+Qiskit), \url{https://docs.quantum.ibm.com/guides/get-started-with-primitives}.
+\item M.\ Crippa et al., \emph{Simulating Static and Dynamic Properties of
+Magnetic Molecules with Prototype Quantum Computers}, Magnetochemistry
+\textbf{7}, 117 (2021) -- riferimento concettuale generale del progetto.
+\end{itemize}
+
+\appendix
+\section{File prodotti in questa fase del lavoro}
+
+\begin{itemize}
+\item \texttt{quantum\_simulation\_dimero\_trotter.ipynb} -- notebook
+completo, con derivazione fisica di $R_1$, riferimenti interni alla
+teoria, sezione errata/discrepanza con \texttt{simmetrie\_dmi\_spin.pdf}.
+\item \texttt{quantum\_simulation\_dimero\_trotter\_semplificato.ipynb} --
+solo il richiesto dal relatore, ricerca dei parametri interattiva con
+widget e persistenza.
+\item \texttt{quantum\_simulation\_dimero\_trotter\_note.md} -- approfondimenti
+tenuti fuori dal notebook completo (spiegazione ``non monocromatico'',
+cronologia della selezione di $R_1$, convenzioni di segno).
+\item \texttt{errata\_simmetrie\_dmi\_spin.tex/.pdf} e
+\texttt{simmetrie\_dmi\_spin.tex/.pdf} (versione corretta integrale) --
+correzione del fattore $2$/$\sqrt2$ negli elementi di matrice DM.
+\item \texttt{dimero\_sintesi.tex/.pdf} (versione corretta) -- correzione
+della norma dei commutatori in \S2.2.
+\end{itemize}
+
+\end{document}

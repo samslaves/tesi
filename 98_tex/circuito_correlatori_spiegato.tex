@@ -1,0 +1,590 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{margin=2.4cm}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black}
+
+\newtcolorbox{ideabox}[1][]{colback=blue!4,colframe=blue!45!black,
+  fonttitle=\bfseries,title={#1},boxrule=0.6pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+\newtcolorbox{warnbox}[1][]{colback=orange!5,colframe=orange!60!black,
+  fonttitle=\bfseries,title={#1},boxrule=0.6pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+
+\newtheorem{proposizione}{Proposizione}
+\newtheorem{lemma}{Lemma}
+
+\title{Il circuito per le correlazioni dinamiche\\
+\large Dallo stato fondamentale alla misura, passo per passo}
+\author{Note di lavoro --- tesi triennale in Fisica (UniPR)\\
+Relatore: Prof.\ Alessandro Chiesa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Spiegazione completa e autocontenuta del circuito quantistico che misura la funzione di
+correlazione dinamica $C_{ij}^{\alpha\beta}(t)=\langle\psi_0|\sigma_i^\alpha(t)\,
+\sigma_j^\beta(0)|\psi_0\rangle$ sul dimero di spin-1/2 con interazione di
+Dzyaloshinskii--Moriya. Si parte dallo stato fondamentale $|\psi_0\rangle$ ottenuto via VQE e si
+arriva ai numeri letti dallo strumento, senza saltare passaggi: perché il correlatore non è
+misurabile direttamente, come l'interferenza su un qubit ausiliario risolve il problema, cosa
+significano esattamente ``controllato'' e ``anti-controllato'', da dove viene il blocco $U(t)$,
+perché $U(t)$ \emph{non} va controllato, e come le due rotazioni finali estraggono parte reale e
+immaginaria. Ogni affermazione non ovvia è accompagnata da derivazione esplicita e, dove utile,
+da verifica numerica.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Il punto di partenza e il problema}
+% =====================================================================
+
+\subsection{Cosa abbiamo già}
+
+Al punto di lavoro del ``test 2'' ($J=1$, $b/J=0.35$, $D/J=0.80$) l'Hamiltoniana è
+\begin{equation}
+H = \underbrace{J\,(X_1X_2+Y_1Y_2+Z_1Z_2)}_{\text{scambio isotropo}}
+  + \underbrace{b\,(Z_1+Z_2)}_{\text{Zeeman}}
+  + \underbrace{D\,(X_1Z_2-Z_1X_2)}_{\text{Dzyaloshinskii--Moriya}},
+\label{eq:H}
+\end{equation}
+in convenzione Pauli diretta (non $s^\alpha=\sigma^\alpha/2$), su due qubit: un qubit per spin,
+nessun mapping fermionico. Il VQE ha già prodotto lo stato fondamentale
+\begin{equation}
+|\psi_0\rangle \simeq 0.2017\,|00\rangle + 0.6648\,|01\rangle - 0.6648\,|10\rangle + 0.2746\,|11\rangle,
+\end{equation}
+con fedeltà $\mathcal F=1$ rispetto alla diagonalizzazione esatta a precisione macchina. Questo
+stato è il \emph{punto di partenza} di tutto ciò che segue: nel circuito comparirà come blocco di
+\emph{state preparation}, cioè come sequenza di gate che porta $|00\rangle$ in $|\psi_0\rangle$.
+
+\subsection{Cosa vogliamo calcolare}
+
+L'oggetto di interesse è la funzione di correlazione dinamica a due tempi
+\begin{equation}
+\boxed{\;C_{ij}^{\alpha\beta}(t) \;=\; \langle\psi_0|\;\sigma_i^\alpha(t)\;\sigma_j^\beta(0)\;|\psi_0\rangle\;}
+\qquad
+\sigma_i^\alpha(t)\equiv e^{iHt}\,\sigma_i^\alpha\,e^{-iHt},
+\label{eq:Cdef}
+\end{equation}
+con $i,j\in\{1,2\}$ i siti e $\alpha,\beta\in\{x,y,z\}$ le componenti. In parole: si
+``perturba'' il sistema al tempo $0$ applicando $\sigma_j^\beta$, lo si lascia evolvere per un
+tempo $t$, e si guarda quanto la risposta somiglia all'azione di $\sigma_i^\alpha$. È la
+quantità che, trasformata di Fourier, dà le sezioni d'urto misurate in spettroscopia (scattering
+di neutroni, EPR): non un artificio teorico, ma il ponte fra la simulazione e ciò che si osserva
+in laboratorio.
+
+\subsection{Perché non si può misurare direttamente}
+
+Qui sta il nodo. La meccanica quantistica dice come misurare il valore d'aspettazione di
+un'osservabile $\mathcal O$: si prepara lo stato, si misura $\mathcal O$ molte volte, si fa la
+media. Ma questo richiede che $\mathcal O$ sia \textbf{hermitiano}, perché solo allora ha
+autovalori reali che possano essere il risultato di una misura.
+
+Il prodotto $\sigma_i^\alpha(t)\,\sigma_j^\beta(0)$ \textbf{non è hermitiano} per $t\neq0$.
+Verifichiamolo: usando $(AB)^\dagger=B^\dagger A^\dagger$ e l'hermitianità delle singole Pauli,
+\begin{equation}
+\big[\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\big]^\dagger
+= \sigma_j^\beta(0)^\dagger\,\sigma_i^\alpha(t)^\dagger
+= \sigma_j^\beta(0)\,\sigma_i^\alpha(t),
+\end{equation}
+che coincide con l'operatore di partenza solo se i due fattori commutano --- vero a $t=0$ per
+siti diversi, falso in generale per $t\neq0$, perché $e^{-iHt}$ ``spalma'' $\sigma_i^\alpha$ su
+entrambi i qubit e distrugge la commutazione.
+
+Conseguenza diretta: $C_{ij}^{\alpha\beta}(t)$ è in generale un \textbf{numero complesso}. Nessun
+apparato di misura restituisce un numero complesso: le misure danno numeri reali. Serve quindi
+una strategia indiretta.
+
+\begin{ideabox}[L'idea centrale in una frase]
+Non si misura il correlatore: si costruisce uno stato in cui il correlatore compare come
+\emph{ampiezza di interferenza} fra due cammini, e si misura l'interferenza --- che è reale e
+osservabile --- su un qubit ausiliario.
+\end{ideabox}
+
+% =====================================================================
+\section{L'ingrediente concettuale: interferenza controllata}
+% =====================================================================
+
+\subsection{Il qubit ausiliario e la sovrapposizione di cammini}
+
+Aggiungiamo al sistema un terzo qubit, l'\textbf{ancilla} (indicata con $a$), che non rappresenta
+nessuno spin fisico del dimero: è uno strumento di calcolo. Lo stato totale vive quindi in
+$\mathcal H_a\otimes\mathcal H_R$, con $\mathcal H_R$ lo spazio a due qubit del \emph{registro}
+(i due spin veri).
+
+Si parte da
+\begin{equation}
+|0\rangle_a\otimes|\psi_0\rangle_R
+\end{equation}
+e si applica un gate di Hadamard \textbf{sull'ancilla soltanto}. Ricordiamo la sua azione:
+\begin{equation}
+H=\frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix},
+\qquad H|0\rangle=\frac{|0\rangle+|1\rangle}{\sqrt2}\equiv|+\rangle .
+\end{equation}
+Lo stato diventa
+\begin{equation}
+|\Phi_1\rangle=\frac{1}{\sqrt2}\Big(|0\rangle_a+|1\rangle_a\Big)\otimes|\psi_0\rangle_R
+=\frac{1}{\sqrt2}\Big(|0\rangle_a|\psi_0\rangle_R+|1\rangle_a|\psi_0\rangle_R\Big).
+\end{equation}
+Il registro è ancora $|\psi_0\rangle$ in entrambi i termini: non è successo nulla di fisico al
+dimero. Ma ora esistono \emph{due rami} etichettati dallo stato dell'ancilla, e questo permette
+la mossa successiva: far accadere \textbf{cose diverse nei due rami}.
+
+\subsection{Gate controllati: la definizione precisa}
+
+Un gate \textbf{controllato} $\mathrm{C}\text{-}G$ con controllo sull'ancilla e bersaglio sul
+registro è definito da
+\begin{equation}
+\mathrm{C}\text{-}G \;=\; |0\rangle\langle0|_a\otimes\mathbb{I}_R \;+\; |1\rangle\langle1|_a\otimes G_R .
+\label{eq:ctrl}
+\end{equation}
+Si legge così: \emph{se} l'ancilla è $|1\rangle$, applica $G$ al registro; \emph{se} è
+$|0\rangle$, non fare nulla. Poiché l'ancilla è in sovrapposizione, entrambe le cose accadono
+simultaneamente, ciascuna nel proprio ramo --- non è una scelta classica, è la struttura stessa
+dello stato entangled.
+
+Il gate \textbf{anti-controllato} scambia i ruoli dei due stati di controllo:
+\begin{equation}
+\mathrm{C}_0\text{-}G \;=\; |0\rangle\langle0|_a\otimes G_R \;+\; |1\rangle\langle1|_a\otimes\mathbb{I}_R ,
+\label{eq:antictrl}
+\end{equation}
+cioè agisce quando l'ancilla è $|0\rangle$. Nei diagrammi si disegna con un \textbf{cerchio
+vuoto} sul filo di controllo, invece del punto pieno del controllo ordinario. In Qiskit si
+ottiene passando \texttt{ctrl\_state=0} al metodo \texttt{.control()} del gate; in alternativa
+lo si può costruire come
+$X$--$\mathrm{C}\text{-}G$--$X$ (due gate $X$ sull'ancilla che invertono temporaneamente il
+significato di $|0\rangle$ e $|1\rangle$).
+
+\begin{warnbox}[Errore facile]
+Scambiare controllo e anti-controllo produce un circuito che gira senza errori e restituisce
+numeri dall'aspetto plausibile, ma sbagliati. Il cerchio pieno e il cerchio vuoto vanno letti
+con attenzione ogni volta.
+\end{warnbox}
+
+% =====================================================================
+\section{Costruzione del circuito, stato per stato}
+% =====================================================================
+
+Fissiamo la notazione della letteratura (Tacchino--Chiesa--Carretta--Gerace,
+\textit{Adv.\ Quantum Technol.} \textbf{3}, 1900052 (2020), Fig.~3; Crippa \textit{et al.},
+\textit{Magnetochemistry} \textbf{7}, 117 (2021), eq.~12): due unitarie $V$ e $W$, con
+\begin{equation}
+W=\sigma_j^\beta \quad(\text{operatore al tempo }0),
+\qquad
+V=\sigma_i^\alpha \quad(\text{operatore al tempo }t).
+\end{equation}
+Nel nostro caso concreto $C_{2,1}^{xx}$: $W=\sigma_1^x$ (sito 1) e $V=\sigma_2^x$ (sito 2).
+Seguiamo lo stato attraverso i quattro stadi.
+
+\paragraph{Stadio 0 --- preparazione.}
+\begin{equation}
+|\Phi_0\rangle=|0\rangle_a\,|\psi_0\rangle_R .
+\end{equation}
+Il blocco \emph{State Preparation} nel diagramma è esattamente questo: la sequenza di gate che
+costruisce $|\psi_0\rangle$ sul registro. In un esperimento reale sarebbe il circuito ansatz
+PMA-2q$\cdot$3 con i parametri ottimizzati dal VQE; nella simulazione si può usare la
+preparazione esatta delle ampiezze.
+
+\paragraph{Stadio 1 --- Hadamard sull'ancilla.}
+\begin{equation}
+|\Phi_1\rangle=\frac{1}{\sqrt2}\Big(|0\rangle_a|\psi_0\rangle+|1\rangle_a|\psi_0\rangle\Big).
+\end{equation}
+
+\paragraph{Stadio 2 --- controlled-$W$ (controllo pieno).}
+Applichiamo \eqref{eq:ctrl} con $G=W$: nel ramo $|1\rangle$ il registro subisce $W$, nel ramo
+$|0\rangle$ resta intatto.
+\begin{equation}
+|\Phi_2\rangle=\frac{1}{\sqrt2}\Big(|0\rangle_a\,|\psi_0\rangle+|1\rangle_a\,W|\psi_0\rangle\Big).
+\end{equation}
+Questo è il momento in cui il circuito ``perturba il sistema al tempo $0$'', ma solo lungo un
+ramo: è proprio l'asimmetria fra i due rami a codificare l'informazione che cerchiamo.
+
+\paragraph{Stadio 3 --- evoluzione $U(t)$, \emph{senza} controllo.}
+Si applica $U(t)=e^{-iHt}$ al registro, identicamente in entrambi i rami:
+\begin{equation}
+|\Phi_3\rangle=\frac{1}{\sqrt2}\Big(|0\rangle_a\,U(t)|\psi_0\rangle+|1\rangle_a\,U(t)\,W|\psi_0\rangle\Big).
+\label{eq:phi3}
+\end{equation}
+
+\paragraph{Stadio 4 --- anti-controlled-$V$.}
+Si applica \eqref{eq:antictrl} con $G=V$: agisce nel ramo $|0\rangle$, lasciando intatto il ramo
+$|1\rangle$.
+\begin{equation}
+\boxed{\;|\Phi_4\rangle=\frac{1}{\sqrt2}\Big(|0\rangle_a\,\underbrace{V\,U(t)|\psi_0\rangle}_{\textstyle |A\rangle}
++|1\rangle_a\,\underbrace{U(t)\,W|\psi_0\rangle}_{\textstyle |B\rangle}\Big).}
+\label{eq:phi4}
+\end{equation}
+
+Lo stato finale ha esattamente la struttura voluta: una sovrapposizione bilanciata di due stati
+del registro, $|A\rangle$ e $|B\rangle$, etichettati dall'ancilla. Tutta l'informazione sul
+correlatore è ora nell'\emph{overlap} $\langle A|B\rangle$, e l'ancilla è lo strumento che lo
+legge.
+
+% =====================================================================
+\section{Perché funziona: la lettura dell'ancilla}
+% =====================================================================
+
+\subsection{L'overlap è il correlatore}
+
+\begin{proposizione}
+Con $|A\rangle=VU(t)|\psi_0\rangle$ e $|B\rangle=U(t)W|\psi_0\rangle$ come in \eqref{eq:phi4},
+e con $V,W$ hermitiani (le Pauli lo sono),
+\begin{equation}
+\langle A|B\rangle=\langle\psi_0|\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,|\psi_0\rangle
+= C_{ij}^{\alpha\beta}(t).
+\end{equation}
+\end{proposizione}
+
+\begin{proof}
+Scriviamo l'overlap e usiamo $(VU)^\dagger=U^\dagger V^\dagger$:
+\begin{equation}
+\langle A|B\rangle=\big(VU|\psi_0\rangle\big)^\dagger\big(UW|\psi_0\rangle\big)
+=\langle\psi_0|\,U^\dagger V^\dagger U\,W\,|\psi_0\rangle .
+\end{equation}
+Ora si osservi il gruppo centrale. Poiché $U(t)=e^{-iHt}$ è unitario, $U^\dagger=e^{+iHt}$, e
+quindi
+\begin{equation}
+U^\dagger\,V^\dagger\,U = e^{iHt}\,V^\dagger\,e^{-iHt},
+\end{equation}
+che è \emph{per definizione} l'operatore $V^\dagger$ in rappresentazione di Heisenberg al tempo
+$t$. Con $V=\sigma_i^\alpha$ hermitiano, $V^\dagger=V$, dunque
+$U^\dagger V^\dagger U=\sigma_i^\alpha(t)$ e
+\begin{equation}
+\langle A|B\rangle=\langle\psi_0|\,\sigma_i^\alpha(t)\,\sigma_j^\beta\,|\psi_0\rangle,
+\end{equation}
+che è la \eqref{eq:Cdef}.
+\end{proof}
+
+Vale la pena soffermarsi su cosa è appena successo. L'evoluzione temporale $U(t)$ è stata
+applicata \emph{una volta sola}, in modo identico ai due rami; ma poiché $V$ agisce
+\emph{dopo} $U$ e $W$ \emph{prima}, l'algebra produce spontaneamente la struttura
+$U^\dagger V U$ --- la rappresentazione di Heisenberg --- senza che si debba mai costruire
+esplicitamente l'operatore evoluto $\sigma_i^\alpha(t)$, che sarebbe una matrice complicata e
+$t$-dipendente. È il cuore dell'eleganza dello schema: la coniugazione di Heisenberg emerge
+dalla \emph{geometria} del circuito.
+
+\subsection{Come l'ancilla misura l'overlap}
+
+Resta da mostrare che l'ancilla legge davvero $\langle A|B\rangle$. Calcoliamo i valori
+d'aspettazione delle Pauli sull'ancilla nello stato \eqref{eq:phi4}. Attenzione: $|A\rangle$ e
+$|B\rangle$ sono normalizzati ($V$, $W$, $U$ sono unitari e $|\psi_0\rangle$ è normalizzato) ma
+in generale \emph{non} ortogonali --- ed è proprio la loro non-ortogonalità a essere misurata.
+
+\begin{proposizione}
+Nello stato \eqref{eq:phi4}:
+\begin{equation}
+\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,\langle A|B\rangle,
+\qquad
+\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,\langle A|B\rangle .
+\end{equation}
+\end{proposizione}
+
+\begin{proof}
+Per $\sigma_x=|0\rangle\langle1|+|1\rangle\langle0|$ (agente solo sull'ancilla, quindi va inteso
+come $\sigma_x\otimes\mathbb I_R$), applichiamolo a \eqref{eq:phi4}:
+\begin{equation}
+(\sigma_x\otimes\mathbb I)\,|\Phi_4\rangle=\frac{1}{\sqrt2}\Big(|1\rangle_a|A\rangle+|0\rangle_a|B\rangle\Big).
+\end{equation}
+Prendendo il prodotto scalare con $|\Phi_4\rangle$ e usando l'ortonormalità
+$\langle0|1\rangle=0$, $\langle0|0\rangle=\langle1|1\rangle=1$:
+\begin{align}
+\langle\sigma_x^{(a)}\rangle
+&=\frac{1}{2}\Big(\langle0|_a\langle A|+\langle1|_a\langle B|\Big)\Big(|1\rangle_a|A\rangle+|0\rangle_a|B\rangle\Big)\\
+&=\frac{1}{2}\Big(\langle A|B\rangle+\langle B|A\rangle\Big)
+=\frac{1}{2}\Big(\langle A|B\rangle+\overline{\langle A|B\rangle}\Big)
+=\mathrm{Re}\,\langle A|B\rangle .
+\end{align}
+Per $\sigma_y=-i|0\rangle\langle1|+i|1\rangle\langle0|$:
+\begin{equation}
+(\sigma_y\otimes\mathbb I)|\Phi_4\rangle=\frac{1}{\sqrt2}\Big(i|1\rangle_a|A\rangle-i|0\rangle_a|B\rangle\Big),
+\end{equation}
+\begin{equation}
+\langle\sigma_y^{(a)}\rangle=\frac{1}{2}\Big(-i\langle A|B\rangle+i\langle B|A\rangle\Big)
+=\frac{1}{2}\Big(-i z+i\bar z\Big)\Big|_{z=\langle A|B\rangle}
+=\frac{1}{2}\big(2\,\mathrm{Im}\,z\big)=\mathrm{Im}\,\langle A|B\rangle,
+\end{equation}
+avendo usato $-iz+i\bar z=-i(x+iy)+i(x-iy)=y+y=2y$ con $z=x+iy$.
+\end{proof}
+
+Mettendo insieme le due proposizioni:
+\begin{equation}
+\boxed{\;\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,C_{ij}^{\alpha\beta}(t),
+\qquad
+\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,C_{ij}^{\alpha\beta}(t).\;}
+\end{equation}
+Il numero complesso non misurabile è stato scomposto in due numeri reali, ciascuno il valore
+d'aspettazione di un'osservabile hermitiana su un singolo qubit. Il problema è risolto.
+
+\subsection{Interpretazione fisica}
+
+Il valore d'aspettazione di $\sigma_x$ sull'ancilla è, in linguaggio interferometrico, la
+\emph{visibilità} della frangia. Se $|A\rangle=|B\rangle$ i due rami sono identici,
+l'interferenza è massima e $\langle\sigma_x\rangle=1$; se $|A\rangle\perp|B\rangle$ i due rami
+sono distinguibili in linea di principio, l'interferenza scompare e
+$\langle\sigma_x\rangle=0$. Il circuito è quindi letteralmente un interferometro alla
+Mach--Zehnder, in cui il ``cammino'' è lo stato dell'ancilla e la ``differenza di fase'' è
+l'azione degli operatori $V,W$ intervallati dall'evoluzione.
+
+% =====================================================================
+\section{Due punti delicati, verificati numericamente}
+% =====================================================================
+
+\subsection{Perché $U(t)$ non è controllato}
+
+È una domanda naturale: se $W$ e $V$ sono controllati, perché non $U(t)$? La risposta viene
+dall'algebra della Proposizione~1. Se $U$ fosse controllato (attivo solo su $|1\rangle$), lo
+stato allo stadio 3 diventerebbe
+\begin{equation}
+\frac{1}{\sqrt2}\Big(|0\rangle_a\,|\psi_0\rangle+|1\rangle_a\,U(t)W|\psi_0\rangle\Big),
+\end{equation}
+e nel ramo $|0\rangle$ mancherebbe del tutto l'evoluzione: l'overlap finale conterrebbe
+$V^\dagger U$ invece di $U^\dagger V^\dagger U$, cioè \textbf{non} l'operatore di Heisenberg.
+Il risultato non sarebbe il correlatore.
+
+C'è anche una lettura fisica: $U(t)$ descrive l'evoluzione naturale del dimero, che avviene
+\emph{indipendentemente} dall'ancilla --- l'ancilla è un contatore ausiliario, non modifica la
+dinamica del sistema. Solo le due ``perturbazioni'' $V,W$ vanno condizionate al ramo.
+
+Verifica numerica (a $N=200$ passi di Trotter, correlatore $C_{2,1}^{xx}$):
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+$t$ & valore esatto & $U$ non controllato & $U$ controllato \\
+\midrule
+$0.7$ & $\phantom{-}0.6589-0.0492i$ & $\phantom{-}0.6587-0.0468i$ & $-0.4990+0.4332i$ \\
+$2.0$ & $\phantom{-}0.0881+0.2232i$ & $\phantom{-}0.0865+0.2270i$ & $-0.1124+0.2120i$ \\
+$4.5$ & $-0.8928-0.2410i$ & $-0.8921-0.2432i$ & $\phantom{-}0.7442+0.5491i$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+La colonna con $U$ controllato non è ``leggermente peggiore'': è semplicemente un'altra
+quantità. Un errore di questo tipo non si manifesta come un crash, e va escluso per costruzione.
+
+\subsection{Controllo o anti-controllo su $V$?}
+
+Nella nostra derivazione $V$ è anti-controllato. Cosa succederebbe con un controllo pieno? Lo
+stato finale sarebbe
+\begin{equation}
+\frac{1}{\sqrt2}\Big(|0\rangle_a\,U|\psi_0\rangle+|1\rangle_a\,V\,U\,W|\psi_0\rangle\Big),
+\end{equation}
+con overlap
+\begin{equation}
+\langle A'|B'\rangle=\langle\psi_0|U^\dagger V U W|\psi_0\rangle .
+\end{equation}
+Confrontando con la Proposizione~1, la differenza è $V$ al posto di $V^\dagger$: le due versioni
+coincidono \textbf{se e solo se} $V$ è hermitiano. Per le matrici di Pauli lo è, quindi
+\emph{nel nostro caso specifico le due varianti sono equivalenti}, come confermato
+numericamente (accordo cifra per cifra su tutti i tempi testati).
+
+\begin{warnbox}[Perché usare comunque l'anti-controllo]
+Due ragioni. Primo, è la convenzione della letteratura di riferimento, e restare aderenti
+facilita il confronto. Secondo, e più sostanziale: la versione anti-controllata resta corretta
+anche per $V$ \emph{non} hermitiano (per esempio operatori di innalzamento
+$\sigma^\pm=(\sigma^x\pm i\sigma^y)/2$, rilevanti in altri contesti spettroscopici), mentre la
+versione a controllo pieno calcolerebbe una quantità diversa. Adottare la forma generale evita
+di dover ricordare, in futuro, che la scorciatoia valeva solo per operatori hermitiani.
+\end{warnbox}
+
+% =====================================================================
+\section{Il blocco $U(t)$: da esponenziale a gate}
+% =====================================================================
+
+\subsection{Il problema di Trotter}
+
+$U(t)=e^{-iHt}$ non è direttamente un gate: è l'esponenziale di una matrice $4\times4$ che
+mescola tutti i termini di \eqref{eq:H}. Se i vari addendi di $H$ commutassero fra loro si
+potrebbe spezzare l'esponenziale esattamente, ma in generale $e^{A+B}\neq e^Ae^B$ quando
+$[A,B]\neq0$.
+
+Adottiamo la separazione già stabilita nel progetto:
+\begin{equation}
+H=H_1+H_2,\qquad
+H_1=J(XX+YY+ZZ)+b(Z_1+Z_2),\qquad
+H_2=D(X_1Z_2-Z_1X_2).
+\end{equation}
+Il motivo di questa scelta e non un'altra: $H_1$ contiene tutto ciò che sopravvive a $D=0$ e ha
+una struttura standard (scambio isotropo $+$ campo) di cui si conosce la decomposizione in gate;
+$H_2$ isola il solo termine DM, che è la novità rispetto ai casi di letteratura. Inoltre, per
+$D=0$ si ha $H_2=0$ e la decomposizione diventa \emph{esatta} --- utile come test limite.
+
+La formula di Suzuki--Trotter al prim'ordine dice che, suddividendo $t$ in $N$ passi di durata
+$\tau=t/N$,
+\begin{equation}
+e^{-iHt}=\Big(e^{-iH_2\tau}\,e^{-iH_1\tau}\Big)^{N}+O\!\left(\frac{t^2}{N}\right).
+\label{eq:trotter}
+\end{equation}
+L'errore per singolo passo è $O(\tau^2)$ (deriva dal commutatore $[H_1,H_2]$ nel primo termine
+della formula di Baker--Campbell--Hausdorff); moltiplicato per gli $N$ passi dà l'errore globale
+$O(N\tau^2)=O(t^2/N)$ della \eqref{eq:trotter}: aumentando $N$ a $t$ fissato l'errore scende come
+$1/N$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.52\textwidth]{fig_trotter.png}
+\caption{Errore del circuito rispetto al valore esatto, a $t=4$ fissato, in funzione del numero
+di passi di Trotter $N$ (scala doppio-logaritmica). La linea tratteggiata è l'andamento $1/N$
+previsto dalla \eqref{eq:trotter}. L'accordo con la pendenza attesa conferma che lo scarto
+residuo è \emph{soltanto} errore di troncamento di Trotter, e non un errore di costruzione del
+circuito: un errore di logica o di convenzione darebbe una discrepanza costante, indipendente da
+$N$.}
+\end{figure}
+
+\subsection{Il compromesso}
+
+Aumentare $N$ riduce l'errore di Trotter ma allunga il circuito, e su hardware reale un circuito
+più lungo accumula più errore di gate e più decoerenza. Esiste quindi un $N$ ottimale che
+bilancia i due effetti --- questione centrale per la Parte 2 della tesi (sistemi aperti), dove il
+rumore entra esplicitamente. In simulazione statevector, dove non c'è rumore, conviene
+semplicemente $N$ grande.
+
+% =====================================================================
+\section{La misura}
+% =====================================================================
+
+\subsection{Perché servono due esecuzioni}
+
+Abbiamo bisogno di $\langle\sigma_x^{(a)}\rangle$ \emph{e} $\langle\sigma_y^{(a)}\rangle$. Ma
+$\sigma_x$ e $\sigma_y$ non commutano ($[\sigma_x,\sigma_y]=2i\sigma_z$): non sono
+simultaneamente misurabili. Si eseguono quindi \textbf{due circuiti separati}, identici in tutto
+tranne l'ultima rotazione sull'ancilla. Non è una scelta implementativa ma un vincolo di
+principio del formalismo quantistico.
+
+\subsection{Come si misura una Pauli diversa da $\sigma_z$}
+
+L'hardware misura sempre nella base computazionale, cioè misura $\sigma_z$. Per misurare
+un'altra Pauli si ruota lo stato in modo che l'osservabile voluta diventi $\sigma_z$. Se si
+applica un unitario $R$ prima della misura, si misura effettivamente
+\begin{equation}
+\langle\psi|R^\dagger\,\sigma_z\,R|\psi\rangle,
+\end{equation}
+quindi basta scegliere $R$ tale che $R^\dagger\sigma_z R$ sia l'osservabile desiderata.
+
+\paragraph{Parte reale: $R=H$.} Usando $H^\dagger=H$ e il calcolo diretto
+$H\sigma_z H=\sigma_x$ (verificabile moltiplicando le matrici),
+\begin{equation}
+H^\dagger\sigma_z H=\sigma_x
+\quad\Longrightarrow\quad
+\text{misurare dopo }H \;=\; \text{misurare }\sigma_x \;=\; \mathrm{Re}\,C(t).
+\end{equation}
+
+\paragraph{Parte immaginaria: $R=R_x(\pi/2)$.} Con $R_x(\theta)=e^{-i\theta\sigma_x/2}$,
+si calcola la coniugazione derivando rispetto a $\theta$:
+\begin{equation}
+\frac{d}{d\theta}\Big(e^{i\theta\sigma_x/2}\sigma_z e^{-i\theta\sigma_x/2}\Big)
+=\frac{i}{2}\big[\sigma_x,\sigma_z\big]\Big|_{\text{coniugato}}
+=\frac{i}{2}(-2i\sigma_y)=\sigma_y ,
+\end{equation}
+che con la condizione iniziale $\sigma_z$ a $\theta=0$ integra a
+\begin{equation}
+R_x(\theta)^\dagger\,\sigma_z\,R_x(\theta)=\sigma_z\cos\theta+\sigma_y\sin\theta .
+\end{equation}
+A $\theta=\pi/2$ resta $\sigma_y$, come voluto:
+\begin{equation}
+\text{misurare dopo }R_x(\pi/2)\;=\;\text{misurare }\sigma_y\;=\;\mathrm{Im}\,C(t).
+\end{equation}
+
+\subsection{Dai conteggi al numero}
+
+Misurando l'ancilla in base computazionale si ottengono conteggi $n_0$ ed $n_1$ su
+$N_{\text{shots}}=n_0+n_1$ ripetizioni. Poiché $\sigma_z$ ha autovalore $+1$ su $|0\rangle$ e
+$-1$ su $|1\rangle$,
+\begin{equation}
+\langle\sigma_z\rangle\simeq\frac{n_0-n_1}{N_{\text{shots}}}=\frac{2n_0}{N_{\text{shots}}}-1 .
+\end{equation}
+I qubit del registro possono essere misurati o ignorati: l'informazione sta tutta nell'ancilla,
+e tracciare via il registro non altera la statistica marginale dell'ancilla.
+
+\paragraph{Errore statistico.} Il conteggio $n_0$ è binomiale con probabilità
+$p=(1+\langle\sigma_z\rangle)/2$, dunque la deviazione standard della stima è
+\begin{equation}
+\sigma_{\text{stat}}=\frac{2\sqrt{p(1-p)}}{\sqrt{N_{\text{shots}}}}\le\frac{1}{\sqrt{N_{\text{shots}}}} .
+\end{equation}
+Il caso peggiore ($p=1/2$, cioè $\langle\sigma_z\rangle=0$) dà $1/\sqrt{N_{\text{shots}}}$: con
+$8192$ shot, circa $0.011$. È esattamente la soglia già adottata nel progetto per decidere se
+un segnale è distinguibile dal rumore statistico.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.52\textwidth]{fig_shot.png}
+\caption{Stima di $\mathrm{Re}\,C_{2,1}^{xx}(2)$ al crescere del numero di shot (media e
+deviazione standard su 400 ripetizioni simulate del campionamento binomiale). La barra d'errore
+si contrae come $1/\sqrt{N_{\text{shots}}}$; il valore converge a quello esatto (linea
+tratteggiata). Questo rumore è \emph{statistico} e indipendente dall'errore di Trotter della
+figura precedente: i due si sommano e vanno controllati separatamente.}
+\end{figure}
+
+% =====================================================================
+\section{Il circuito completo e la sua validazione}
+% =====================================================================
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_circuito.png}
+\caption{Il circuito realmente eseguito per $C_{2,1}^{xx}(t)$, nei due rami di misura. Da
+sinistra: preparazione di $|\psi_0\rangle$ sul registro; $H$ sull'ancilla; controlled-$X$ su
+$q_0$ (sito 1) con controllo pieno, cioè $W=\sigma_1^x$; il blocco $U(t)$ ripetuto $N$ volte
+(qui $N=2$ per leggibilità; nella validazione $N=200$--$400$), non controllato; controlled-$X$ su
+$q_1$ (sito 2) con \emph{anti}-controllo (cerchio vuoto), cioè $V=\sigma_2^x$; infine la
+rotazione di base sull'ancilla ($H$ per la parte reale, $R_x(\pi/2)$ per l'immaginaria) e la
+misura.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_validazione.png}
+\caption{Validazione: parte reale (sinistra) e immaginaria (destra) di $C_{2,1}^{xx}(t)$. La
+linea continua è il calcolo classico esatto ottenuto per diagonalizzazione (formula spettrale
+$C(t)=\sum_k e^{i(E_0-E_k)t}a_kb_k$); i punti sono i valori estratti dal circuito quantistico
+tramite $\langle\sigma_x^{(a)}\rangle$ e $\langle\sigma_y^{(a)}\rangle$. L'accordo su tutto
+l'intervallo esplorato, per entrambe le componenti, conferma la correttezza dell'intera catena:
+preparazione, controlli, evoluzione, rotazione di base.}
+\end{figure}
+
+\clearpage
+% =====================================================================
+\section{Riepilogo dei passaggi}
+% =====================================================================
+
+\begin{enumerate}[leftmargin=*]
+\item Il correlatore $C_{ij}^{\alpha\beta}(t)$ è complesso e il suo operatore non è hermitiano:
+non è misurabile direttamente.
+\item Si aggiunge un'ancilla e la si porta in $|+\rangle$ con un Hadamard, creando due rami
+coerenti.
+\item Un gate controllato applica $W=\sigma_j^\beta$ solo nel ramo $|1\rangle$: è la
+perturbazione al tempo $0$.
+\item L'evoluzione $U(t)=e^{-iHt}$ agisce su entrambi i rami, senza controllo. Realizzata via
+Suzuki--Trotter con errore $O(t^2/N)$.
+\item Un gate anti-controllato applica $V=\sigma_i^\alpha$ solo nel ramo $|0\rangle$: è
+l'operatore al tempo $t$. La struttura $U^\dagger V^\dagger U$ --- la rappresentazione di
+Heisenberg --- emerge automaticamente dall'ordine delle operazioni.
+\item Lo stato finale è $\tfrac{1}{\sqrt2}(|0\rangle|A\rangle+|1\rangle|B\rangle)$ con
+$\langle A|B\rangle=C_{ij}^{\alpha\beta}(t)$.
+\item L'ancilla legge l'overlap: $\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,C$,
+$\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,C$.
+\item Poiché $\sigma_x$ e $\sigma_y$ non commutano servono due esecuzioni, con $H$ oppure
+$R_x(\pi/2)$ prima della misura in base computazionale.
+\item I conteggi danno $\langle\sigma_z\rangle=(n_0-n_1)/N_{\text{shots}}$, con errore
+statistico $\lesssim1/\sqrt{N_{\text{shots}}}$.
+\end{enumerate}
+
+\paragraph{Le due sorgenti di errore, da non confondere.}
+L'errore di \emph{Trotter} è sistematico, dipende da $N$ e $t$, e resta anche con infiniti shot;
+l'errore \emph{statistico} è casuale, dipende solo da $N_{\text{shots}}$, e resta anche con
+Trotter esatto. Su hardware reale si aggiunge una terza sorgente --- errori di gate,
+decoerenza, errori di lettura --- che è l'oggetto della Parte 2 della tesi.
+
+\end{document}

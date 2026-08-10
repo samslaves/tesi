@@ -1,0 +1,806 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposizione}{Proposizione}
+\newtheorem{corollario}{Corollario}
+\newtheorem{osservazione}{Osservazione}
+\newtheorem*{definizione}{Definizione}
+
+\title{Simmetrie residue e annullamento strutturale dei correlatori\\
+dinamici $\langle\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\rangle$\\[2pt]
+\large nel dimero di spin-1/2 con interazione DM}
+\author{Note preparatorie -- tesi triennale in Fisica (UniPR)\\
+Relatore: Prof.\ Alessandro Chiesa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Si affronta, in modo completo e autocontenuto, il problema posto dal relatore: prima di
+implementare il circuito con qubit ausiliario (Hadamard test) per le correlazioni dinamiche
+$\langle\psi_0|\sigma_i^\alpha(t)\,\sigma_j^\beta(0)|\psi_0\rangle$ sul dimero con termine di
+Dzyaloshinskii--Moriya, si vuole stabilire per via classica (analisi di simmetria
+dell'Hamiltoniana e diagonalizzazione esatta) quali combinazioni $(i,j,\alpha,\beta)$ sono
+strutturalmente nulle, e quali sono invece legate fra loro da relazioni esatte. Si dimostra che
+la magnetizzazione totale $M=\langle S_z\rangle$ non è più un buon numero quantico per $D\neq0$;
+si individua una simmetria unitaria residua che sopravvive per ogni valore dei parametri; si
+sfrutta la realtà della matrice hamiltoniana in base computazionale per ottenere una simmetria
+di time-reversal e i vincoli conseguenti sulla parte reale/immaginaria dei correlatori; si
+fornisce infine il criterio numerico esatto (in base agli autostati) per la verifica classica,
+completa e non euristica, di ogni singola combinazione al punto di lavoro del test 2
+($b/J=0.35$, $D/J=0.80$).
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Inquadramento e obiettivo}
+% =====================================================================
+
+L'Hamiltoniana di riferimento, nella convenzione già fissata in \texttt{dimer\_exact.py} e in
+\texttt{dimero\_DM.pdf} (Pauli, non spin $s=\sigma/2$; base computazionale
+$\{|00\rangle,|01\rangle,|10\rangle,|11\rangle\}$, $|0\rangle=|\!\uparrow\rangle$,
+$|1\rangle=|\!\downarrow\rangle$), è
+
+\begin{equation}
+H = \underbrace{J\,(X_1X_2+Y_1Y_2+Z_1Z_2)}_{H_{\mathrm{ex}}}
+  + \underbrace{b\,(Z_1+Z_2)}_{H_Z}
+  + \underbrace{D\,(X_1Z_2-Z_1X_2)}_{H_{\mathrm{DM}}}
+\label{eq:H}
+\end{equation}
+con, al punto di lavoro del test 2, $J=1$, $b/J=0.35$, $D/J=0.80$.
+
+Lo stato fondamentale $|\psi_0\rangle$ a questo punto di lavoro è stato trovato via VQE
+(ansatz PMA-2q$\cdot$3, $\mathcal F=1$ a precisione macchina, cfr.\ \texttt{risultati\_vqe\_test2.md}),
+è non degenere, e il file \texttt{ground\_state\_test2.npz} ne contiene il vettore esplicito.
+
+L'osservabile di interesse è il correlatore dinamico a due tempi
+
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) \;\equiv\; \langle\psi_0|\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,|\psi_0\rangle,
+\qquad
+\sigma_i^\alpha(t) \equiv e^{iHt}\,\sigma_i^\alpha\,e^{-iHt},
+\qquad i,j\in\{1,2\},\;\alpha,\beta\in\{x,y,z\}.
+\label{eq:corr-def}
+\end{equation}
+
+Si useranno unità $\hbar=1$ in tutto il documento (coerente con le convenzioni già in uso nei
+notebook Trotter).
+
+L'obiettivo è duplice:
+\begin{enumerate}[label=(\roman*)]
+\item stabilire un criterio \emph{generale e dimostrato} per cui una simmetria di $H$ implica
+l'annullamento (o una relazione esatta) di $C_{ij}^{\alpha\beta}(t)$ per \emph{ogni} $t$, non solo
+a $t=0$;
+\item applicarlo esplicitamente all'Hamiltoniana \eqref{eq:H}, individuando tutte le simmetrie
+residue che sopravvivono per $D\neq0$, e derivandone le conseguenze quantitative.
+\end{enumerate}
+
+% =====================================================================
+\section{Criterio generale: simmetrie e annullamento strutturale}
+% =====================================================================
+
+\subsection{Caso unitario}
+\label{sec:crit-unitario}
+
+\begin{proposizione}
+\label{prop:unitaria}
+Sia $U$ un operatore unitario tale che $[U,H]=0$, e sia $|\psi_0\rangle$ un autostato non
+degenere di $H$, cosicché $U|\psi_0\rangle=u_0|\psi_0\rangle$ con $|u_0|=1$. Allora per ogni $t$
+
+\begin{equation}
+C_{AB}(t) \equiv \langle\psi_0|A(t)B(0)|\psi_0\rangle
+= \langle\psi_0|\,\widetilde A(t)\,\widetilde B(0)\,|\psi_0\rangle,
+\qquad \widetilde A \equiv UAU^\dagger,\;\; \widetilde B\equiv UBU^\dagger.
+\end{equation}
+\end{proposizione}
+
+\begin{proof}
+Il primo passo è mostrare che $U$, commutando con $H$, commuta anche con l'evoluzione
+temporale generata da $H$. Sviluppando l'esponenziale in serie e usando $[U,H]=0
+\;\Rightarrow\; UH^nU^\dagger=(UHU^\dagger)^n=H^n$ per ogni $n$ (perché $U^\dagger U=\mathbb I$
+inserito fra ogni coppia di fattori $H$ non altera nulla, dato che $U$ commuta con $H$ stesso):
+\begin{equation}
+U\,e^{-iHt}\,U^\dagger = U\left(\sum_{n=0}^\infty \frac{(-it)^n}{n!}H^n\right)U^\dagger
+= \sum_{n=0}^\infty \frac{(-it)^n}{n!}\,UH^nU^\dagger
+= \sum_{n=0}^\infty \frac{(-it)^n}{n!}H^n = e^{-iHt}.
+\label{eq:U-evol}
+\end{equation}
+Dunque $U$ e $e^{-iHt}$ commutano per ogni $t$. Applicando questo fatto all'operatore di
+Heisenberg $A(t)=e^{iHt}Ae^{-iHt}$:
+\begin{equation}
+U A(t) U^\dagger = U e^{iHt}Ae^{-iHt}U^\dagger
+= \big(Ue^{iHt}U^\dagger\big)\big(UAU^\dagger\big)\big(Ue^{-iHt}U^\dagger\big)
+= e^{iHt}\,\widetilde A\,e^{-iHt} = \widetilde A(t).
+\label{eq:UAtU}
+\end{equation}
+Infine, inserendo $U^\dagger U=\mathbb I$ due volte nella definizione \eqref{eq:corr-def} e usando
+$U|\psi_0\rangle=u_0|\psi_0\rangle$ (quindi $\langle\psi_0|U^\dagger = \bar u_0\langle\psi_0|$):
+\begin{align}
+C_{AB}(t) &= \langle\psi_0|A(t)B(0)|\psi_0\rangle
+= \langle\psi_0|U^\dagger\, U A(t)U^\dagger\, U B(0)U^\dagger\, U|\psi_0\rangle \\
+&= \bar u_0 u_0\,\langle\psi_0|\big(UA(t)U^\dagger\big)\big(UB(0)U^\dagger\big)|\psi_0\rangle
+= |u_0|^2\,\langle\psi_0|\widetilde A(t)\,\widetilde B(0)|\psi_0\rangle,
+\end{align}
+e poiché $|u_0|^2=1$ si ottiene la tesi.
+\end{proof}
+
+\begin{corollario}
+\label{cor:zero-unitario}
+Se $\widetilde A = \eta_A\,A'$ e $\widetilde B=\eta_B\,B'$ con $\eta_A,\eta_B\in\{\pm1\}$ e con
+$A',B'$ operatori tali che $A'(t)B'(0)$ dia luogo esattamente al \emph{medesimo} correlatore
+$C_{AB}(t)$ (stessa coppia di siti e componenti), allora
+\begin{equation}
+C_{AB}(t) = \eta_A\eta_B\, C_{AB}(t) \quad\Longrightarrow\quad
+\big(1-\eta_A\eta_B\big)\,C_{AB}(t)=0,
+\end{equation}
+e se $\eta_A\eta_B=-1$ si conclude $C_{AB}(t)\equiv 0$ per ogni $t$.
+Se invece $A',B'$ individuano una coppia \emph{diversa} da $(A,B)$, la Proposizione
+\ref{prop:unitaria} fornisce non uno zero ma una relazione esatta fra due correlatori distinti.
+\end{corollario}
+
+Questo secondo caso (relazione, non zero) è esattamente quello che si incontrerà nella
+Sezione~\ref{sec:simmetria-U}: la simmetria residua trovata scambia i siti, quindi non fissa mai
+una singola coppia $(i,j,\alpha,\beta)$ in sé.
+
+\subsection{Caso antiunitario}
+\label{sec:crit-antiunitario}
+
+Per ottenere zeri veri anche quando l'unica simmetria disponibile scambia i siti, serve lo
+strumento più fine del \emph{time-reversal}, che è necessariamente rappresentato da un operatore
+\emph{antiunitario} (teorema di Wigner). Si richiama qui la teoria da zero, poiché non è stata
+usata altrove nel progetto.
+
+\begin{definizione}
+Un operatore $\Theta$ è antiunitario se è antilineare, $\Theta(c|\phi\rangle)=\bar c\,\Theta|\phi\rangle$
+per ogni $c\in\mathbb C$, e preserva i moduli dei prodotti scalari nella forma coniugata:
+\begin{equation}
+\langle \Theta\alpha|\Theta\beta\rangle = \langle\beta|\alpha\rangle = \overline{\langle\alpha|\beta\rangle}.
+\label{eq:antiunit-def}
+\end{equation}
+\end{definizione}
+
+\begin{lemma}[Identità degli elementi di matrice sotto $\Theta$]
+\label{lem:matrix-element}
+Sia $\Theta$ antiunitario e $X$ un operatore lineare. Definendo $\widetilde X\equiv\Theta X\Theta^{-1}$
+(che è di nuovo un operatore \emph{lineare}, perché la composizione di due mappe antilineari,
+$\Theta$ e $\Theta^{-1}$, con $X$ lineare in mezzo, è lineare), vale per ogni coppia di stati
+$|\alpha\rangle,|\beta\rangle$:
+\begin{equation}
+\boxed{\;\langle\alpha|X|\beta\rangle^{*} = \langle\Theta\alpha|\,\widetilde X\,|\Theta\beta\rangle\;}
+\label{eq:matrix-element-thm}
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Sia $|\gamma\rangle\equiv X|\beta\rangle$. Applicando la definizione \eqref{eq:antiunit-def} alla
+coppia $(\alpha,\gamma)$:
+\begin{equation}
+\langle\Theta\alpha|\Theta\gamma\rangle = \overline{\langle\alpha|\gamma\rangle}
+= \overline{\langle\alpha|X|\beta\rangle}.
+\end{equation}
+D'altra parte, per definizione di $\widetilde X$ e usando $\Theta^{-1}\Theta=\mathbb I$:
+\begin{equation}
+\Theta|\gamma\rangle = \Theta X|\beta\rangle = \Theta X\Theta^{-1}\Theta|\beta\rangle
+= \widetilde X\,|\Theta\beta\rangle.
+\end{equation}
+Sostituendo, $\langle\Theta\alpha|\widetilde X|\Theta\beta\rangle = \overline{\langle\alpha|X|\beta\rangle}$,
+che è la \eqref{eq:matrix-element-thm}.
+\end{proof}
+
+\noindent
+Si osservi la differenza cruciale col caso unitario (Proposizione~\ref{prop:unitaria}): qui
+compare una coniugazione complessa dell'intero elemento di matrice, non solo un fattore di fase,
+ed è proprio questa coniugazione a generare vincoli di realtà/immaginarietà (e non solo
+relazioni fra moduli).
+
+\begin{lemma}[Complesso coniugato di un operatore reale]
+\label{lem:K}
+Sia $K$ l'operatore di coniugazione complessa componente per componente in una base fissata
+$\{|n\rangle\}$: $K\big(\sum_n c_n|n\rangle\big) = \sum_n \bar c_n|n\rangle$. Allora $K$ è
+antiunitario, $K^2=\mathbb I$, e per ogni operatore lineare $X$ con matrice $X_{nm}=\langle n|X|m\rangle$
+nella base scelta:
+\begin{equation}
+KXK = X^{*} \quad\text{(matrice complessa coniugata, elemento per elemento)}.
+\end{equation}
+In particolare, se $X$ è rappresentato da una matrice reale in quella base, $KXK=X$; se è
+rappresentato da una matrice puramente immaginaria, $KXK=-X$.
+\end{lemma}
+
+\begin{proof}
+Antiunitarietà: $\langle K\alpha|K\beta\rangle=\sum_n \overline{\bar\alpha_n}\,\bar\beta_n
+=\sum_n \alpha_n\bar\beta_n = \overline{\sum_n\bar\alpha_n\beta_n}=\overline{\langle\alpha|\beta\rangle}$,
+che è la \eqref{eq:antiunit-def}. $K^2=\mathbb I$ è ovvio (coniugare due volte restituisce
+l'originale). Per l'azione su $X$: $(KXK)|m\rangle = KX|\bar m\rangle$ dove $|\bar m\rangle=K|m\rangle$
+è il vettore della base stessa (reale nella base computazionale, $K|m\rangle=|m\rangle$ per ogni
+vettore di base); quindi $KX|m\rangle = K\sum_n X_{nm}|n\rangle=\sum_n \overline{X_{nm}}|n\rangle$,
+cioè la colonna $m$-esima di $KXK$ è la colonna $m$-esima di $X^*$. Da qui l'ultima affermazione,
+ponendo $X^*=\pm X$.
+\end{proof}
+
+Questi due lemmi sono tutto ciò che serve; si applicheranno entrambi nella
+Sezione~\ref{sec:time-reversal}.
+
+% =====================================================================
+\section{Il numero quantico $M=\langle S_z\rangle$ non sopravvive per $D\neq0$}
+% =====================================================================
+
+Prima di cercare simmetrie \emph{nuove}, va verificato che quella vecchia (usata per tutto il
+lavoro a $D=0$) sia effettivamente rotta, per non continuare a ragionare per abitudine nel
+settore $M$.
+
+\begin{proposizione}
+\label{prop:Sz-rotto}
+$[\,Z_1+Z_2,\,H_{\mathrm{DM}}\,] = 2iD\,(Y_1Z_2-Z_1Y_2) \neq 0$ per $D\neq0$.
+\end{proposizione}
+
+\begin{proof}
+Si usa la relazione ciclica delle Pauli $[Z,X]=ZX-XZ=2iY$ (verificabile direttamente:
+$ZX=\begin{psmallmatrix}0&1\\-1&0\end{psmallmatrix}$,
+$XZ=\begin{psmallmatrix}0&-1\\1&0\end{psmallmatrix}$, differenza $\begin{psmallmatrix}0&2\\-2&0\end{psmallmatrix}=2iY$
+con $Y=\begin{psmallmatrix}0&-i\\i&0\end{psmallmatrix}$). Sviluppando il commutatore termine per
+termine, e usando che operatori su siti diversi commutano sempre:
+\begin{align}
+[Z_1+Z_2,\,X_1Z_2] &= [Z_1,X_1]\,Z_2 + X_1\,[Z_2,Z_2]
+= (2iY_1)\,Z_2 + 0 = 2i\,Y_1Z_2, \\
+[Z_1+Z_2,\,Z_1X_2] &= [Z_1,Z_1]\,X_2 + Z_1\,[Z_2,X_2]
+= 0 + Z_1\,(2iY_2) = 2i\,Z_1Y_2.
+\end{align}
+Quindi
+\begin{equation}
+[Z_1+Z_2,\,H_{\mathrm{DM}}] = D\Big([Z_1+Z_2,X_1Z_2]-[Z_1+Z_2,Z_1X_2]\Big)
+= 2iD\,(Y_1Z_2-Z_1Y_2).
+\end{equation}
+Il termine $Y_1Z_2-Z_1Y_2$ non è identicamente nullo come operatore (è una combinazione lineare
+di due elementi linearmente indipendenti dell'algebra di Pauli a due qubit), dunque il
+commutatore è diverso da zero per ogni $D\neq0$.
+\end{proof}
+
+\begin{osservazione}
+Poiché $[Z_1+Z_2,H_{\mathrm{ex}}]=0$ e $[Z_1+Z_2,H_Z]=0$ banalmente (il primo perché lo scambio
+isotropo conserva sempre $S_z$ totale, il secondo perché $H_Z\propto Z_1+Z_2$ stesso), si ha
+$[Z_1+Z_2,H]=2iD(Y_1Z_2-Z_1Y_2)\neq0$ per $D\neq0$: è esattamente e soltanto il termine DM a
+rompere la conservazione di $M$. Al punto di lavoro del test 2 ($D/J=0.80\neq0$) $M$ \emph{non}
+è un buon numero quantico, e non può essere usato per classificare selection rules come si
+faceva a $D=0$.
+\end{osservazione}
+
+% =====================================================================
+\section{La simmetria unitaria residua: scambio combinato a rotazione locale}
+\label{sec:simmetria-U}
+% =====================================================================
+
+\subsection{Perché lo scambio puro non basta}
+
+Lo scambio dei due siti $P_{12}$ (SWAP) è una simmetria naturale da testare per primo, essendo
+$H_{\mathrm{ex}}$ e $H_Z$ manifestamente simmetrici per scambio $1\leftrightarrow2$. Sotto
+$P_{12}$, l'operatore ``$X$ sul sito 1, $Z$ sul sito 2'' diventa ``$X$ sul sito 2, $Z$ sul sito
+1'', cioè $X_1Z_2\to Z_1X_2$ e viceversa:
+\begin{equation}
+P_{12}\,H_{\mathrm{DM}}\,P_{12} = D\,(Z_1X_2-X_1Z_2) = -H_{\mathrm{DM}}.
+\end{equation}
+Il termine DM è \emph{dispari} sotto scambio puro, mentre $H_{\mathrm{ex}}+H_Z$ è pari: lo
+scambio puro non è una simmetria di $H$ per $D\neq0$. Serve un'operazione aggiuntiva che
+``ripari'' il segno di $H_{\mathrm{DM}}$ senza guastare $H_{\mathrm{ex}}+H_Z$.
+
+\subsection{Costruzione della simmetria}
+
+Si consideri la rotazione di un singolo qubit di angolo $\pi$ attorno all'asse $z$,
+$V\equiv R_z(\pi) = e^{-i\pi Z/2} = \cos(\pi/2)\,\mathbb I - i\sin(\pi/2)\,Z = -iZ$. Le sue
+proprietà di coniugazione sulle Pauli si ricavano direttamente da $Z X Z = -X$, $ZYZ=-Y$,
+$ZZZ=Z$ (immediate dalle matrici esplicite, o dall'anticommutazione $\{Z,X\}=\{Z,Y\}=0$):
+\begin{equation}
+VXV^\dagger = (-iZ)X(iZ) = ZXZ = -X, \qquad
+VYV^\dagger = -Y, \qquad
+VZV^\dagger = Z.
+\label{eq:V-coniug}
+\end{equation}
+Si definisce ora l'operatore su due qubit
+\begin{equation}
+\boxed{U \equiv \mathrm{SWAP}\cdot(V\otimes V)}
+\end{equation}
+cioè: si applica la stessa rotazione locale $V$ a \emph{entrambi} i qubit, poi si scambiano i
+due qubit. Poiché $V\otimes V$ agisce in modo identico sui due fattori, commuta con lo scambio:
+$\mathrm{SWAP}\cdot(V\otimes V) = (V\otimes V)\cdot\mathrm{SWAP}$, quindi l'ordine delle due
+operazioni è indifferente.
+
+\begin{lemma}[Azione di $U$ su un operatore di singolo sito]
+\label{lem:U-singolo}
+Per $\alpha\in\{x,y,z\}$, definendo $\eta_x=\eta_y=-1$, $\eta_z=+1$:
+\begin{equation}
+U\,\sigma_1^\alpha\,U^\dagger = \eta_\alpha\,\sigma_2^\alpha,
+\qquad
+U\,\sigma_2^\alpha\,U^\dagger = \eta_\alpha\,\sigma_1^\alpha.
+\end{equation}
+\end{lemma}
+
+\begin{proof}
+Scrivendo $\sigma_1^\alpha=\sigma^\alpha\otimes\mathbb I$ e usando che SWAP scambia i due fattori
+di un prodotto tensoriale, $\mathrm{SWAP}\,(A\otimes B)\,\mathrm{SWAP}=B\otimes A$:
+\begin{align}
+U\,\sigma_1^\alpha\,U^\dagger
+&= \mathrm{SWAP}\,(V\otimes V)(\sigma^\alpha\otimes\mathbb I)(V\otimes V)^\dagger\,\mathrm{SWAP} \\
+&= \mathrm{SWAP}\,\big(V\sigma^\alpha V^\dagger\otimes \mathbb I\big)\,\mathrm{SWAP}
+= \mathrm{SWAP}\,\big(\eta_\alpha\sigma^\alpha\otimes\mathbb I\big)\,\mathrm{SWAP}
+= \eta_\alpha\,\big(\mathbb I\otimes\sigma^\alpha\big) = \eta_\alpha\,\sigma_2^\alpha,
+\end{align}
+avendo usato la \eqref{eq:V-coniug} al terzo passaggio. Il caso $\sigma_2^\alpha$ è identico per
+simmetria della costruzione.
+\end{proof}
+
+\begin{proposizione}[$U$ è una simmetria esatta di $H$ per ogni $J,b,D$]
+\label{prop:U-simmetria}
+$[U,H]=0$ per qualunque valore reale dei parametri.
+\end{proposizione}
+
+\begin{proof}
+Si verifica separatamente sui tre blocchi, usando il Lemma~\ref{lem:U-singolo} e la linearità
+di $X\mapsto UXU^\dagger$ sui prodotti (per operatori su siti diversi, che commutano sempre, la
+coniugazione di un prodotto è il prodotto delle coniugazioni: $U(AB)U^\dagger=(UAU^\dagger)(UBU^\dagger)$
+per qualunque $U$ unitario, banalmente inserendo $U^\dagger U=\mathbb I$ fra $A$ e $B$).
+
+\emph{Scambio isotropo.} Per ciascun termine $\alpha\alpha$:
+\begin{equation}
+U(\sigma_1^\alpha\sigma_2^\alpha)U^\dagger
+= (U\sigma_1^\alpha U^\dagger)(U\sigma_2^\alpha U^\dagger)
+= (\eta_\alpha\sigma_2^\alpha)(\eta_\alpha\sigma_1^\alpha)
+= \eta_\alpha^2\,\sigma_1^\alpha\sigma_2^\alpha = \sigma_1^\alpha\sigma_2^\alpha,
+\end{equation}
+perché $\eta_\alpha^2=1$ sempre. Dunque $U H_{\mathrm{ex}} U^\dagger = H_{\mathrm{ex}}$.
+
+\emph{Zeeman.} Usando $\eta_z=+1$:
+\begin{equation}
+U(Z_1+Z_2)U^\dagger = U\sigma_1^zU^\dagger + U\sigma_2^zU^\dagger
+= \sigma_2^z+\sigma_1^z = Z_1+Z_2,
+\end{equation}
+quindi $UH_ZU^\dagger=H_Z$.
+
+\emph{DM.} Qui è essenziale che $\eta_x\eta_z=(-1)(+1)=-1$:
+\begin{align}
+U(X_1Z_2)U^\dagger &= (U\sigma_1^xU^\dagger)(U\sigma_2^zU^\dagger)
+= (\eta_x\sigma_2^x)(\eta_z\sigma_1^z) = \eta_x\eta_z\,\sigma_1^z\sigma_2^x = -Z_1X_2, \\
+U(Z_1X_2)U^\dagger &= (U\sigma_1^zU^\dagger)(U\sigma_2^xU^\dagger)
+= (\eta_z\sigma_2^z)(\eta_x\sigma_1^x) = \eta_z\eta_x\,\sigma_1^x\sigma_2^z = -X_1Z_2,
+\end{align}
+(nel penultimo passaggio si è riordinato il prodotto di operatori su siti diversi, lecito perché
+commutano). Sottraendo:
+\begin{equation}
+U\,H_{\mathrm{DM}}\,U^\dagger = D\big[(-Z_1X_2)-(-X_1Z_2)\big] = D\,(X_1Z_2-Z_1X_2) = H_{\mathrm{DM}}.
+\end{equation}
+I tre blocchi sono ciascuno separatamente invarianti, quindi $UHU^\dagger=H$, cioè $[U,H]=0$.
+\end{proof}
+
+\begin{osservazione}
+Si noti bene il meccanismo: lo scambio da solo cambia segno a $H_{\mathrm{DM}}$
+($X_1Z_2\leftrightarrow Z_1X_2$ scambia i due addendi, cambiando il segno della loro
+differenza); la rotazione $V\otimes V$ da sola introduce un fattore $\eta_x\eta_z=-1$ su
+\emph{ciascun} addendo del termine DM (perché mescola una componente $x$, che cambia segno, con
+una componente $z$, che non cambia segno). I due segni si compongono moltiplicativamente e si
+cancellano esattamente, mentre lasciano invariati $H_{\mathrm{ex}}$ (dove $\eta_\alpha^2=1$
+sempre, qualunque componente) e $H_Z$ (dove non c'è mai uno scambio di componente, solo
+$\eta_z=+1$). È precisamente perché il termine DM accoppia una componente pari sotto $V$ ($z$)
+a una dispari ($x$) che occorre lo scambio dei siti per compensare: la struttura
+$X_1Z_2-Z_1X_2$ è ``fatta apposta'' per essere dispari sotto scambio e pari sotto $V\otimes V$
+applicato a un solo termine per volta con lo scambio incluso -- da cui l'esistenza di $U$.
+\end{osservazione}
+
+\begin{proposizione}[Involutività]
+\label{prop:U2}
+$U^2=\mathbb I$; $U$ è hermitiano e i suoi autovalori sono $u_0=\pm1$.
+\end{proposizione}
+
+\begin{proof}
+$\mathrm{SWAP}$ e $V\otimes V$ commutano, quindi $U^2=\mathrm{SWAP}^2\,(V\otimes V)^2$.
+$\mathrm{SWAP}^2=\mathbb I$ banalmente. $V^2=(-iZ)^2=-Z^2=-\mathbb I$, dunque
+$(V\otimes V)^2=V^2\otimes V^2=(-\mathbb I)\otimes(-\mathbb I)=\mathbb I\otimes\mathbb I=\mathbb I$.
+Quindi $U^2=\mathbb I$. Un operatore unitario ($U^\dagger U=\mathbb I$, essendo composizione di
+unitari) con $U^2=\mathbb I$ soddisfa $U^\dagger=U^{-1}=U$, quindi è hermitiano, e i suoi
+autovalori (reali, essendo hermitiano) soddisfano $u_0^2=1\Rightarrow u_0=\pm1$.
+\end{proof}
+
+\subsection{Conseguenze sui correlatori}
+
+Applicando la Proposizione~\ref{prop:unitaria} con $A=\sigma_i^\alpha$, $B=\sigma_j^\beta$ e il
+Lemma~\ref{lem:U-singolo}:
+
+\begin{corollario}[Relazioni sito 1 $\leftrightarrow$ sito 2]
+\label{cor:U-correlatori}
+Per ogni $t$, per ogni $\alpha,\beta\in\{x,y,z\}$:
+\begin{align}
+C_{11}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\; C_{22}^{\alpha\beta}(t),
+\label{eq:cor-auto} \\
+C_{12}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\; C_{21}^{\alpha\beta}(t).
+\label{eq:cor-incrociato}
+\end{align}
+\end{corollario}
+
+\begin{proof}
+Segue applicando la Proposizione~\ref{prop:unitaria} caso per caso. Per l'autocorrelazione al
+sito 1: $\widetilde A=U\sigma_1^\alpha U^\dagger=\eta_\alpha\sigma_2^\alpha$,
+$\widetilde B=U\sigma_1^\beta U^\dagger=\eta_\beta\sigma_2^\beta$, quindi
+$C_{11}^{\alpha\beta}(t)=\langle\psi_0|(\eta_\alpha\sigma_2^\alpha)(t)\,(\eta_\beta\sigma_2^\beta)(0)|\psi_0\rangle
+=\eta_\alpha\eta_\beta\,C_{22}^{\alpha\beta}(t)$. Per il correlatore incrociato,
+$\widetilde A = U\sigma_1^\alpha U^\dagger=\eta_\alpha\sigma_2^\alpha$ e
+$\widetilde B=U\sigma_2^\beta U^\dagger=\eta_\beta\sigma_1^\beta$, dando
+$C_{12}^{\alpha\beta}(t)=\eta_\alpha\eta_\beta\,\langle\psi_0|\sigma_2^\alpha(t)\sigma_1^\beta(0)|\psi_0\rangle
+=\eta_\alpha\eta_\beta\,C_{21}^{\alpha\beta}(t)$.
+\end{proof}
+
+\noindent
+Non sono zeri (nessuna delle due relazioni lega una quantità a se stessa cambiata di segno,
+perché $U$ scambia sempre i siti), ma dimezzano esattamente il lavoro numerico: calcolato
+$C_{11}^{\alpha\beta}$ e $C_{12}^{\alpha\beta}$ per tutte le nove coppie di componenti, le
+restanti nove ($C_{22}^{\alpha\beta}$ e $C_{21}^{\alpha\beta}$) sono fissate. La tabella dei
+segni $\eta_\alpha\eta_\beta$ è:
+
+\begin{center}
+\begin{tabular}{c|ccc}
+$\eta_\alpha\eta_\beta$ & $\beta=x$ & $\beta=y$ & $\beta=z$ \\\hline
+$\alpha=x$ & $+1$ & $+1$ & $-1$ \\
+$\alpha=y$ & $+1$ & $+1$ & $-1$ \\
+$\alpha=z$ & $-1$ & $-1$ & $+1$
+\end{tabular}
+\end{center}
+
+% =====================================================================
+\section{Time-reversal: $H$ è reale in base computazionale}
+\label{sec:time-reversal}
+% =====================================================================
+
+\subsection{$H$ commuta con la coniugazione complessa}
+
+\begin{proposizione}
+\label{prop:H-reale}
+Nella base computazionale, $H$ è rappresentato da una matrice reale simmetrica per qualunque
+$J,b,D\in\mathbb R$, dunque $KHK=H$ con $K$ definito come nel Lemma~\ref{lem:K}.
+\end{proposizione}
+
+\begin{proof}
+$X$ e $Z$ hanno rappresentazioni matriciali reali; $Y$ è puramente immaginaria. I tre addendi di
+$H_{\mathrm{ex}}$ sono $X_1X_2$ (reale$\otimes$reale $=$ reale), $Y_1Y_2$ (immaginaria$\otimes$immaginaria
+$=$ reale, perché $i\cdot i=-1$ reale), $Z_1Z_2$ (reale). $H_Z\propto Z_1+Z_2$ è reale. Il
+termine DM $X_1Z_2-Z_1X_2$ è prodotto di reale per reale, quindi reale. Somma di matrici reali
+con coefficienti reali $J,b,D$: $H$ è reale. È inoltre simmetrica perché hermitiana e reale
+(hermitiana $+$ reale $\Rightarrow$ simmetrica). Per il Lemma~\ref{lem:K}, matrice reale
+$\Rightarrow KHK=H$.
+
+\emph{Verifica indipendente:} questo fatto è già visibile esplicitamente nella matrice $4\times4$
+derivata in \texttt{dimero\_DM.pdf} (eq.~5 di quel documento),
+\begin{equation}
+H = \begin{pmatrix}
+J+2b & -D & D & 0 \\
+-D & -J & 2J & -D \\
+D & 2J & -J & D \\
+0 & -D & D & J-2b
+\end{pmatrix},
+\end{equation}
+manifestamente reale per ogni $J,b,D$ reali.
+\end{proof}
+
+\subsection{$K$ inverte il tempo}
+
+\begin{lemma}
+\label{lem:K-tempo}
+$K\,e^{-iHt}\,K = e^{+iHt} = e^{-iH(-t)}$.
+\end{lemma}
+
+\begin{proof}
+Sia $|\chi\rangle$ uno stato arbitrario e $f(t)\equiv K\,e^{-iHt}K\,|\chi\rangle$. Si mostra che
+$f$ soddisfa l'equazione di Schrödinger con Hamiltoniana $-H$. Poiché $H$ è reale (Prop.
+\ref{prop:H-reale}), per ogni vettore $|\phi\rangle$ vale $K(H|\phi\rangle) = H\,K|\phi\rangle$
+(coniugare un prodotto matrice-vettore con matrice reale equivale a coniugare solo il vettore).
+Derivando $f$ rispetto a $t$:
+\begin{equation}
+\frac{d}{dt}f(t) = K\left(\frac{d}{dt}e^{-iHt}K\chi\right)
+= K\big(-iH\,e^{-iHt}K\chi\big),
+\end{equation}
+e $K$, essendo antilineare, porta fuori il complesso coniugato dello scalare $-i$, cioè $+i$:
+\begin{equation}
+\frac{d}{dt}f(t) = i\,K\big(H\,e^{-iHt}K\chi\big) = i\,H\,K\big(e^{-iHt}K\chi\big) = iH\,f(t),
+\end{equation}
+avendo usato di nuovo $K(H|\phi\rangle)=HK|\phi\rangle$. Dunque $i\,\frac{d}{dt}f(t) = -H f(t)$:
+$f$ evolve secondo Schrödinger con Hamiltoniana $-H$, quindi $f(t)=e^{+iHt}f(0)$. Essendo
+$f(0)=K\mathbb I K|\chi\rangle=K^2|\chi\rangle=|\chi\rangle$ (Lemma~\ref{lem:K}), si conclude
+$f(t)=e^{iHt}|\chi\rangle$ per ogni $|\chi\rangle$, cioè $Ke^{-iHt}K=e^{iHt}$.
+\end{proof}
+
+\subsection{Relazione generale sui correlatori}
+
+\begin{proposizione}
+\label{prop:K-correlatore}
+Sia $|\psi_0\rangle$ reale in base computazionale ($K|\psi_0\rangle=|\psi_0\rangle$; lecito
+prendere $|\psi_0\rangle$ reale, a meno di una fase globale ininfluente, perché $H$ è reale
+simmetrica e non degenere -- coerente con quanto già verificato numericamente in
+\texttt{risultati\_vqe\_test2.md}, dove l'overlap $\langle\psi_{\mathrm{exact}}|\psi_{\mathrm{VQE}}\rangle$
+risulta reale positivo). Allora per ogni $\alpha,\beta\in\{x,y,z\}$, ogni $i,j\in\{1,2\}$ e ogni
+$t$:
+\begin{equation}
+\boxed{\;\overline{C_{ij}^{\alpha\beta}(t)} = \eta_\alpha\eta_\beta\; C_{ij}^{\alpha\beta}(-t)\;}
+\label{eq:K-corr}
+\end{equation}
+con $\eta_x=\eta_z=+1$, $\eta_y=-1$ (segno di realtà/immaginarietà della matrice di Pauli
+corrispondente, Lemma~\ref{lem:K}).
+\end{proposizione}
+
+\begin{proof}
+Si applica il Lemma~\ref{lem:matrix-element} (identità generale per operatori antiunitari) con
+$\Theta=K$, $|\alpha\rangle=|\beta\rangle=|\psi_0\rangle$ (uso qui $\alpha,\beta$ per gli stati
+nella notazione del lemma, da non confondere con le componenti di Pauli dell'enunciato) e
+$X=\sigma_i^\alpha(t)\,\sigma_j^\beta(0)$:
+\begin{equation}
+\overline{\langle\psi_0|X|\psi_0\rangle} = \langle K\psi_0|\,KXK\,|K\psi_0\rangle
+= \langle\psi_0|\,KXK\,|\psi_0\rangle,
+\end{equation}
+avendo usato $K|\psi_0\rangle=|\psi_0\rangle$. Resta da calcolare $KXK$. Per un prodotto di due
+operatori, $K(PQ)K = K(PQ)K$; inserendo $K^2=\mathbb I$ fra $P$ e $Q$, $KPQK=KPK\cdot KQK$
+(vale perché la coniugazione elemento-per-elemento di un prodotto di matrici è il prodotto delle
+matrici coniugate: $(PQ)^*=P^*Q^*$). Dunque
+\begin{equation}
+KXK = K\,\sigma_i^\alpha(t)\,K \cdot K\,\sigma_j^\beta(0)\,K.
+\end{equation}
+Per il primo fattore, usando $\sigma_i^\alpha(t)=e^{iHt}\sigma_i^\alpha e^{-iHt}$ e il
+Lemma~\ref{lem:K-tempo} (nella forma $Ke^{iHt}K=e^{-iHt}$, ottenuta scambiando $t\to-t$ nella
+sua formulazione):
+\begin{equation}
+K\sigma_i^\alpha(t)K = \big(Ke^{iHt}K\big)\big(K\sigma_i^\alpha K\big)\big(Ke^{-iHt}K\big)
+= e^{-iHt}\,\big(\eta_\alpha\sigma_i^\alpha\big)\,e^{iHt}
+= \eta_\alpha\,\sigma_i^\alpha(-t),
+\end{equation}
+avendo usato $K\sigma_i^\alpha K=\eta_\alpha\sigma_i^\alpha$ (Lemma~\ref{lem:K}: $X,Z$ reali,
+$\eta=+1$; $Y$ immaginaria, $\eta=-1$) e riconosciuto che
+$e^{-iHt}(\cdot)e^{iHt}=e^{iH(-t)}(\cdot)e^{-iH(-t)}$ è esattamente l'operatore di Heisenberg
+calcolato in $-t$. Per il secondo fattore, a tempo fissato $0$, semplicemente
+$K\sigma_j^\beta(0)K = \eta_\beta\,\sigma_j^\beta(0)$. Componendo:
+\begin{equation}
+KXK = \eta_\alpha\eta_\beta\;\sigma_i^\alpha(-t)\,\sigma_j^\beta(0),
+\end{equation}
+e quindi
+\begin{equation}
+\overline{C_{ij}^{\alpha\beta}(t)} = \langle\psi_0|\,\eta_\alpha\eta_\beta\,\sigma_i^\alpha(-t)\sigma_j^\beta(0)\,|\psi_0\rangle
+= \eta_\alpha\eta_\beta\;C_{ij}^{\alpha\beta}(-t),
+\end{equation}
+che è la \eqref{eq:K-corr}.
+\end{proof}
+
+\begin{corollario}[Struttura pari/dispari in $t$]
+\label{cor:parita-t}
+Scrivendo $C(t)=\mathrm{Re}\,C(t) + i\,\mathrm{Im}\,C(t)$:
+\begin{itemize}
+\item se $\eta_\alpha\eta_\beta=+1$ (nessuna o entrambe le componenti $=y$): $\mathrm{Re}\,C_{ij}^{\alpha\beta}(t)$
+è \emph{pari} in $t$, $\mathrm{Im}\,C_{ij}^{\alpha\beta}(t)$ è \emph{dispari} in $t$;
+\item se $\eta_\alpha\eta_\beta=-1$ (esattamente una componente $=y$): $\mathrm{Re}\,C_{ij}^{\alpha\beta}(t)$
+è \emph{dispari} in $t$, $\mathrm{Im}\,C_{ij}^{\alpha\beta}(t)$ è \emph{pari} in $t$.
+\end{itemize}
+\end{corollario}
+
+\begin{proof}
+Dalla \eqref{eq:K-corr}, separando parte reale e immaginaria di $\overline{C(t)}=\eta_\alpha\eta_\beta C(-t)$:
+$\mathrm{Re}\,C(t) - i\,\mathrm{Im}\,C(t) = \eta_\alpha\eta_\beta\big[\mathrm{Re}\,C(-t)+i\,\mathrm{Im}\,C(-t)\big]$.
+Uguagliando parte reale e immaginaria separatamente (i coefficienti sono reali):
+$\mathrm{Re}\,C(t)=\eta_\alpha\eta_\beta\,\mathrm{Re}\,C(-t)$ e
+$-\mathrm{Im}\,C(t)=\eta_\alpha\eta_\beta\,\mathrm{Im}\,C(-t)$, da cui la tesi per $\eta_\alpha\eta_\beta=\pm1$.
+\end{proof}
+
+\begin{corollario}[Zero rigoroso a tempo uguale]
+\label{cor:zero-t0}
+Se $i\neq j$ ed esattamente una fra $\alpha,\beta$ è $y$ (l'altra $x$ o $z$), allora
+\begin{equation}
+C_{ij}^{\alpha\beta}(0) = \langle\psi_0|\,\sigma_i^\alpha\,\sigma_j^\beta\,|\psi_0\rangle = 0.
+\end{equation}
+\end{corollario}
+
+\begin{proof}
+Per $i\neq j$, $\sigma_i^\alpha$ e $\sigma_j^\beta$ agiscono su qubit diversi e commutano; il
+loro prodotto è hermitiano (prodotto di due hermitiani che commutano), quindi
+$C_{ij}^{\alpha\beta}(0)=\langle\psi_0|\sigma_i^\alpha\sigma_j^\beta|\psi_0\rangle\in\mathbb R$.
+D'altra parte, ponendo $t=0$ nella \eqref{eq:K-corr}:
+$\overline{C_{ij}^{\alpha\beta}(0)}=\eta_\alpha\eta_\beta\,C_{ij}^{\alpha\beta}(0)$; se
+$\eta_\alpha\eta_\beta=-1$ (una sola componente $y$) questo impone
+$C_{ij}^{\alpha\beta}(0)=-\overline{C_{ij}^{\alpha\beta}(0)}$, cioè $C_{ij}^{\alpha\beta}(0)$
+puramente immaginario. Un numero reale e puramente immaginario è necessariamente nullo.
+\end{proof}
+
+\noindent
+Concretamente, al punto test 2, questo garantisce (indipendentemente da qualunque calcolo
+numerico) che
+\begin{equation}
+\langle\sigma_1^x\sigma_2^y\rangle = \langle\sigma_1^y\sigma_2^x\rangle
+= \langle\sigma_1^y\sigma_2^z\rangle = \langle\sigma_1^z\sigma_2^y\rangle = 0 \quad\text{a } t=0.
+\end{equation}
+Va sottolineato il limite di questo risultato: la dimostrazione usa in modo essenziale
+l'hermitianità del prodotto a $t=0$, che \emph{non} vale più per $t\neq0$ (dove
+$\sigma_i^\alpha(t)$ mescola generi\-camente operatori su entrambi i qubit tramite $e^{\pm iHt}$,
+e il prodotto $\sigma_i^\alpha(t)\sigma_j^\beta(0)$ non è più hermitiano). Per $t\neq0$ la
+\eqref{eq:K-corr} fornisce comunque un vincolo (parità in $t$ della parte reale/immaginaria, Cor.
+\ref{cor:parita-t}), ma non uno zero automatico: se il correlatore è strutturalmente nullo per
+\emph{ogni} $t$ va verificato con il criterio esatto della Sezione~\ref{sec:controllo-numerico}.
+
+% =====================================================================
+\section{Simmetria combinata $U\!\cdot\!K$ e verifica di consistenza}
+% =====================================================================
+
+Le Sezioni~\ref{sec:simmetria-U} e~\ref{sec:time-reversal} hanno prodotto due simmetrie
+indipendenti, una unitaria ($U$) e una antiunitaria ($K$). È istruttivo, e costituisce un buon
+controllo incrociato dell'algebra svolta, comporle.
+
+\begin{proposizione}
+$\Theta'\equiv UK$ è una simmetria antiunitaria di $H$ ($\Theta' H\Theta'^{-1}=H$), e induce sui
+singoli operatori di sito un puro scambio, \emph{senza} segno:
+\begin{equation}
+\Theta'\,\sigma_1^\alpha\,\Theta'^{-1} = \sigma_2^\alpha, \qquad
+\Theta'\,\sigma_2^\alpha\,\Theta'^{-1} = \sigma_1^\alpha,
+\qquad \forall\alpha\in\{x,y,z\}.
+\end{equation}
+\end{proposizione}
+
+\begin{proof}
+$\Theta'H\Theta'^{-1} = UKHK^{-1}U^{-1} = U(KHK)U^{-1} = UHU^{-1}=H$, usando $KHK=H$
+(Prop.~\ref{prop:H-reale}) e $UHU^{-1}=UHU^\dagger=H$ (Prop.~\ref{prop:U-simmetria}). Per
+l'azione sugli operatori: $\Theta'\sigma_1^\alpha\Theta'^{-1} = U\big(K\sigma_1^\alpha K\big)U^\dagger
+= U\big(\eta_\alpha\sigma_1^\alpha\big)U^\dagger = \eta_\alpha\,U\sigma_1^\alpha U^\dagger
+= \eta_\alpha\cdot\eta_\alpha\,\sigma_2^\alpha = \eta_\alpha^2\,\sigma_2^\alpha = \sigma_2^\alpha$,
+avendo usato $\eta_\alpha^2=1$. Analogamente per $\sigma_2^\alpha$.
+\end{proof}
+
+Ripetendo la dimostrazione della Proposizione~\ref{prop:K-correlatore} con $\Theta'$ al posto di
+$K$ (identica nella struttura, ma senza i fattori $\eta$ dato che $\Theta'$ non li introduce),
+si ottiene la relazione, valida per ogni $t$:
+\begin{equation}
+\overline{C_{ij}^{\alpha\beta}(t)} = C_{\bar i\bar j}^{\alpha\beta}(-t),
+\qquad \bar 1=2,\;\bar 2=1.
+\label{eq:Theta-prime}
+\end{equation}
+
+\begin{osservazione}[Verifica di consistenza]
+Combinando la \eqref{eq:Theta-prime} per la coppia $(1,1)$ con la relazione
+\eqref{eq:cor-auto} ($C_{11}^{\alpha\beta}=\eta_\alpha\eta_\beta C_{22}^{\alpha\beta}$, valida a
+ogni $t$, quindi anche a $-t$):
+\begin{equation}
+\overline{C_{11}^{\alpha\beta}(t)} \overset{\eqref{eq:Theta-prime}}{=} C_{22}^{\alpha\beta}(-t)
+\overset{\eqref{eq:cor-auto}}{=} \eta_\alpha\eta_\beta\,C_{11}^{\alpha\beta}(-t),
+\end{equation}
+che è \emph{esattamente} la \eqref{eq:K-corr} per $i=j=1$, ottenuta questa volta come
+conseguenza di $U$ e $\Theta'=UK$ anziché di $K$ direttamente. Le due derivazioni indipendenti
+(Sezione~\ref{sec:time-reversal} via $K$ diretto, e questa via $U$ e $\Theta'=UK$) coincidono:
+è un controllo non banale che non vi siano errori di segno nell'algebra delle Sezioni
+precedenti.
+\end{osservazione}
+
+% =====================================================================
+\section{Il controllo classico esatto in autobase}
+\label{sec:controllo-numerico}
+% =====================================================================
+
+Le simmetrie individuate (Sez.~\ref{sec:simmetria-U}--\ref{sec:time-reversal}) danno relazioni
+esatte e, a $t=0$, alcuni zeri rigorosi; ma per sapere se un dato $C_{ij}^{\alpha\beta}(t)$ è
+identicamente nullo per \emph{ogni} $t$ -- l'informazione di cui serve prima di disegnare il
+circuito con l'ancilla -- occorre un criterio che non si fermi a $t=0$. Lo si ottiene
+diagonalizzando $H$ esattamente e usando la sua autobase, senza bisogno di costruire $C(t)$ come
+funzione di $t$.
+
+\begin{proposizione}[Criterio esatto in autobase]
+\label{prop:autobase}
+Sia $H=\sum_k E_k\,|k\rangle\langle k|$ la decomposizione spettrale, con $|0\rangle\equiv|\psi_0\rangle$
+lo stato fondamentale. Allora
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) = \sum_k e^{i(E_0-E_k)t}\; a_k\, b_k,
+\qquad a_k \equiv \langle\psi_0|\sigma_i^\alpha|k\rangle,\;\;
+b_k \equiv \langle k|\sigma_j^\beta|\psi_0\rangle.
+\label{eq:spettrale}
+\end{equation}
+Di conseguenza $C_{ij}^{\alpha\beta}(t)\equiv0$ per ogni $t\in\mathbb R$ se e solo se
+$a_kb_k=0$ per ogni $k=0,1,2,3$.
+\end{proposizione}
+
+\begin{proof}
+Inserendo due risoluzioni dell'identità $\mathbb I=\sum_k|k\rangle\langle k|$ nella definizione
+\eqref{eq:corr-def} e usando $H|k\rangle=E_k|k\rangle$:
+\begin{align}
+C_{ij}^{\alpha\beta}(t) &= \langle\psi_0|e^{iHt}\sigma_i^\alpha e^{-iHt}\sigma_j^\beta|\psi_0\rangle
+= e^{iE_0t}\langle\psi_0|\sigma_i^\alpha\Big(\sum_k e^{-iE_kt}|k\rangle\langle k|\Big)\sigma_j^\beta|\psi_0\rangle \\
+&= \sum_k e^{i(E_0-E_k)t}\,\langle\psi_0|\sigma_i^\alpha|k\rangle\langle k|\sigma_j^\beta|\psi_0\rangle
+= \sum_k e^{i(E_0-E_k)t}\,a_k b_k,
+\end{align}
+avendo usato $\langle\psi_0|e^{iHt}=e^{iE_0t}\langle\psi_0|$. Le quattro funzioni
+$t\mapsto e^{i(E_0-E_k)t}$, $k=0,1,2,3$, sono linearmente indipendenti come funzioni di $t$
+(hanno frequenze $E_0-E_k$ a due a due distinte, tranne $k=0$ che dà frequenza nulla; nel caso
+non degenere $E_k\neq E_{k'}$ per $k\neq k'$ garantisce l'indipendenza lineare, per un argomento
+di tipo Vandermonde/Wronskiano sulle esponenziali). Una combinazione lineare di funzioni
+linearmente indipendenti è identicamente nulla se e solo se tutti i coefficienti sono nulli:
+$C_{ij}^{\alpha\beta}(t)\equiv0 \iff a_kb_k=0\;\forall k$.
+\end{proof}
+
+\begin{osservazione}
+Questo criterio è \emph{più forte} delle sole considerazioni di simmetria: cattura anche
+eventuali coincidenze numeriche specifiche del punto $(b/J,D/J)=(0.35,0.80)$, oltre agli zeri
+imposti in modo strutturale (cioè per ogni valore dei parametri) dalle simmetrie $U$ e $K$.
+Viceversa, le simmetrie restano preziose perché spiegano \emph{perché} un dato $a_kb_k$ si
+annulla (non è un caso numerico, ma la conseguenza di una legge di conservazione/selezione), il
+che è esattamente quanto richiesto dal relatore (``non solo verificarlo numericamente'').
+\end{osservazione}
+
+\subsection{Algoritmo}
+
+\begin{enumerate}[label=\arabic*.]
+\item Diagonalizzare $H$ al punto test 2 (già disponibile: `ground\_state\_test2.npz`, oppure
+ricalcolabile con `numpy.linalg.eigh` su `dimer\_hamiltonian(b=0.35, J=1, D=0.80).to\_matrix()`),
+ottenendo gli autovettori $\{|k\rangle\}_{k=0}^3$ come colonne della matrice $V$ e le energie
+$E_k$.
+\item Per ciascuna coppia $(i,\alpha)$, calcolare il vettore $a = V^\dagger\,(\sigma_i^\alpha\,|\psi_0\rangle) \in\mathbb C^4$
+(le componenti $a_k$ sono le proiezioni sugli autostati).
+\item Analogamente $b=V^\dagger\,(\sigma_j^\beta\,|\psi_0\rangle)$ per ciascuna coppia $(j,\beta)$.
+\item Calcolare il prodotto componente per componente $a\odot b\in\mathbb C^4$: se
+$\|a\odot b\|_\infty<\varepsilon$ (tolleranza numerica, $\varepsilon\sim10^{-10}$ con
+diagonalizzazione in doppia precisione), il correlatore è strutturalmente nullo per ogni $t$ a
+questo punto di lavoro.
+\item Ripetere per le $9$ coppie di componenti $\times$ le $4$ combinazioni di siti
+(ridotte a $9\times2=18$ indipendenti grazie al Corollario~\ref{cor:U-correlatori}, essendo
+$C_{22}$ e $C_{21}$ determinati da $C_{11}$ e $C_{12}$).
+\end{enumerate}
+
+Le predizioni delle Sezioni precedenti da usare come controllo incrociato sull'output numerico:
+
+\begin{center}
+\begin{tabular}{@{}p{0.42\textwidth}p{0.5\textwidth}@{}}
+\toprule
+Predizione teorica & Verifica numerica attesa \\
+\midrule
+$C_{11}^{\alpha\beta}(t)=\eta_\alpha\eta_\beta\,C_{22}^{\alpha\beta}(t)$ &
+confronto diretto delle serie $a_kb_k$ per sito 1 e sito 2 \\[4pt]
+$C_{12}^{\alpha\beta}(t)=\eta_\alpha\eta_\beta\,C_{21}^{\alpha\beta}(t)$ &
+idem, correlatori incrociati \\[4pt]
+$C_{12}^{xy}(0)=C_{12}^{yx}(0)=C_{12}^{yz}(0)=C_{12}^{zy}(0)=0$ &
+somma $\sum_k a_kb_k$ nulla per queste $4$ combinazioni; non implica automaticamente
+$a_kb_k=0\;\forall k$, quindi non implica da sola l'annullamento strutturale per $t\neq0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{osservazione}
+L'ultima riga della tabella merita attenzione: il Corollario~\ref{cor:zero-t0} garantisce solo
+$C_{ij}^{\alpha\beta}(0)=\sum_k a_kb_k=0$, cioè l'annullamento della \emph{somma}. Il criterio
+della Proposizione~\ref{prop:autobase} è più stringente e richiede $a_kb_k=0$ per ogni singolo
+$k$: è possibile in linea di principio che una combinazione sia nulla a $t=0$ per cancellazione
+fra termini, pur non essendo identicamente nulla per $t\neq0$. È proprio per questo che il
+controllo numerico completo (Sez.~\ref{sec:controllo-numerico}) resta necessario anche per le
+combinazioni già escluse a $t=0$ dall'argomento di simmetria.
+\end{osservazione}
+
+% =====================================================================
+\section{Sintesi e prossimo passo}
+% =====================================================================
+
+\begin{itemize}
+\item $M=\langle S_z\rangle$ non è conservato per $D\neq0$ (Prop.~\ref{prop:Sz-rotto}): niente
+selection rules basate su $M$ al punto test 2.
+\item Esiste una simmetria unitaria esatta $U=\mathrm{SWAP}\cdot(R_z(\pi)\otimes R_z(\pi))$, per
+ogni $J,b,D$ (Prop.~\ref{prop:U-simmetria}), che lega esattamente le autocorrelazioni e le
+correlazioni incrociate dei due siti (Cor.~\ref{cor:U-correlatori}): dimezza il numero di
+combinazioni indipendenti da calcolare.
+\item $H$ è reale in base computazionale per ogni $J,b,D$ (Prop.~\ref{prop:H-reale}), il che
+produce una simmetria di time-reversal $K$ che vincola la parità in $t$ di parte reale e
+immaginaria di ogni correlatore (Cor.~\ref{cor:parita-t}) e impone lo zero rigoroso a $t=0$ per
+le quattro combinazioni incrociate con una sola componente $y$ (Cor.~\ref{cor:zero-t0}).
+\item La composizione $U\!\cdot\!K$ fornisce una verifica di consistenza indipendente di tutta
+l'algebra di segno (Sez.~6), che torna esatta.
+\item Il criterio definitivo, valido per ogni $t$ e non solo strutturale ma anche specifico del
+punto test 2, è quello in autobase (Prop.~\ref{prop:autobase}): va eseguito numericamente prima
+di passare alla progettazione del circuito con l'ancilla.
+\end{itemize}
+
+\end{document}

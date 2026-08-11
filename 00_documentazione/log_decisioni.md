@@ -329,13 +329,21 @@ Prof. Chiesa ha risposto alla domanda 5 di `domande_relatore.md`:
   stato di preparazione, sullo schema del notebook TIM.
 
 ## Domande ancora aperte (aggiornato)
-- [ ] Quali combinazioni (sito, componente) sono nulle per simmetria al
-      punto del test 2 — da verificare classicamente prima del circuito.
+- [x] ~~Quali combinazioni (sito, componente) sono nulle per simmetria al
+      punto del test 2~~ — **risposta: nessuna, 0 su 36** strutturalmente
+      nulle per ogni $t$ (verificato sia per via classica sia rimisurando
+      via circuito). 4 combinazioni nulle solo a $t=0$ (siti diversi, una
+      sola componente $y$), non per ogni $t$ — vedi aggiornamento sotto.
+- [ ] Osservazioni della relazione inviata al relatore (vedi
+      `domande_relatore.md`, punto 6): in attesa di risposta.
 - [ ] Parte 2: quale modello di rumore.
 - [ ] Parte 2: ottimizzatore — SPSA?
 - [ ] Collocazione definitiva in tesi del blocco di quantum simulation
       (Trotter + correlazioni) — ancora "sistema chiuso, non meglio
       specificato" per indicazione del relatore.
+- [ ] Rumore di **gate** reale sul circuito delle correlazioni (finora
+      solo rumore statistico su simulazione ideale) — da affrontare
+      insieme alla Parte 2.
 
 ## Aggiornamento — due appunti manoscritti del relatore (immagini caricate)
 
@@ -384,3 +392,64 @@ al circuito di correlazione del punto 1):
 **Stato:** materiale preparatorio per la Parte 2, non ancora iniziata.
 Nessuna azione immediata richiesta; da riprendere quando si apre quel
 blocco della tesi.
+
+## Aggiornamento — circuito con l'ancilla: derivazione, validazione, due bug corretti
+
+Fase circuito (successiva al VQE ground state al test 2) completata fino
+alla misura di tutte le 36 combinazioni e all'invio della relazione al
+relatore.
+
+**Derivazione del circuito.** Lo schizzo del relatore (punto 1 della
+sezione precedente, non verificato, lui stesso non ne era sicuro) non è
+stato usato come riferimento diretto. Circuito ri-derivato da zero
+(Hadamard test standard: $H$ sull'ancilla, controlled-$W$ prima di
+$U(t)$, $U(t)$ non controllato, anti-controlled-$V$ dopo, rotazione
+finale + misura per $\mathrm{Re}/\mathrm{Im}$), verificato contro due
+fonti indipendenti in letteratura: Crippa et al. (*Magnetochemistry* 7,
+117, 2021, eq. 12 — il riferimento primario della tesi) e Tacchino,
+Chiesa, Carretta, Gerace (*Adv. Quantum Technol.* 3, 1900052, 2020, Fig.
+3/Sez. 3.6) — struttura identica in entrambe, coerente con il circuito
+ri-derivato.
+
+**Due bug trovati e corretti**, entrambi mascherati per coincidenza sui
+primi due correlatori validati ($C_{2,1}^{xx}$, $C_{2,1}^{xy}$) grazie
+alla simmetria $U$, e diventati visibili solo scansionando
+sistematicamente tutte le 36 combinazioni:
+
+1. **Formula spettrale del correlatore classico** (usata come riferimento
+   per la validazione): mancava un coniugato complesso —
+   $C(t)=\sum_k e^{i(E_0-E_k)t}\overline{a_k}b_k$, non $a_kb_k$. Invisibile
+   per $\alpha=x,z$ (matrici reali, $a_k$ reale); ribalta il segno quando
+   $\alpha=y$ (matrice immaginaria). Non ha invalidato nessuna conclusione
+   qualitativa già tratta (tutte basate su moduli/rapporti, insensibili al
+   segno), ma falsava il confronto diretto circuito-vs-classico.
+2. **Mappatura sito→qubit nel circuito**: `site_to_qubit={1:0,2:1}` era
+   invertita rispetto alla convenzione già stabilita (sito1 = indice qubit
+   1 di $|\psi_0\rangle$, sito2 = indice 0). Il circuito costruiva quindi
+   sempre il correlatore con i siti scambiati — invisibile per
+   $C_{2,1}^{xx}$ e $C_{2,1}^{xy}$ perché $\eta_\alpha\eta_\beta=+1$ per
+   queste coppie (la simmetria $U$ garantisce
+   $C_{12}=\eta_\alpha\eta_\beta C_{21}$).
+
+Entrambi corretti in tutti e tre i notebook coinvolti; rieseguiti e
+riverificati dopo la correzione.
+
+**File prodotti:**
+- `correlazioni_dimero_esplorazione.ipynb` (principale) e
+  `correlazioni_dimero_simmetria_U.ipynb` (secondario, sincronizzato) —
+  derivazione completa, scan a 36 combinazioni, validazione, shot finiti.
+- `circuito_correlazioni_tutte.ipynb` — versione snella: misura diretta
+  (non dedotta) di tutte le 36 via circuito, selettore interattivo,
+  spettro $|a_kb_k|$ per ciascuna, analisi.
+- `simmetrie_correlatori_dimero.pdf` — teoria delle simmetrie (derivazione
+  completa, non solo verifica numerica).
+- `circuito_correlatori_spiegato.pdf` + `interferometro.html` — spiegazione
+  pedagogica completa del circuito (prodotti di Pauli, rappresentazione di
+  Heisenberg, misura), verificata passo per passo.
+- `circuito_compatto_risposta.pdf` — risposta alla domanda del relatore
+  sul circuito compatto a 3 CNOT: dove si applica (misura di $C(t)$ a $t$
+  fissato) e dove no (studio Trotter-vs-rumore, preparazione dello stato).
+  Deliverable a sé, non ancora applicato al circuito delle correlazioni.
+- `relazione_correlazioni.docx`/`.md` — relazione inviata al relatore,
+  due osservazioni in attesa di risposta (vedi `domande_relatore.md`,
+  punto 6).

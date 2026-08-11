@@ -113,3 +113,31 @@ senza riscrivere il circuito ogni volta. Prima di tutto, un controllo
 classico (matrice) di quali combinazioni sono strutturalmente nulle per
 simmetria a $(b/J,D/J)=(0.35,0.80)$, per non sprecare tempo implementando
 casi banali.
+
+## 6. Osservazioni sulla misura via circuito (relazione inviata)
+
+Circuito con l'ancilla derivato da zero (non lo schizzo del punto 5,
+mai verificato), validato, ed eseguito su tutte le 36 combinazioni
+$C_{ij}^{\alpha\beta}(t)$ al punto del test 2 — nessuna risulta
+strutturalmente nulla per ogni $t$ (solo 4 si annullano a $t=0$, siti
+diversi con una sola componente $y$). Relazione inviata al relatore
+(`relazione_correlazioni.docx`), con due osservazioni in attesa di
+risposta:
+
+1. Il correlatore indicato dal relatore come esempio
+   ($\langle\sigma_{x2}(t)\sigma_{x1}(0)\rangle$, cioè $C_{2,1}^{xx}$) non
+   è fra i più "ricchi" per criterio spettrale ($a_2/a_1$): è 27° su 36.
+   Tenuto comunque come priorità per rilevanza fisica, non per qualità del
+   segnale — le due cose non coincidono, segnalato esplicitamente invece
+   di scegliere senza dirlo.
+2. Pattern trovato negli spettri: tutte le combinazioni "ricche" (una
+   componente $x$, una $y$) condividono lo stesso spettro esatto (canali
+   $k=1,3$); tutte le "piatte" $ZZ$ condividono anch'esse lo stesso
+   spettro esatto (canale $k=2$). $C_{1,1}^{zy}$ è un terzo caso a sé
+   (canale $k=1$ dominante). Non c'è ancora una spiegazione fisica del
+   perché la coppia di componenti fissi così rigidamente quale livello
+   eccitato viene raggiunto — ipotesi non verificata: collegato all'asse
+   del campo Zeeman ($z$) e alla struttura del DM ($x,z$). Chiesto un
+   parere diretto al relatore prima di investigare da soli.
+
+**Stato:** in attesa di risposta.

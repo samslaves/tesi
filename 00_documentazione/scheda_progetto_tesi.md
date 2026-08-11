@@ -152,15 +152,40 @@ calcolare correlazioni dinamiche (richiede l'ancilla, finora non usata).
   sono di interesse; più componenti da provare ($S_z,S_x,S_y$); alcune
   combinazioni si annulleranno per simmetria dell'Hamiltoniana (atteso,
   da verificare classicamente prima di implementare il circuito).
-- **Prossimo passo:** controllo classico di quali combinazioni sono nulle
-  per simmetria, poi circuito con l'ancilla (Hadamard test) parametrico
-  in (sito, componente), con stato iniziale preparato da
-  `ground_state_test2.npz` al posto di $|00\rangle$.
+- **Prossimo passo (completato — vedi aggiornamento sotto):** ~~controllo
+  classico di quali combinazioni sono nulle per simmetria, poi circuito
+  con l'ancilla (Hadamard test) parametrico in (sito, componente), con
+  stato iniziale preparato da `ground_state_test2.npz` al posto di
+  $|00\rangle$.~~
 - **Primo caso concreto suggerito dal relatore** (appunti manoscritti):
   $\langle\sigma_{x2}(t)\,\sigma_{x1}(0)\rangle$. Il circuito abbinato nello
   schizzo è indicativo, non verificato (il relatore stesso non ne era
-  sicuro) — da ri-derivare prima dell'implementazione. Dettagli in
-  `log_decisioni.md`.
+  sicuro) — ri-derivato da zero, non usato come riferimento diretto.
+  Dettagli in `log_decisioni.md`.
+
+## Aggiornamento — circuito con l'ancilla: derivato, validato, tutte le 36 misurate
+
+Circuito con l'ancilla derivato da zero (non lo schizzo del relatore),
+verificato contro due fonti di letteratura indipendenti (Crippa et al.
+eq. 12; Tacchino-Chiesa-Carretta-Gerace, *Adv. Quantum Technol.* 2020,
+Fig. 3), validato su statevector e con shot finiti. Tutte le 36
+combinazioni $C_{ij}^{\alpha\beta}(t)$ misurate direttamente via
+circuito — nessuna strutturalmente nulla per ogni $t$. Due bug
+metodologici trovati e corretti nel percorso (dettagli in
+`log_decisioni.md`). Relazione con i risultati inviata al relatore
+(`relazione_correlazioni.docx`), due osservazioni in attesa di risposta
+(vedi `domande_relatore.md`, punto 6).
+
+Filone collaterale chiuso: analisi del circuito compatto a 3 CNOT
+(risposta alla domanda del relatore su come ridurre il conteggio di
+gate), con raccomandazione su dove si applica legittimamente — non
+ancora integrato nel circuito delle correlazioni, resta un'opzione
+futura.
+
+**Prossimo passo vero e proprio:** in attesa della risposta del relatore
+sulle due osservazioni; in parallelo, la Parte 2 (sistemi aperti) resta
+il blocco più grande non ancora iniziato — il rumore di gate reale sul
+circuito delle correlazioni si collega naturalmente a quella fase.
 
 ## Nota — materiale preparatorio per la Parte 2 (non ancora iniziata)
 

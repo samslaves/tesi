@@ -141,3 +141,54 @@ risposta:
    parere diretto al relatore prima di investigare da soli.
 
 **Stato:** in attesa di risposta.
+
+---
+
+# Domande per il relatore — trimero N=3, triangolo isoscele
+
+Domande aperte sulla nuova estensione (teoria esatta del triangolo isoscele,
+completata in autonomia), da porre a Prof. Chiesa quando si passa al VQE.
+
+## 7. Isoscele basta, o serve anche lo scaleno?
+
+La teoria esatta in forma chiusa vale solo per il caso isoscele ($J'_{23}=J'_{31}$),
+grazie alla simmetria di scambio $1\leftrightarrow2$. Il caso scaleno
+($J'_{23}\neq J'_{31}$) rompe questa simmetria e richiederebbe la
+diagonalizzazione numerica dell'$8\times8$ (nessuna forma chiusa).
+
+**Domanda:** per la tesi è sufficiente il caso isoscele (con l'equilatero
+come caso particolare), o vuole che si tratti anche lo scaleno per
+completezza/generalità?
+
+## 8. Priorità: catena aperta o VQE sul triangolo?
+
+Con la teoria del triangolo isoscele completa, restano due filoni aperti per
+N=3: la teoria della catena aperta (non ancora iniziata) e il VQE sul
+triangolo isoscele (usando la teoria esatta appena fatta come benchmark).
+
+**Domanda:** quale priorità, vista la scadenza di settembre — completare
+prima il quadro teorico (catena aperta) o passare subito al VQE sul
+triangolo?
+
+## 9. Trattazione quantitativa del DM sul triangolo: necessaria?
+
+Il ruolo del termine DM nell'aprire il gap agli incroci di livello è stato
+discusso solo qualitativamente (analogo al dimero: serve un termine con
+$\Delta M\neq0$). Una trattazione quantitativa richiederebbe abbandonare la
+forma chiusa e diagonalizzare l'$8\times8$ completo con DM acceso.
+
+**Domanda:** serve quantificare il gap aperto dal DM sul triangolo (analogo
+a quanto già fatto per il dimero), o per la tesi basta il livello qualitativo
+già raggiunto, dando priorità al VQE?
+
+## 10. Valori di riferimento per $(J,J',b)$ sul triangolo
+
+Per il dimero è stato usato un punto di riferimento concordato (parametri
+del "test 2", $b/J=0.35$, $D/J=0.80$). Per il triangolo isoscele non c'è
+ancora un punto di riferimento analogo.
+
+**Domanda:** ci sono valori di $(J,J')$ di suo interesse per il triangolo
+isoscele (es. un rapporto $J'/J$ specifico, magari motivato da un composto
+reale), o si può scegliere liberamente un punto rappresentativo (es. uno dei
+casi già usati nella teoria: $J{=}1,J'{=}0.4$ nella regione C) come punto di
+partenza per il VQE?

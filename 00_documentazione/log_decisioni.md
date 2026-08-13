@@ -54,8 +54,10 @@ Caso isotropo $J_x=J_y=J_z=J$, risolubile in forma chiusa:
   *template* metodologico (decomposizione in gate, confronto Trotter vs esatto,
   eventuale ancilla per funzioni di correlazione dinamiche) ma con
   l'Hamiltoniana giusta (dimero VQE, non Ising).
-- **Stato:** NON ancora iniziato. Solo presa visione e pianificazione per ora,
-  su richiesta esplicita di Samuele ("per ora non fare nulla").
+- **Stato:** ~~NON ancora iniziato. Solo presa visione e pianificazione per ora,
+  su richiesta esplicita di Samuele ("per ora non fare nulla").~~ **SUPERATO —
+  task completato, vedi "Aggiornamento — quantum simulation Trotter del
+  dimero: completata" più sotto.**
 - **Da chiarire con il relatore/in autonomia:**
   - dove collocare questo blocco nella tesi (sotto-sezione di Parte 1? sezione
     a sé stante prima della Parte 2, come ponte verso la dinamica?);
@@ -103,14 +105,23 @@ Caso isotropo $J_x=J_y=J_z=J$, risolubile in forma chiusa:
       `confronto_ansatz_entangler.ipynb` (4 ansatz reali A–D + famiglie
       PMA-1q/PMA-2q) + `analisi_rotazioni_PMA.ipynb` (derivazione di quali
       rotazioni servono per rompere $M$). Dettagli completi in fondo al file.
-- [ ] Esteso a N=3 (catena aperta E triangolo).
+- [x] **Trimero N=3, triangolo (anello) isoscele: teoria esatta completa.**
+      Base $J$, lati $J'$ ($J\neq J'$), risolubile in forma chiusa via
+      decomposizione di Kambe (Casimir $S_{12}^2,S^2,S_z$) — nessuna
+      diagonalizzazione numerica necessaria. Dettagli completi in fondo al
+      file.
+- [ ] Trimero N=3, catena aperta: teoria non ancora iniziata.
+- [ ] VQE N=3 (entrambe le topologie, catena e anello): non ancora iniziato
+      — teoria esatta dell'anello isoscele disponibile come benchmark.
 - [ ] Introdotto il modello di rumore / operatore densità (Parte 2).
 - [x] Caricato `Quantum_simulation_TIM_noiseless.ipynb` (esempio Trotter/TIM,
       da riusare come template metodologico, NON come Hamiltoniana da tenere).
 - [x] Caricati appunti del relatore `quantum_simulation_notes.jpg` (schema
       Trotter per $H=H_1+H_2$ del dimero, casi $D=0$ esatto e $D\neq0$ Suzuki-Trotter).
-- [ ] Implementata la quantum simulation ($e^{-iHt}$, Trotter) sull'Hamiltoniana
-      VQE del dimero — task richiesto dal relatore, non ancora iniziato.
+- [x] Implementata la quantum simulation ($e^{-iHt}$, Trotter) sull'Hamiltoniana
+      VQE del dimero — completata, usata come base per il circuito delle
+      correlazioni. Vedi "Aggiornamento — quantum simulation Trotter del
+      dimero: completata".
 - [x] **Notebook `Quantum_simulation_TIM_noiseless.ipynb` eseguito per intero
       da Samuele, senza errori, con la sua installazione Qiskit 2.x.**
       Unica modifica necessaria: commentata la riga
@@ -453,3 +464,280 @@ riverificati dopo la correzione.
 - `relazione_correlazioni.docx`/`.md` — relazione inviata al relatore,
   due osservazioni in attesa di risposta (vedi `domande_relatore.md`,
   punto 6).
+
+## Aggiornamento — Trimero N=3, triangolo (anello) isoscele: teoria esatta completa
+
+Prima estensione di Parte 1 a N=3, topologia anello/triangolo. Generalizzazione
+del caso equilatero (frustrato) al caso **isoscele**: base $J$ fra i siti
+$1,2$, lati $J'$ fra $2,3$ e $3,1$ ($J\neq J'$, con $J'=J$ come caso
+particolare che recupera l'equilatero). Obiettivo: capire per quali segni e
+rapporti di $J,J'$ esiste un incrocio di livello del fondamentale al variare
+del campo $b$, come base teorica prima di passare al VQE.
+
+### Perché l'isoscele (e non subito lo scaleno)
+
+Con i due lati uguali, l'Hamiltoniana ha una simmetria di scambio $1\leftrightarrow2$
+($P_{12}$) che si traduce nella conservazione di $\mathbf S_{12}^2$ (spin
+della sola coppia di base) oltre a $\mathbf S^2,S_z$ — dimostrato esplicitamente
+via coniugazione $P_{12}HP_{12}^\dagger$, non solo per analogia. Questo rende
+il problema **risolubile in forma chiusa** (decomposizione di Kambe): lo
+spettro esce per sola sostituzione algebrica, senza diagonalizzare l'$8\times8$.
+Con lati diversi ($J'_{23}\neq J'_{31}$, caso scaleno) questa simmetria si
+rompe e serve la diagonalizzazione numerica — rimandato, non necessario per
+la fase attuale.
+
+### Risultato centrale: tre multipletti, spettro chiuso
+
+$$H = J\,\boldsymbol\sigma_1\cdot\boldsymbol\sigma_2 + J'(\boldsymbol\sigma_2\cdot\boldsymbol\sigma_3+\boldsymbol\sigma_3\cdot\boldsymbol\sigma_1) + b\sum_i Z_i$$
+
+(convenzione operativa di Pauli, coerente con 6-Applications.pdf). Tre blocchi:
+
+| blocco | $S_{12}$ | $S$ | dim. | $E(b{=}0)$ |
+|---|---|---|---|---|
+| A | 1 | 3/2 | 4 | $J+2J'$ |
+| B | 1 | 1/2 | 2 | $J-4J'$ |
+| C | 0 | 1/2 | 2 | $-3J$ |
+
+Limite dimero ($J'\to0$): $E_A,E_B\to J$, $E_C\to-3J$ — coincide esattamente
+con singoletto/tripletto del dimero già validato in Parte 1 (buon controllo
+di coerenza fra le due estensioni).
+
+### Campo critico e mappa dei segni
+
+Per $b>0$ il fondamentale è C o B (a $b=0$) fino a un campo critico $b_c$
+dove interseca A (quadrupletto saturato):
+$$b_c = 2J+J' \ \ (\text{se il fondamentale a }b{=}0\text{ è C}), \qquad b_c=3J' \ \ (\text{se è B}).$$
+Limite $J'\to0$: $b_c\to2J$, esattamente il campo critico $b/J=2$ del
+dimero — secondo controllo di coerenza indipendente.
+
+**Mappa completa nel piano $(J,J')$, con segni** (non solo il quadrante
+$J,J'>0$): esiste sempre un crossing tranne quando $J<0$ e $J'<0$ (ferromagnete
+già saturo a $b=0$) o quando $J>0,J'<-2J$ (oltre quella soglia A è già
+fondamentale a $b=0$). Il caso $J>0,J'<0$ è degno di nota: il campo critico
+$2J+J'$ decresce e si annulla esattamente a $J'=-2J$, dove il fondamentale è
+degenere $2+4=6$ volte già a $b=0$ — punto limite utile come stress test per
+un futuro ansatz VQE.
+
+**Tutti gli incroci trovati sono veri incroci** (gap esattamente nullo, non
+anticrossing): dimostrato dalla regola di selezione $\bra{S_{12},S,M}H\ket{S_{12}',S',M'}=0$
+se i numeri quantici differiscono, conseguenza diretta della costruzione di
+$H$ come combinazione lineare dei soli Casimir. Per aprire il gap servirebbe
+un termine con $\Delta M\neq0$ (es. il DM già usato nel dimero) — discusso
+solo qualitativamente, **non quantificato**: richiederebbe abbandonare la
+forma chiusa e diagonalizzare l'$8\times8$ completo. Rimandato a una fase
+successiva se necessario per il VQE.
+
+### Errore trovato e corretto durante la stesura
+
+Nella prima esposizione (chat) le pendenze delle otto rette $E(b)$ erano state
+indicate erroneamente come $\pm2,\pm6$; il valore corretto (derivato e usato
+ovunque nei calcoli, incluso $b_c$) è $\pm1,\pm3$ (pendenza $=2M$, non $4M$).
+Le formule finali di $b_c$ erano comunque corrette; solo la frase descrittiva
+andava sistemata — fatto, verificato che non si propagasse altrove.
+
+### Verifica numerica indipendente
+
+Script `verifica.py`: diagonalizzazione esatta dell'$8\times8$ (NumPy) contro
+tutte le formule chiuse — spettro completo (400 configurazioni casuali di
+$(J,J',b)$, errore massimo $\sim10^{-14}$), campo critico (10 casi, scansione
+del salto di $\langle S_z\rangle$ del ground state), mappa dei segni (14640
+punti sulla griglia, zero disaccordi genuini — i soli "mismatch" iniziali
+erano artefatti di floating point sulla retta di degenerazione $J'=-2J$, non
+errori), identità operatoriali ($\boldsymbol\sigma_1\cdot\boldsymbol\sigma_2=2P_{12}-\mathbb I$,
+$\mathbf S_{12}^2=\mathbb I+P_{12}$), condizione di isoscele ($\|[H,\mathbf
+S_{12}^2]\|=0$ se e solo se $J'_{23}=J'_{31}$, verificato anche per
+sbilanciamenti minimi).
+
+### File prodotti
+
+- `teoria_trimero_isoscele.pdf` (20 pagine) — derivazione completa senza
+  passaggi impliciti: algebra di scambio, decomposizione di Kambe (col metodo
+  esplicito del conteggio per $M$, non solo citazione di Clebsch-Gordan),
+  simmetria $C_2$ dimostrata via coniugazione, spettro nei Casimir, campo
+  critico, mappa dei segni, regola di selezione, conseguenze per il VQE.
+  Include: figura della geometria, figura della mappa dei segni $(J,J')$,
+  figura ad albero della decomposizione $\tfrac12^{\otimes3}\to$ A,B,C,
+  figura della struttura diagonale $8\times8$ di $H$ (a $b=0$ e $b\neq0$),
+  quattro grafici dello spettro in campo nei casi rappresentativi.
+- `animazione_trimero_isoscele.html` — esplorazione interattiva standalone
+  (nessuna dipendenza esterna): slider su $J,J'$ (con segno) e sul campo
+  osservato, triangolo con legami colorati per segno (AFM/FM) e spessore
+  proporzionale al modulo, mini-mappa di fase con posizione corrente, stato
+  istantaneo (fondamentale, gap, magnetizzazione) aggiornato dal vivo.
+- `verifica.py` — batteria di test sopra descritta, riusabile per controlli
+  futuri (es. dopo l'estensione allo scaleno o all'introduzione del DM).
+
+### Metodologia di lavoro (nuova, degna di nota per il seguito)
+
+L'intera derivazione è stata costruita a domande: ogni passaggio lasciato
+inizialmente implicito (es. perché gli autovalori di $P_{12}$ sono $\pm1$,
+perché $v\propto(1,1)$ diventa $\ket{t_0}=\tfrac1{\sqrt2}(\ket{01}+\ket{10})$,
+le regole di commutazione $[s_i^a,s_j^b]$, perché $\mathbf S^2$ si chiama
+"Casimir", perché il conteggio dà tre multipletti A,B,C invece di due) è
+stato reso esplicito su richiesta e poi integrato nel PDF in un secondo
+momento, con verifica di non aver perso né semplificato nulla (controllo
+riga-per-riga di ogni occorrenza terminologica prima di applicare rinomine,
+es. "singoletto" usato correttamente per la sola coppia di base ma
+fuorviante se riferito al blocco C intero — corretto in tre punti precisi,
+non con una sostituzione generica).
+
+### Prossimo passo
+
+Catena aperta N=3 (teoria esatta, stesso livello di dettaglio) per completare
+il quadro Parte 1; oppure VQE per il triangolo isoscele (PMA-2q·3 esteso a 3
+qubit) usando questa teoria come benchmark. Nessuna decisione ancora presa
+su quale priorità — vedi `scheda_progetto_tesi.md`.
+
+## Aggiornamento — quantum simulation Trotter del dimero: completata
+
+Implementato il task richiesto dal relatore il 18/07/2026 (simulazione dinamica
+reale $e^{-iHt}$ dell'Hamiltoniana VQE del dimero, non del TIM), seguendo le
+risposte del 19/07 (2 qubit, $D\neq0$ diretto, stato iniziale $\ket{00}$,
+osservabile $S_z$ totale, Suzuki-Trotter al 1° ordine).
+
+**Punto di partenza per la dimostrazione Trotter:** il regime **R0**
+($b/J=0.5$, $D/J=1/6$, cioè $J=2b$, $D=b/3$) è **esattamente il
+suggerimento originale del relatore** del 19/07/2026 (vedi risposta 4
+sopra), usato come primo caso e come controllo "quasi monocromatico"; da lì
+derivato **R1** ($b/J=-0.18$, $D/J=1$, non monocromatico). Sono i punti
+adottati **per questo sotto-task specifico** (dimostrare convergenza di
+Trotter, costo in gate, comportamento monocromatico vs non), un filone
+esplorativo a sé.
+
+**Punto adottato per la pipeline principale (ground state → correlazioni):**
+resta il "test 2" ($b/J=0.35$, $D/J=0.80$, `parametri_scelti.json`) — è lì
+che il ground state trovato via VQE viene effettivamente usato come stato
+iniziale nel circuito con l'ancilla per le correlazioni dinamiche (vedi
+sezioni precedenti). **I due punti non si sovrappongono e non sono in
+competizione**: R0/R1 non sono mai stati portati alla pipeline
+ground-state/correlazioni, e il test2 non è mai stato usato per la
+dimostrazione di convergenza di Trotter (**corretto rispetto a una prima
+stesura di questa voce**, che indicava erroneamente il test 2 come punto di
+partenza anche per la dimostrazione Trotter).
+
+### Selezione del regime dimostrativo
+
+Per trovare "oscillazioni di $S_z$ non banali (non monocromatiche)" come
+richiesto, sviluppato un criterio a due indicatori calcolati dalla dinamica
+esatta: **escursione** picco-picco di $\langle S_z\rangle(t)$ (deve superare
+il rumore statistico di campionamento) e **$a_2/a_1$**, rapporto fra le
+ampiezze dei due modi spettrali dominanti ($\to0$ monocromatico, $\to1$
+bilanciato). Servono entrambi: un segnale ricco ma minuscolo, o grande ma
+monocromatico, non soddisfano la richiesta.
+
+Storia della selezione (utile per la difesa): un primo criterio (entropia
+spettrale pesata $A\cdot S$) è stato scartato — non riconducibile ad alcuna
+fonte (proposta originale non richiesta dal corso) e poco robusto (scarto
+1°–5° classificato del 4%, un criterio alternativo rimescolava la
+graduatoria). Il criterio a due indicatori attuale è più semplice e
+verificabile a mano dal relatore.
+
+Due regimi identificati: **R0** ($b/J=0.5,\,D/J=1/6$, quasi monocromatico,
+usato come controllo) e **R1** ($b/J\approx-0.18,\,D/J=1$, non
+monocromatico, $a_2/a_1=0.995$) — quest'ultimo derivato dalla struttura a V
+dell'Hamiltoniana (ampiezza da formula di Rabi, numero di frequenze dai
+detuning $\Delta_\pm=J\pm b$) con due scan 1D indipendenti, non da scan
+automatico o brute-force.
+
+> ✅ **Discrepanza R1 risolta (era falso allarme di versione):** il notebook
+> definisce esplicitamente `R1 = dict(b=-0.18, J=1.0, D=1.0)  # punto
+> adottato` e lo usa coerentemente ovunque, incluse le etichette dei grafici
+> nella versione attuale del notebook (`R1: $b/J=-0.18,\ D/J=1$`). Il
+> grafico con l'etichetta $-0.15$ mostrato durante la revisione era una
+> **figura non aggiornata** rispetto al notebook corrente — nessuna
+> discrepanza reale nel codice, $-0.18$ è il valore definitivo su tutta la
+> linea (derivazione, tabelle, circuito, grafici).
+
+### Risultato analitico trovato durante l'analisi
+
+Lo stato $\ket{t_0}=(\ket{01}+\ket{10})/\sqrt2$ risulta **esattamente
+disaccoppiato** dall'intera dinamica: autostato di $H_1$ (energia $J/4$),
+annichilito da $H_2$ ($H_2\ket{t_0}=0$ esatto — i contributi del DM su
+$\ket{01}$ e $\ket{10}$ si cancellano per interferenza distruttiva esatta),
+ortogonale a $\ket{00}$, non contribuisce a $S_z$. Tutte e tre le proprietà
+verificate a scarto numericamente zero. Conseguenza: lo spazio efficace è a
+3 livelli (non 4), quindi al più 2 frequenze **indipendenti** (non 3: vincolo
+$\Delta_{03}=\Delta_{01}+\Delta_{13}$) nell'evoluzione di $\langle
+S_z\rangle(t)$ — verificato su tutti i regimi testati.
+
+### Verifica quantitativa dell'errore di Trotter
+
+Scaling misurato a $t=10$: infedeltà $1-\mathcal F$ scala con pendenza
+$-2.11$ (log-log), norma operatoriale $\|\Delta U\|_2$ con pendenza $-1.06$
+— coerenti con la teoria (Trotter al 1° ordine: errore per passo
+$O((t/N)^2)$, quindi $\|\Delta U\|\sim O(1/N)$ a $t$ fissato e $1-\mathcal
+F\sim O(1/N^2)$, essendo l'infedeltà quadratica nell'errore d'operatore).
+Confrontato anche il circuito con shot finiti (8192 shot, $N=20$) contro la
+dinamica esatta — buon accordo.
+
+### Costo in gate (`costo_gate_trotter.md`)
+
+Due codifiche a confronto per passo di Trotter:
+
+| | `cx`-`rz`-`cx` esplicito | `RZZ` nativo |
+|---|---|---|
+| gate/passo | 17 (8 a 2 qubit) | 11 (5 a 2 qubit) |
+| profondità/passo | 15 | 9 |
+
+A $N=20$ ($t=30$, il caso eseguito su circuito): 340 vs 220 gate totali, 160
+vs 100 a due qubit. Nota: `RZZGate` di Qiskit non è primitivo indipendente,
+la sua `.definition` è esattamente la stessa decomposizione `cx-rz-cx` — la
+differenza è solo il livello di astrazione a cui si conta, rilevante per la
+Parte 2 (rumore di gate reale).
+
+> ✅ **Verificato sul codice, non solo sull'intestazione (in risposta a
+> domanda diretta di Samuele):** `trotter_dimero.py` scrive $H$ in
+> **convenzione di spin** ($s_i=\sigma_i/2$, coefficienti $b/2$, $J/4$,
+> $D/4$ — è la notazione con cui il relatore stesso ha posto il task in
+> `quantum_simulation_notes.jpg`) con la propria convenzione sito1→qubit0.
+> Il circuito delle correlazioni (`circuito_correlazioni_tutte.ipynb`)
+> costruisce $H$ **in modo completamente indipendente**, con la propria
+> funzione `dimer_hamiltonian` in **convenzione di Pauli diretta** (nessun
+> fattore $1/2,1/4$ — la stessa di `vqe_test2.py`/6-Applications.pdf) e con
+> `site_to_qubit={1:1, 2:0}`. **Nessun import fra i due file** (verificato
+> a colpo di script sul notebook: zero occorrenze di `trotter_dimero`).
+> Controllando l'algebra con entrambe le convenzioni tracciate insieme
+> (sito **e** normalizzazione, non una sola delle due), i due moduli
+> risultano **entrambi corretti e a vicenda coerenti** per la stessa fisica
+> $D(s_{x1}s_{z2}-s_{z1}s_{x2})$ — non c'è un segno sbagliato nascosto.
+> **Non è quindi un bug attivo**, ma resta un punto da tenere a mente: le
+> due convenzioni (spin vs Pauli) differiscono per un fattore $2$ su $b$ e
+> $4$ su $J,D$ (lo stesso tipo di dizionario $J_\text{Heisenberg}=4J_\text{code}$
+> già noto nel progetto) — se in futuro si vorranno riusare gli stessi
+> valori numerici fra il blocco Trotter e il blocco VQE/correlazioni, va
+> applicata la conversione esplicita, **sito e normalizzazione insieme**
+> (convertirne solo una delle due, isolatamente, introdurrebbe davvero un
+> segno sbagliato).
+
+### Collegamento con le correlazioni
+
+Il circuito con l'ancilla (Hadamard test) usa $U(t)$ come blocco non
+controllato fra controlled-$W$ e anti-controlled-$V$. **Verificato**: $U(t)$
+nel circuito delle correlazioni **non** è quella di `trotter_dimero.py` — è
+costruita in proprio nel notebook delle correlazioni, come prodotto Trotter
+($e^{-iH_2\tau}e^{-iH_1\tau}$, con $H_1,H_2$ dalla convenzione di Pauli
+locale del notebook) applicato $N$ volte come gate unitario esplicito
+(`UnitaryGate`, non decomposto in porte elementari). Il filone Trotter di
+`trotter_dimero.py` resta quindi **dimostrativo a sé** (focalizzato su
+convergenza, costo in gate, regimi R0/R1) e non condivide codice con le
+correlazioni — ciascuno dei due usa la propria costruzione di $U(t)$,
+internamente coerente (vedi discrepanza sopra, chiarita).
+
+### File prodotti
+
+`trotter_dimero.py`, `quantum_simulation_dimero_trotter.ipynb`,
+`quantum_simulation_dimero_trotter_semplificato.ipynb`,
+`quantum_simulation_dimero_trotter_note.md`,
+`quantum_simulation_relazione_domande_tecniche.md`, `costo_gate_trotter.md`,
+`parametri_scelti.json`.
+
+**Stato:** completato. Le due discrepanze inizialmente segnalate sono state
+entrambe verificate e chiuse (R1: falso allarme di figura non aggiornata;
+convenzioni spin/Pauli e sito/qubit: diverse ma internamente coerenti in
+ciascun modulo, nessun bug attivo, nessun import incrociato) — vedi ✅
+sopra. Punto da tenere a mente per il seguito, non un errore: se si
+vorranno mai riusare gli stessi valori numerici $(b,J,D)$ fra il blocco
+Trotter (convenzione di spin) e il blocco VQE/correlazioni (convenzione di
+Pauli), va applicata la conversione $b_\text{Pauli}=b_\text{spin}/2$,
+$J_\text{Pauli}=J_\text{spin}/4$, $D_\text{Pauli}=D_\text{spin}/4$ — sito e
+normalizzazione insieme, non separatamente.

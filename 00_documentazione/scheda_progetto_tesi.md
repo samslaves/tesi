@@ -40,10 +40,14 @@ basso; incrocio con $|\!\downarrow\downarrow\rangle$ (= $|S{=}1,M{=}-1\rangle$) 
 
 ## Estensione — N=3 (3 spin-1/2)
 $$H = J\!\!\sum_{\langle i,j\rangle}\!\!(X_iX_j+Y_iY_j+Z_iZ_j) + b\sum_{i=1}^{3} Z_i$$
-- **Catena aperta** (trimero): legami $(1,2)$ e $(2,3)$.
+- **Catena aperta** (trimero): legami $(1,2)$ e $(2,3)$. *(Teoria non ancora iniziata.)*
 - **Anello/triangolo**: aggiunge il legame $(3,1)$ → AFM **frustrato** (numero dispari).
-- Spazio di Hilbert $2^3=8$; spin totale $S=1/2$ (due volte) o $S=3/2$.
-- *(Topologia da decidere con il relatore — vedi log.)*
+  Parametrizzato in generale come **isoscele**: base $J$ fra $1,2$, lati $J'$ fra
+  $2,3$ e $3,1$ ($J\neq J'$; l'equilatero frustrato è il caso particolare $J'=J$).
+  **Teoria esatta completa** — vedi aggiornamento dedicato più sotto.
+- Spazio di Hilbert $2^3=8$; spin totale $S=1/2$ (due volte, blocchi B e C) o
+  $S=3/2$ (blocco A) — **mai $S=0$** (numero dispari di spin-$1/2$).
+- Entrambe le topologie confermate in scope dal relatore (vedi log).
 
 ## STRUTTURA DELLA TESI (definita con il relatore)
 
@@ -54,10 +58,13 @@ $$H = J\!\!\sum_{\langle i,j\rangle}\!\!(X_iX_j+Y_iY_j+Z_iZ_j) + b\sum_{i=1}^{3}
   (per il dimero, autovalori analitici qui sopra); calcolo di osservabili
   (es. magnetizzazione $M_z$) e fidelity $\mathcal{F}=|\langle\psi_0|\psi(\tilde\theta)\rangle|$.
 
-### Nuovo blocco richiesto dal relatore — Quantum simulation (Trotter) del dimero
-> **Stato: richiesto dal relatore il 18/07/2026, NON ancora implementato.**
+### Blocco richiesto dal relatore — Quantum simulation (Trotter) del dimero
+> **Stato: COMPLETATO.** Richiesto dal relatore il 18/07/2026, implementato
+> e verificato (convergenza, costo in gate, regimi dimostrativi R0/R1) — vedi
+> aggiornamento dedicato più sotto e dettaglio completo in `log_decisioni.md`.
 > Collocazione nella tesi ancora da definire (probabile ponte tra Parte 1 e
-> Parte 2, o sotto-sezione di Parte 1) — vedi `log_decisioni.md`.
+> Parte 2, o sotto-sezione di Parte 1) — resta l'unico punto aperto di questo
+> blocco.
 
 Distinto dal VQE: non si cerca variazionalmente lo stato fondamentale, ma si
 simula l'**evoluzione temporale reale** $e^{-iHt}|\psi_0\rangle$ dell'Hamiltoniana
@@ -96,20 +103,27 @@ $$H = b(s_{z1}+s_{z2}) + J\,\vec s_1\!\cdot\!\vec s_2 + D(s_{x1}s_{z2}-s_{z1}s_{
 - Peruzzo et al., Nat. Commun. 5, 4213 (2014) — origine del VQE.
 - Kandala et al., Nature 549, 242 (2017) — ansatz hardware-efficient.
 
-## Aggiornamento 18/07/2026 — quantum simulation (Trotter) sul dimero: stato avanzato
+## Aggiornamento — quantum simulation (Trotter) sul dimero: COMPLETATA
 
-Vedi `log_decisioni.md` per i dettagli completi. In sintesi:
+Vedi `log_decisioni.md` per i dettagli completi (derivazione, verifica
+numerica dello scaling dell'errore, costo in gate). In sintesi:
 - **Hamiltoniana confermata** (appunti del relatore): $H=H_1+H_2$ con
   $H_1=b(s_{z1}+s_{z2})+J\vec s_1\cdot\vec s_2$ (fisso) e
   $H_2=D(s_{x1}s_{z2}-s_{z1}s_{x2})$ (solo DM, dipende da $D$).
-- **$D=0$:** decomposizione esatta $R_z^{(1)}(bt)R_z^{(2)}(bt)U_J$.
-- **$D\neq0$:** Suzuki-Trotter, errore $O((t/N)^2)$ per passo.
-- **Notebook template** `Quantum_simulation_TIM_noiseless.ipynb` (Trotter su
-  Ising) **eseguito con successo** con Qiskit 2.x, nessuna incompatibilità
-  (solo l'import inutilizzato di `qiskit_ibm_runtime` va commentato).
-- **Prossimo passo:** riscrivere lo stesso schema Trotter sostituendo
-  l'Hamiltoniana Ising con quella del dimero, prima per $D=0$ (verifica
-  esatta) poi per $D\neq0$.
+- **Implementata direttamente con $D\neq0$** (per indicazione del relatore,
+  nessun passaggio intermedio per $D=0$), Suzuki-Trotter al 1° ordine.
+- **Regimi dimostrativi:** R0 (suggerimento del relatore, $J=2b,D=b/3$,
+  oscillazione quasi monocromatica) e R1 (derivato, $b/J=-0.18,D/J=1$, non
+  monocromatico, $a_2/a_1=0.995$) — filone esplorativo a sé, distinto dal
+  punto "test 2" usato per la pipeline ground state→correlazioni.
+- **Errore di Trotter verificato quantitativamente**: scaling misurato
+  coerente con la teoria ($1-\mathcal F\sim O(1/N^2)$, $\|\Delta U\|\sim
+  O(1/N)$).
+- **File:** `trotter_dimero.py`, due notebook, note di approfondimento,
+  analisi costo in gate (`costo_gate_trotter.md`).
+
+**Prossimo passo:** decidere con il relatore la collocazione definitiva nella
+tesi (unico punto ancora aperto per questo blocco).
 
 ## Aggiornamento 18/07/2026 — N=2 (dimero) sostanzialmente completo
 
@@ -130,9 +144,13 @@ Parte 1 / N=2 sono stati prodotti e validati:
 **Metodologia VQE confermata per il seguito (N=3):** multistart $R=6$,
 reinizializzazione nel ciclo esterno.
 
-**Prossimo passo:** estendere ansatz PMA-2q e benchmark esatto a N=3 (catena
-e triangolo); in parallelo, il task di quantum simulation Trotter sul dimero
-richiesto dal relatore (vedi sezione dedicata sopra).
+**Prossimo passo (storico, superato — vedi aggiornamenti successivi nel
+file):** ~~estendere ansatz PMA-2q e benchmark esatto a N=3 (catena e
+triangolo); in parallelo, il task di quantum simulation Trotter sul dimero
+richiesto dal relatore (vedi sezione dedicata sopra).~~ Entrambi i filoni
+sono avanzati da allora: teoria esatta del triangolo isoscele completata
+(vedi "Aggiornamento — N=3, triangolo isoscele") e Trotter completato (vedi
+"Aggiornamento — quantum simulation Trotter del dimero: COMPLETATA").
 
 ## Aggiornamento — fase VQE → ground state → correlazioni dinamiche
 
@@ -194,3 +212,35 @@ $\dot\rho=-\frac{i}{\hbar}[H,\rho]+\mathcal D[\rho]$, rappresentazione di
 Kraus, esempio canale bit-flip) caricati nel progetto. Materiale di
 riferimento per quando si apre il blocco Parte 2 — nessuna azione
 immediata. Dettagli in `log_decisioni.md`.
+
+## Aggiornamento — N=3, triangolo isoscele: teoria esatta completa
+
+Vedi `log_decisioni.md` per la derivazione completa. In sintesi, per la
+topologia anello/triangolo:
+
+- **Parametrizzazione:** base $J$ (siti 1,2), lati $J'$ (siti 2,3 e 3,1),
+  $J\neq J'$; l'equilatero frustrato è il caso particolare $J'=J$.
+- **Risolubile in forma chiusa** (decomposizione di Kambe, Casimir
+  $S_{12}^2,S^2,S_z$) grazie alla simmetria di scambio $1\leftrightarrow2$
+  presente solo quando i due lati sono uguali — dimostrata esplicitamente,
+  non assunta.
+- **Tre multipletti** A ($S_{12}{=}1,S{=}3/2$), B ($S_{12}{=}1,S{=}1/2$),
+  C ($S_{12}{=}0,S{=}1/2$), spettro in forma chiusa, limite dimero ($J'\to0$)
+  verificato.
+- **Campo critico** $b_c$ in forma chiusa nei due regimi ($2J+J'$ o $3J'$);
+  **mappa completa dei segni** $(J,J')$ per l'esistenza del crossing, inclusi
+  i quadranti con $J$ e/o $J'$ negativi.
+- **Tutti gli incroci trovati sono veri** (gap nullo, non anticrossing) —
+  dimostrato via regola di selezione. Il ruolo del DM nell'aprire il gap è
+  discusso solo qualitativamente, non quantificato numericamente.
+- **File:** `teoria_trimero_isoscele.pdf` (20 pagine),
+  `animazione_trimero_isoscele.html` (esplorazione interattiva),
+  `verifica.py` (batteria di test contro diagonalizzazione esatta, tutti
+  superati).
+
+**Non ancora fatto per N=3:** teoria della catena aperta; VQE per entrambe
+le topologie (ansatz di partenza raccomandato: `PMA-2q·3`, già validato per
+il dimero); trattazione quantitativa del DM sul triangolo.
+
+**Prossimo passo:** da decidere fra catena aperta (teoria) o VQE sul
+triangolo isoscele (ora che c'è il benchmark esatto).

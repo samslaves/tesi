@@ -1,0 +1,577 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Trimero isoscele — spettro in campo e termine DM</title>
+<style>
+:root{
+  --paper:#E7ECF2; --panel:#F7F9FC; --ink:#14273A; --soft:#5C7288;
+  --rule:#BDC9D7; --live:#A8560C;
+  --colA:#BA7517; --colB:#1E5C99; --colC:#0E7C86;
+  --mono:ui-monospace,"SF Mono","Cascadia Mono","Roboto Mono",Menlo,Consolas,monospace;
+  --sans:system-ui,-apple-system,"Segoe UI",Roboto,Helvetica,Arial,sans-serif;
+}
+*{box-sizing:border-box}
+body{
+  margin:0; background:var(--paper); color:var(--ink); font-family:var(--sans);
+  line-height:1.62; font-size:16px;
+  background-image:linear-gradient(var(--rule) 1px,transparent 1px),linear-gradient(90deg,var(--rule) 1px,transparent 1px);
+  background-size:28px 28px; background-position:-1px -1px;
+}
+.sheet{max-width:1080px;margin:0 auto;padding:0 20px 90px}
+header{padding:64px 0 40px;border-bottom:2px solid var(--ink);margin-bottom:44px}
+.eyebrow{font-family:var(--mono);font-size:11.5px;letter-spacing:.16em;text-transform:uppercase;color:var(--soft);margin-bottom:16px}
+h1{font-family:var(--mono);font-size:clamp(25px,4vw,40px);font-weight:600;line-height:1.16;margin:0 0 16px;letter-spacing:-.015em}
+.lede{max-width:64ch;color:#2C4257;font-size:17px;margin:0}
+section{background:var(--panel);border:1px solid var(--rule);padding:30px 28px 34px;margin-bottom:32px}
+h2{font-family:var(--mono);font-size:13px;letter-spacing:.13em;text-transform:uppercase;font-weight:600;
+   margin:0 0 6px;padding-bottom:9px;border-bottom:1px solid var(--rule);color:var(--ink)}
+.sub{color:var(--soft);font-size:14.5px;margin:10px 0 24px;max-width:70ch}
+h3{font-family:var(--mono);font-size:12.5px;letter-spacing:.06em;font-weight:600;margin:0 0 10px;color:var(--soft);text-transform:uppercase}
+p{margin:0 0 14px}
+.note{font-size:13.5px;color:var(--soft);margin-top:14px;line-height:1.55}
+code,.kb{font-family:var(--mono);font-size:.93em}
+.kb{color:var(--ink)}
+svg{width:100%;height:auto;display:block}
+.axis line{stroke:var(--soft); stroke-width:1;}
+.axis text{fill:var(--soft); font-family:var(--mono); font-size:10.5px;}
+.gridline{stroke:var(--rule); stroke-width:0.6;}
+.lineA{stroke:var(--colA);} .lineB{stroke:var(--colB);} .lineC{stroke:var(--colC);}
+.crossdot{fill:var(--ink);}
+.crosslabel{fill:var(--ink); font-family:var(--mono); font-size:11px;}
+.obsline{stroke:var(--live); stroke-width:1.2; stroke-dasharray:3,3; opacity:0.85;}
+.obsdot{stroke:#fff; stroke-width:1.5;}
+.dmline{stroke:var(--ink); stroke-width:2; opacity:0.88; fill:none;}
+.gapmark{stroke:var(--live); stroke-width:1.6;}
+.gaplabel{fill:var(--live); font-family:var(--mono); font-size:11px; font-weight:600;}
+hr.sep{border:none; border-top:1px solid var(--rule); margin:16px 0;}
+.subgrid{display:grid;grid-template-columns:1fr 1fr;gap:26px;align-items:start}
+@media(max-width:820px){.subgrid{grid-template-columns:1fr}}
+.bondAFM{stroke:#A4306B;} .bondFM{stroke:#1E5C99;} .bondZero{stroke:var(--soft); stroke-dasharray:2,2;}
+.sitedot{fill:var(--panel); stroke:var(--ink); stroke-width:1.5;}
+.sitelabel{fill:var(--ink); font-family:var(--mono); font-size:11px;}
+.bondlabel{font-family:var(--mono); font-size:9px;}
+.bondlabel.afm{fill:#A4306B;} .bondlabel.fm{fill:#1E5C99;} .bondlabel.zero{fill:var(--soft);}
+.pm-region-B{fill:var(--colB); opacity:0.12;}
+.pm-region-C{fill:var(--colC); opacity:0.14;}
+.pm-region-A{fill:var(--colA); opacity:0.14;}
+.pm-bound{stroke:var(--soft); stroke-width:1;}
+.pm-axis{stroke:var(--soft); stroke-width:1;}
+.pm-tick{fill:var(--soft); font-family:var(--mono); font-size:9px;}
+.pm-label{font-family:var(--mono); font-size:11px; font-weight:600;}
+.pm-dot{stroke:#fff; stroke-width:1.5;}
+/* controlli */
+.ctl{display:flex;align-items:center;gap:14px;flex-wrap:wrap;margin-bottom:18px}
+.ctl label{font-family:var(--mono);font-size:12px;letter-spacing:.05em;color:var(--soft); min-width:64px}
+input[type=range]{flex:1;min-width:180px;accent-color:var(--live);height:22px}
+.tval{font-family:var(--mono);font-size:15px;color:var(--live);min-width:56px;text-align:right}
+.stagebar{display:flex;flex-wrap:wrap;gap:7px;margin-bottom:18px}
+.stagebtn{font-family:var(--mono);font-size:12px;letter-spacing:.04em;padding:9px 13px;background:transparent;
+  border:1px solid var(--rule);color:var(--soft);cursor:pointer;transition:.15s;border-radius:0}
+.stagebtn:hover{border-color:var(--ink);color:var(--ink)}
+.stagebtn[aria-selected="true"]{background:var(--ink);border-color:var(--ink);color:var(--paper)}
+.stagebtn:focus-visible{outline:2px solid var(--live);outline-offset:2px}
+/* legend */
+.legend{display:flex;gap:18px;flex-wrap:wrap;font-family:var(--mono);font-size:11.5px;color:var(--soft);margin-top:14px}
+.legend i{display:inline-block;width:11px;height:11px;margin-right:6px;vertical-align:-1px}
+/* readout */
+.readout{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:12px}
+.rd{background:#fff;border:1px solid var(--rule);padding:12px 14px}
+.rd .k{font-family:var(--mono);font-size:10.5px;letter-spacing:.07em;text-transform:uppercase;color:var(--soft)}
+.rd .v{font-family:var(--mono);font-size:19px;color:var(--live);margin-top:4px}
+.rd .v.small{font-size:14px;color:var(--ink)}
+.callout{border-left:3px solid var(--live);background:#fff;padding:13px 16px;margin-top:18px;font-size:14.5px}
+footer{font-family:var(--mono);font-size:11.5px;color:var(--soft);text-align:center;padding-top:14px}
+@media(prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
+</style>
+</head>
+<body>
+<div class="sheet">
+
+<header>
+  <div class="eyebrow">Trimero di spin-1/2 &middot; triangolo isoscele &middot; forma chiusa + termine DM numerico</div>
+  <h1>Spettro in campo del<br>trimero isoscele</h1>
+  <p class="lede">Otto livelli E(S<sub>12</sub>,S,M) al variare del campo <span class="kb">b</span>, per J e J′ regolabili (con segno). Il pallino nero segna l'incrocio del fondamentale in forma chiusa; attivando il termine DM lo spettro viene ricalcolato per diagonalizzazione numerica esatta dell'8&times;8, per vedere se l'incrocio si apre davvero.</p>
+</header>
+
+<section>
+  <h2>1 &middot; Spettro esatto</h2>
+  <p class="sub">Tratto continuo = ramo M&lt;0 (rilevante per il fondamentale a b&gt;0); tratteggio corto = ramo M&gt;0. Con il DM acceso, la curva nera sovrapposta è lo spettro numerico esatto (diagonalizzazione 8&times;8, algoritmo di Jacobi); le rette colorate restano come riferimento D=0.</p>
+  <svg id="plot" viewBox="0 0 940 420" role="img" aria-label="Grafico dello spettro in campo"></svg>
+  <div class="legend">
+    <span><i style="background:var(--colA)"></i>A: S12=1, S=3/2 (quadrupletto)</span>
+    <span><i style="background:var(--colB)"></i>B: S12=1, S=1/2 (doppietto)</span>
+    <span><i style="background:var(--colC)"></i>C: S12=0, S=1/2 (doppietto, da singoletto di base)</span>
+    <span><i style="background:var(--ink)"></i>spettro esatto con DM</span>
+  </div>
+  <p class="note">Assi: <i>b</i> orizzontale, <i>E</i> verticale, nelle stesse unità di energia di J e J′ (convenzione di Pauli: nessuna unità fisica fissata, solo il rapporto b/J ha significato).</p>
+</section>
+
+<section>
+  <h2>2 &middot; Geometria e posizione nel piano (J,J′)</h2>
+  <p class="sub">Il colore dei legami segue il segno (rosso = antiferromagnetico, blu = ferromagnetico). A destra, la mappa a tre zone: quale multipletto è il fondamentale a campo nullo, in funzione di (J,J′).</p>
+  <div class="subgrid">
+    <div><h3>Geometria e legami</h3><svg id="triangle" viewBox="0 0 230 175" role="img" aria-label="Triangolo isoscele con legami J e J'"></svg></div>
+    <div><h3>Posizione nel piano (J,J′)</h3><svg id="phasemap" viewBox="0 0 200 208" role="img" aria-label="Mappa dei segni e posizione corrente"></svg></div>
+  </div>
+</section>
+
+<section>
+  <h2>3 &middot; Parametri J, J′, b</h2>
+  <div class="ctl">
+    <label for="J">J</label>
+    <input type="range" id="J" min="-3" max="3" step="0.05" value="1">
+    <span class="tval" id="Jval">1.00</span>
+  </div>
+  <div class="ctl">
+    <label for="Jp">J′</label>
+    <input type="range" id="Jp" min="-3" max="3" step="0.05" value="0.4">
+    <span class="tval" id="Jpval">0.40</span>
+  </div>
+  <div class="stagebar" id="presetbar">
+    <button class="stagebtn" data-j="1" data-jp="0.4">regione C</button>
+    <button class="stagebtn" data-j="1" data-jp="1.6">regione B</button>
+    <button class="stagebtn" data-j="1" data-jp="-2.5">regione A</button>
+    <button class="stagebtn" data-j="1" data-jp="1">equilatero</button>
+    <button class="stagebtn" data-j="1" data-jp="0">dimero (J′=0)</button>
+  </div>
+  <hr class="sep">
+  <div class="ctl">
+    <label for="bfrac">b osservato</label>
+    <input type="range" id="bfrac" min="0" max="1" step="0.002" value="0.42">
+    <span class="tval" id="bobsval">0.00</span>
+  </div>
+</section>
+
+<section>
+  <h2>4 &middot; Termine DM (Dzyaloshinskii&ndash;Moriya)</h2>
+  <p class="sub">
+    Due forme candidate, verificate rispetto alla simmetria di scambio 1&harr;2 (vedi <code>analisi_dm_trimero.pdf</code>).
+    <b>Opzione A</b> — solo legami laterali, segno opposto (D<sub>12</sub>=0, D<sub>23</sub>=&minus;D<sub>31</sub>): rispetta la simmetria, [H,S<sub>12</sub>²]=0 esatto.
+    <b>Opzione B</b> — tutti e tre i legami, stesso segno, proporzionale a J (proposta come scelta semplice): rompe la simmetria, [H,S<sub>12</sub>²]&ne;0.
+  </p>
+  <div class="stagebar" id="dmModeBar">
+    <button class="stagebtn" data-mode="off" aria-selected="true">DM spento</button>
+    <button class="stagebtn" data-mode="A">Opzione A (solo laterali)</button>
+    <button class="stagebtn" data-mode="B">Opzione B (tutti i legami)</button>
+  </div>
+  <div class="ctl">
+    <label for="dmval">parametro DM</label>
+    <input type="range" id="dmval" min="0" max="0.4" step="0.005" value="0.15">
+    <span class="tval" id="dmvalShow">0.15</span>
+  </div>
+  <div class="callout" id="dmCallout">DM spento: spettro in forma chiusa, incrocio vero a b<sub>c</sub>.</div>
+</section>
+
+<section>
+  <h2>5 &middot; Stato al campo osservato</h2>
+  <div class="readout" id="status"></div>
+</section>
+
+<footer>Trimero isoscele — teoria in forma chiusa (Kambe) + analisi numerica del termine DM</footer>
+</div>
+
+<script>
+const svg = document.getElementById('plot');
+const triSvg = document.getElementById('triangle');
+const pmSvg = document.getElementById('phasemap');
+const Jin = document.getElementById('J');
+const Jpin = document.getElementById('Jp');
+const Jval = document.getElementById('Jval');
+const Jpval = document.getElementById('Jpval');
+const bfracIn = document.getElementById('bfrac');
+const bobsval = document.getElementById('bobsval');
+const statusBox = document.getElementById('status');
+const dmvalIn = document.getElementById('dmval');
+const dmvalShow = document.getElementById('dmvalShow');
+const dmCallout = document.getElementById('dmCallout');
+
+let dmMode = 'off'; // 'off' | 'A' | 'B'
+
+const W = 940, H = 420;
+const padL = 62, padR = 20, padT = 24, padB = 38;
+const plotW = W - padL - padR, plotH = H - padT - padB;
+
+const QN = {A:{S12:1, S:1.5}, B:{S12:1, S:0.5}, C:{S12:0, S:0.5}};
+
+// ============================================================== forma chiusa (D=0)
+
+function lines(J, Jp){
+  return [
+    {mult:'A', M:1.5,  base:J+2*Jp, cls:'lineA'},
+    {mult:'A', M:0.5,  base:J+2*Jp, cls:'lineA'},
+    {mult:'A', M:-0.5, base:J+2*Jp, cls:'lineA'},
+    {mult:'A', M:-1.5, base:J+2*Jp, cls:'lineA'},
+    {mult:'B', M:0.5,  base:J-4*Jp, cls:'lineB'},
+    {mult:'B', M:-0.5, base:J-4*Jp, cls:'lineB'},
+    {mult:'C', M:0.5,  base:-3*J,   cls:'lineC'},
+    {mult:'C', M:-0.5, base:-3*J,   cls:'lineC'},
+  ];
+}
+
+function stateAt(J, Jp, b){
+  const es = lines(J,Jp).map(l=>({mult:l.mult, M:l.M, E:l.base+2*l.M*b, cls:l.cls}));
+  es.sort((a,c)=>a.E-c.E);
+  return {ground: es[0], gap: es[1].E-es[0].E};
+}
+
+function groundEnergyAt(J, Jp, b){
+  const EA = J+2*Jp-3*b, EB = J-4*Jp-b, EC = -3*J-b;
+  const vals = [['A',EA],['B',EB],['C',EC]];
+  vals.sort((a,b)=>a[1]-b[1]);
+  return vals[0];
+}
+
+function findCrossing(J, Jp){
+  const E0 = {A: J+2*Jp, B: J-4*Jp, C: -3*J};
+  let gs0 = Object.keys(E0).reduce((a,b)=>E0[a]<=E0[b]?a:b);
+  if (gs0 === 'A') return null;
+  const bc = gs0 === 'B' ? 3*Jp : 2*J+Jp;
+  if (bc <= 0) return null;
+  return {from: gs0, to: 'A', bc: bc};
+}
+
+function regionOf(J, Jp){
+  const E0 = {A: J+2*Jp, B: J-4*Jp, C: -3*J};
+  return Object.keys(E0).reduce((a,b)=>E0[a]<=E0[b]?a:b);
+}
+
+// ============================================================== algebra complessa 8x8 (per il DM)
+
+function zeros(n){ return Array.from({length:n},()=>new Array(n).fill(0)); }
+function eye(n){ const m=zeros(n); for(let i=0;i<n;i++) m[i][i]=1; return m; }
+
+// matrici di Pauli complesse: {re:[[..]], im:[[..]]}
+const PI = {re:eye(2), im:zeros(2)};
+const PX = {re:[[0,1],[1,0]], im:zeros(2)};
+const PY = {re:[[0,0],[0,0]], im:[[0,-1],[1,0]]};
+const PZ = {re:[[1,0],[0,-1]], im:zeros(2)};
+
+function kronC(A,B){
+  const na=A.re.length, nb=B.re.length, n=na*nb;
+  const re=zeros(n), im=zeros(n);
+  for(let i=0;i<na;i++) for(let j=0;j<na;j++) for(let k=0;k<nb;k++) for(let l=0;l<nb;l++){
+    const R = A.re[i][j]*B.re[k][l]-A.im[i][j]*B.im[k][l];
+    const I = A.re[i][j]*B.im[k][l]+A.im[i][j]*B.re[k][l];
+    re[i*nb+k][j*nb+l]=R; im[i*nb+k][j*nb+l]=I;
+  }
+  return {re,im};
+}
+function addC(A,B){
+  const n=A.re.length, re=zeros(n), im=zeros(n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){ re[i][j]=A.re[i][j]+B.re[i][j]; im[i][j]=A.im[i][j]+B.im[i][j]; }
+  return {re,im};
+}
+function scaleC(A,s){
+  const n=A.re.length, re=zeros(n), im=zeros(n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){ re[i][j]=A.re[i][j]*s; im[i][j]=A.im[i][j]*s; }
+  return {re,im};
+}
+function mulC(A,B){
+  const n=A.re.length, re=zeros(n), im=zeros(n);
+  for(let i=0;i<n;i++) for(let j=0;j<n;j++){
+    let sr=0, si=0;
+    for(let k=0;k<n;k++){
+      sr += A.re[i][k]*B.re[k][j]-A.im[i][k]*B.im[k][j];
+      si += A.re[i][k]*B.im[k][j]+A.im[i][k]*B.re[k][j];
+    }
+    re[i][j]=sr; im[i][j]=si;
+  }
+  return {re,im};
+}
+
+// operatore P sul sito 'site' (1,2,3), identita' altrove; ordine kron: site1(x)site2(x)site3
+function opOn(site, P){
+  const ops = [PI,PI,PI];
+  ops[site-1] = P;
+  return kronC(kronC(ops[0],ops[1]),ops[2]);
+}
+const OP_X = {1:opOn(1,PX), 2:opOn(2,PX), 3:opOn(3,PX)};
+const OP_Y = {1:opOn(1,PY), 2:opOn(2,PY), 3:opOn(3,PY)};
+const OP_Z = {1:opOn(1,PZ), 2:opOn(2,PZ), 3:opOn(3,PZ)};
+
+function sigdot(i,j){
+  return addC(addC(mulC(OP_X[i],OP_X[j]), mulC(OP_Y[i],OP_Y[j])), mulC(OP_Z[i],OP_Z[j]));
+}
+function dmTerm(i,j,D){
+  return scaleC(addC(mulC(OP_X[i],OP_Z[j]), scaleC(mulC(OP_Z[i],OP_X[j]),-1)), D);
+}
+const SIGDOT = {'12':sigdot(1,2), '23':sigdot(2,3), '31':sigdot(3,1)};
+const ZTOT = addC(addC(OP_Z[1],OP_Z[2]),OP_Z[3]);
+
+// autovalori di una matrice reale simmetrica 8x8 via rotazioni di Jacobi
+function jacobiEigenvalues(a, maxIter=100, tol=1e-11){
+  const n = a.length;
+  a = a.map(row=>row.slice());
+  for(let iter=0; iter<maxIter; iter++){
+    let maxval=0, p=0, q=1;
+    for(let i=0;i<n;i++) for(let j=i+1;j<n;j++) if(Math.abs(a[i][j])>maxval){maxval=Math.abs(a[i][j]); p=i; q=j;}
+    if(maxval<tol) break;
+    const app=a[p][p], aqq=a[q][q], apq=a[p][q];
+    const phi=0.5*Math.atan2(2*apq, aqq-app);
+    const c=Math.cos(phi), s=Math.sin(phi);
+    for(let k=0;k<n;k++){
+      const akp=a[k][p], akq=a[k][q];
+      a[k][p]=c*akp-s*akq; a[k][q]=s*akp+c*akq;
+    }
+    for(let k=0;k<n;k++){
+      const apk=a[p][k], aqk=a[q][k];
+      a[p][k]=c*apk-s*aqk; a[q][k]=s*apk+c*aqk;
+    }
+  }
+  const out=[]; for(let i=0;i<n;i++) out.push(a[i][i]);
+  return out.sort((x,y)=>x-y);
+}
+
+// spettro esatto (8 autovalori) all'Hamiltoniana completa, incluso DM
+function exactSpectrum(J, Jp, b, mode, D){
+  let Htot = addC(addC(scaleC(SIGDOT['12'],J), scaleC(SIGDOT['23'],Jp)), scaleC(SIGDOT['31'],Jp));
+  Htot = addC(Htot, scaleC(ZTOT, b));
+  if(mode==='A'){
+    Htot = addC(Htot, dmTerm(2,3, D));
+    Htot = addC(Htot, dmTerm(3,1, -D));
+  } else if(mode==='B'){
+    Htot = addC(Htot, dmTerm(1,2, D*J));
+    Htot = addC(Htot, dmTerm(2,3, D*Jp));
+    Htot = addC(Htot, dmTerm(3,1, D*Jp));
+  }
+  return jacobiEigenvalues(Htot.re);
+}
+
+// ============================================================== disegno: triangolo, mappa fasi (invariati)
+
+function bondClass(val){
+  if (val > 1e-9) return {cls:'bondAFM', tag:'afm', word:'AFM'};
+  if (val < -1e-9) return {cls:'bondFM', tag:'fm', word:'FM'};
+  return {cls:'bondZero', tag:'zero', word:'nullo'};
+}
+
+function drawTriangle(J, Jp){
+  const p1={x:34,y:145}, p2={x:166,y:145}, p3={x:100,y:22};
+  const wJ  = 1.5 + 4.5*Math.min(Math.abs(J)/3,1);
+  const wJp = 1.5 + 4.5*Math.min(Math.abs(Jp)/3,1);
+  const bJ = bondClass(J), bJp = bondClass(Jp);
+  let s = '';
+  s += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" class="${bJ.cls}" stroke-width="${wJ}"/>`;
+  s += `<line x1="${p2.x}" y1="${p2.y}" x2="${p3.x}" y2="${p3.y}" class="${bJp.cls}" stroke-width="${wJp}"/>`;
+  s += `<line x1="${p3.x}" y1="${p3.y}" x2="${p1.x}" y2="${p1.y}" class="${bJp.cls}" stroke-width="${wJp}"/>`;
+  [p1,p2,p3].forEach((p)=>{ s += `<circle cx="${p.x}" cy="${p.y}" r="6" class="sitedot"/>`; });
+  s += `<text x="${p1.x-10}" y="${p1.y+16}" class="sitelabel" text-anchor="middle">1</text>`;
+  s += `<text x="${p2.x+10}" y="${p2.y+16}" class="sitelabel" text-anchor="middle">2</text>`;
+  s += `<text x="${p3.x}" y="${p3.y-11}" class="sitelabel" text-anchor="middle">3</text>`;
+  s += `<text x="${(p1.x+p2.x)/2}" y="${p1.y+22}" text-anchor="middle" class="bondlabel ${bJ.tag}">J=${J.toFixed(2)} (${bJ.word})</text>`;
+  s += `<text x="${(p2.x+p3.x)/2+30}" y="${(p2.y+p3.y)/2-2}" text-anchor="start" class="bondlabel ${bJp.tag}">J'=${Jp.toFixed(2)}</text>`;
+  s += `<text x="${(p2.x+p3.x)/2+30}" y="${(p2.y+p3.y)/2+12}" text-anchor="start" class="bondlabel ${bJp.tag}">(${bJp.word})</text>`;
+  triSvg.innerHTML = s;
+}
+
+function drawPhaseMap(J, Jp){
+  const range = 3;
+  const pl=28, pr=10, pt=10, pb=30, W2=200, H2=208;
+  const pw=W2-pl-pr, ph=H2-pt-pb;
+  const X = v => pl + (v+range)/(2*range)*pw;
+  const Y = v => pt + ph - (v+range)/(2*range)*ph;
+  let s='';
+  s += `<polygon points="${X(-range)},${Y(0)} ${X(0)},${Y(0)} ${X(range)},${Y(range)} ${X(range)},${pt} ${X(-range)},${pt}" class="pm-region-B"/>`;
+  const Jstar = range/2;
+  s += `<polygon points="${X(0)},${Y(0)} ${X(range)},${Y(range)} ${X(range)},${Y(-range)} ${X(Jstar)},${Y(-range)}" class="pm-region-C"/>`;
+  s += `<polygon points="${X(-range)},${Y(0)} ${X(0)},${Y(0)} ${X(Jstar)},${Y(-range)} ${X(-range)},${Y(-range)}" class="pm-region-A"/>`;
+  s += `<line x1="${pl}" y1="${Y(0)}" x2="${W2-pr}" y2="${Y(0)}" class="pm-axis"/>`;
+  s += `<line x1="${X(0)}" y1="${pt}" x2="${X(0)}" y2="${H2-pb}" class="pm-axis"/>`;
+  s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(range)}" y2="${Y(range)}" class="pm-bound"/>`;
+  s += `<line x1="${X(0)}" y1="${Y(0)}" x2="${X(Jstar)}" y2="${Y(-range)}" class="pm-bound"/>`;
+  s += `<line x1="${X(-range)}" y1="${Y(0)}" x2="${X(0)}" y2="${Y(0)}" class="pm-bound"/>`;
+  [-range,0,range].forEach(v=>{
+    s += `<text x="${X(v)}" y="${H2-pb+12}" text-anchor="middle" class="pm-tick">${v}</text>`;
+    s += `<text x="${pl-4}" y="${Y(v)+3}" text-anchor="end" class="pm-tick">${v}</text>`;
+  });
+  s += `<text x="${W2-pr}" y="${H2-pb+24}" text-anchor="end" font-style="italic" class="pm-tick">J</text>`;
+  s += `<text x="${pl-16}" y="${pt+2}" text-anchor="end" font-style="italic" class="pm-tick">J'</text>`;
+  s += `<text x="${X(-1.6)}" y="${Y(2.3)}" class="pm-label" fill="var(--colB)">B</text>`;
+  s += `<text x="${X(1.35)}" y="${Y(0.15)}" class="pm-label" fill="var(--colC)">C</text>`;
+  s += `<text x="${X(-1.6)}" y="${Y(-2.3)}" class="pm-label" fill="var(--colA)">A</text>`;
+  const Jc = Math.max(-range, Math.min(range, J));
+  const Jpc = Math.max(-range, Math.min(range, Jp));
+  const reg = regionOf(J,Jp);
+  const regColorVar = reg==='A' ? '--colA' : (reg==='B' ? '--colB' : '--colC');
+  s += `<line x1="${X(Jc)}" y1="${Y(Jpc)}" x2="${X(Jc)}" y2="${Y(0)}" stroke="var(--soft)" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+  s += `<line x1="${X(Jc)}" y1="${Y(Jpc)}" x2="${pl}" y2="${Y(Jpc)}" stroke="var(--soft)" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+  s += `<circle cx="${X(Jc)}" cy="${Y(Jpc)}" r="5" class="pm-dot" fill="var(${regColorVar})"/>`;
+  pmSvg.innerHTML = s;
+}
+
+// ============================================================== disegno principale
+
+function draw(){
+  const J = parseFloat(Jin.value);
+  const Jp = parseFloat(Jpin.value);
+  Jval.textContent = J.toFixed(2);
+  Jpval.textContent = Jp.toFixed(2);
+  const D = parseFloat(dmvalIn.value);
+  dmvalShow.textContent = D.toFixed(3);
+
+  drawTriangle(J, Jp);
+  drawPhaseMap(J, Jp);
+
+  const L = lines(J, Jp);
+  const cross = findCrossing(J, Jp);
+
+  let bmax = cross ? cross.bc*1.35 : 4;
+  bmax = Math.max(bmax, 1.5);
+
+  let ymin = Infinity, ymax = -Infinity;
+  L.forEach(l=>{
+    const y0 = l.base, y1 = l.base + 2*l.M*bmax;
+    ymin = Math.min(ymin,y0,y1); ymax = Math.max(ymax,y0,y1);
+  });
+  const pad = (ymax-ymin)*0.08 || 1;
+  ymin -= pad; ymax += pad;
+
+  function X(b){ return padL + (b/bmax)*plotW; }
+  function Y(e){ return padT + plotH - ((e-ymin)/(ymax-ymin))*plotH; }
+
+  let svgContent = '';
+  const nGrid = 5;
+  for(let i=0;i<=nGrid;i++){
+    const yy = ymin + (ymax-ymin)*i/nGrid;
+    svgContent += `<line class="gridline" x1="${padL}" y1="${Y(yy)}" x2="${W-padR}" y2="${Y(yy)}"/>`;
+  }
+  svgContent += `<g class="axis">`;
+  svgContent += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}"/>`;
+  svgContent += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/>`;
+  for(let i=0;i<=nGrid;i++){
+    const yy = ymin + (ymax-ymin)*i/nGrid;
+    svgContent += `<line x1="${padL-4}" y1="${Y(yy)}" x2="${padL}" y2="${Y(yy)}"/>`;
+    svgContent += `<text x="${padL-7}" y="${Y(yy)+4}" text-anchor="end">${yy.toFixed(1)}</text>`;
+  }
+  const nTicksX = 6;
+  for(let i=0;i<nTicksX;i++){
+    const bb = bmax*i/nTicksX;
+    svgContent += `<line x1="${X(bb)}" y1="${H-padB}" x2="${X(bb)}" y2="${H-padB+4}"/>`;
+    svgContent += `<text x="${X(bb)}" y="${H-padB+16}" text-anchor="middle">${bb.toFixed(1)}</text>`;
+  }
+  svgContent += `<text x="${W-padR}" y="${H-padB+16}" text-anchor="end" font-size="13">b</text>`;
+  svgContent += `<text x="${padL-7}" y="${padT-4}" text-anchor="end" font-size="13">E</text>`;
+  svgContent += `</g>`;
+
+  const refOpacity = (dmMode==='off') ? 1 : 0.35;
+  L.forEach(l=>{
+    const dash = l.M < 0 ? '' : '4,3';
+    const x1=X(0), y1=Y(l.base), x2=X(bmax), y2=Y(l.base+2*l.M*bmax);
+    svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${l.cls}" stroke-width="2" stroke-dasharray="${dash}" fill="none" opacity="${refOpacity}"/>`;
+  });
+
+  if(cross && dmMode==='off'){
+    const yAtBc = J+2*Jp-3*cross.bc;
+    svgContent += `<circle cx="${X(cross.bc)}" cy="${Y(yAtBc)}" r="4" class="crossdot"/>`;
+    svgContent += `<text x="${X(cross.bc)}" y="${Y(yAtBc)-10}" text-anchor="middle" class="crosslabel">b_c=${cross.bc.toFixed(2)}</text>`;
+  }
+
+  // spettro esatto con DM: griglia di punti + ricerca del gap minimo vicino a bc
+  let gapInfo = null;
+  if(dmMode!=='off' && D>0){
+    const nPts = 70;
+    const grid = [];
+    for(let i=0;i<=nPts;i++){
+      const b = bmax*i/nPts;
+      grid.push({b, ev: exactSpectrum(J,Jp,b,dmMode,D)});
+    }
+    for(let k=0;k<8;k++){
+      let path='';
+      grid.forEach((g,i)=>{
+        const x=X(g.b), y=Y(g.ev[k]);
+        path += (i===0? `M ${x} ${y}`:` L ${x} ${y}`);
+      });
+      svgContent += `<path d="${path}" class="dmline"/>`;
+    }
+    // ricerca del gap minimo: due passate (grossolana poi fine), per avvicinarsi al vero minimo
+    let bestGap = Infinity, bestB = 0, bestE = 0;
+    let bLo = cross ? Math.max(0, cross.bc-bmax*0.5) : 0;
+    let bHi = cross ? Math.min(bmax, cross.bc+bmax*0.5) : bmax;
+    for(let pass=0; pass<4; pass++){
+      const nSearch = 200;
+      let localBest = Infinity, localB = bLo;
+      for(let i=0;i<=nSearch;i++){
+        const b = bLo + (bHi-bLo)*i/nSearch;
+        const ev = exactSpectrum(J,Jp,b,dmMode,D);
+        const gap = ev[1]-ev[0];
+        if(gap<localBest){ localBest=gap; localB=b; bestE=ev[0]; }
+      }
+      bestGap = localBest; bestB = localB;
+      const halfWidth = (bHi-bLo)/nSearch*3;
+      bLo = Math.max(0, localB-halfWidth); bHi = localB+halfWidth;
+    }
+    gapInfo = {gap:bestGap, b:bestB, E:bestE};
+    const xg = X(bestB), yg1 = Y(bestE), yg2 = Y(bestE+bestGap);
+    svgContent += `<line x1="${xg}" y1="${yg1}" x2="${xg}" y2="${yg2}" class="gapmark"/>`;
+    svgContent += `<text x="${xg+6}" y="${(yg1+yg2)/2}" class="gaplabel">gap=${bestGap.toFixed(4)}</text>`;
+  }
+
+  const frac = parseFloat(bfracIn.value);
+  const bObs = frac*bmax;
+  bobsval.textContent = bObs.toFixed(2);
+  const st = stateAt(J, Jp, bObs);
+  svgContent += `<line x1="${X(bObs)}" y1="${padT}" x2="${X(bObs)}" y2="${H-padB}" class="obsline"/>`;
+  svgContent += `<circle cx="${X(bObs)}" cy="${Y(st.ground.E)}" r="4.5" class="${st.ground.cls} obsdot" style="fill:currentColor"/>`;
+
+  svg.innerHTML = svgContent;
+  const obsCircle = svg.querySelector('.obsdot');
+  if(obsCircle){
+    const colorVar = st.ground.cls === 'lineA' ? '--colA' : (st.ground.cls === 'lineB' ? '--colB' : '--colC');
+    obsCircle.style.fill = getComputedStyle(document.documentElement).getPropertyValue(colorVar);
+  }
+
+  // callout DM
+  if(dmMode==='off'){
+    dmCallout.innerHTML = `DM spento: spettro in forma chiusa, incrocio <b>vero</b> a b<sub>c</sub>${cross? '='+cross.bc.toFixed(3): ' (nessuno, A già fondamentale)'}.`;
+  } else if(dmMode==='A'){
+    const g = gapInfo ? gapInfo.gap : 0;
+    const aperto = g > 1e-4;
+    dmCallout.innerHTML = `<b>Opzione A</b> (solo legami laterali, D&prime;=${D.toFixed(3)}): [H,S<sub>12</sub>&sup2;]=0 esatto &rArr; l'incrocio C&harr;A resta <b>${aperto?'aperto (controllare: non dovrebbe)':'chiuso — incrocio vero'}</b>. Gap minimo trovato: ${g.toExponential(2)}. Il punto critico si sposta rispetto a b<sub>c</sub> nominale, ma le due curve continuano a toccarsi: nessun anticrossing, per costruzione (regola di non-incrocio di von Neumann&ndash;Wigner applicata a S<sub>12</sub>&sup2;).`;
+  } else {
+    const g = gapInfo ? gapInfo.gap : 0;
+    dmCallout.innerHTML = `<b>Opzione B</b> (tutti i legami, proporzionale a J, r=${D.toFixed(3)}): [H,S<sub>12</sub>&sup2;]&ne;0 &rArr; l'incrocio si apre <b>davvero</b>. Gap minimo trovato: <b>${g.toFixed(4)}</b>, cresce linearmente con r.`;
+  }
+
+  // readout
+  const g0 = groundEnergyAt(J, Jp, 0);
+  let cards = '';
+  cards += `<div class="rd"><div class="k">fondamentale a b=0</div><div class="v small">${g0[0]} (S12=${QN[g0[0]].S12}, S=${QN[g0[0]].S}), E=${g0[1].toFixed(2)}</div></div>`;
+  cards += cross
+    ? `<div class="rd"><div class="k">incrocio (forma chiusa)</div><div class="v small">${cross.from} &rarr; A a b<sub>c</sub>=${cross.bc.toFixed(3)}</div></div>`
+    : `<div class="rd"><div class="k">incrocio (forma chiusa)</div><div class="v small">nessuno: A già fondamentale</div></div>`;
+  cards += `<div class="rd"><div class="k">campo osservato b</div><div class="v">${bObs.toFixed(2)}</div></div>`;
+  cards += `<div class="rd"><div class="k">fondamentale osservato</div><div class="v small">${st.ground.mult} (M=${st.ground.M})</div></div>`;
+  cards += `<div class="rd"><div class="k">gap al primo eccitato</div><div class="v">${st.gap.toFixed(3)}</div></div>`;
+  cards += `<div class="rd"><div class="k">magnetizzazione &lang;S<sub>z</sub>&rang;</div><div class="v">${st.ground.M}</div></div>`;
+  if(dmMode!=='off' && gapInfo){
+    cards += `<div class="rd"><div class="k">gap minimo con DM (b=${gapInfo.b.toFixed(3)})</div><div class="v">${gapInfo.gap.toFixed(5)}</div></div>`;
+  }
+  statusBox.innerHTML = cards;
+}
+
+Jin.addEventListener('input', draw);
+Jpin.addEventListener('input', draw);
+bfracIn.addEventListener('input', draw);
+dmvalIn.addEventListener('input', draw);
+
+document.querySelectorAll('#presetbar .stagebtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    Jin.value = btn.dataset.j;
+    Jpin.value = btn.dataset.jp;
+    draw();
+  });
+});
+document.querySelectorAll('#dmModeBar .stagebtn').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    dmMode = btn.dataset.mode;
+    document.querySelectorAll('#dmModeBar .stagebtn').forEach(b=>b.setAttribute('aria-selected', b===btn));
+    draw();
+  });
+});
+
+draw();
+</script>
+</body>
+</html>

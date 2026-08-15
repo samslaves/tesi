@@ -1,0 +1,134 @@
+"""
+Ansatz PMA per il trimero SENZA branching (mirror di pma_2q del dimero,
+confronto_ansatz_entangler.ipynb) -- stato iniziale FISSO, indipendente da
+(J,J',b): la scelta del ramo/settore emerge dall'ottimizzazione dei
+parametri, non da una preparazione diversa a seconda del campo.
+
+Struttura (K cicli):
+    |000> -> X(q0) -> [RBS_12(a_k), RBS_23(b_k), RBS_31(c_k), Ry(d_k,q0),
+                        Ry(e_k,q1), Ry(f_k,q2)]_{k=1..K}
+Parametri: 6K.
+
+Confrontato con la versione a branching (vqe_trimer_ring.py, RBS+branching,
+3K+3 parametri; vqe_trimer_ring_W.py, W+branching, 3K parametri):
+    - stesso conteggio di parametri a K=1 (6) della versione RBS+branching
+    - NESSUNA logica if b<b_c: un solo circuito, sempre lo stesso
+    - piu' ROBUSTA al termine DM: i Ry indipendenti rompono la conservazione
+      di M (e di S12) che nella versione a branching e' la causa del
+      collasso di fidelity vicino a b_c (vedi analisi_dm_trimero.pdf)
+
+Verificato numericamente (non solo teoria):
+    D=0:  K=1 (6 par) -> F=1.000000 su tutto l'asse b, incluso b_c degenere
+    DM Opzione B, D=0.15, b=b_c:
+          K=1 (6 par) -> F=0.999898  (residuo piccolo ma non nullo)
+          K=2 (12 par) -> F=1.000000 (residuo chiuso)
+"""
+
+import numpy as np
+from scipy.optimize import minimize
+from qiskit.primitives import StatevectorEstimator
+from qiskit.circuit import QuantumCircuit, ParameterVector
+from qiskit.quantum_info import Statevector
+
+from trimer_ring_exact import (
+    trimer_hamiltonian, exact_sweep, ground_state_projector,
+    trimer_hamiltonian_dm, exact_sweep_dm, ground_state_projector_dm,
+    magnetization_operator, critical_field,
+)
+
+BOND12 = (2, 1)
+BOND23 = (1, 0)
+BOND31 = (0, 2)
+
+
+def rbs_block(qc, phi, q0, q1):
+    """Stesso blocco RBS gia' validato in vqe_trimer_ring.py."""
+    sub = QuantumCircuit(2, name="RBS")
+    sub.h(0); sub.h(1); sub.cz(0, 1)
+    sub.ry(phi, 0); sub.ry(-phi, 1)
+    sub.cz(0, 1); sub.h(0); sub.h(1)
+    qc.append(sub.to_gate(label="RBS"), [q0, q1])
+
+
+def make_ha_ansatz(reps=2):
+    from qiskit.circuit.library import n_local
+    return n_local(num_qubits=3, rotation_blocks="ry", entanglement_blocks="cz",
+                    entanglement="full", reps=reps, insert_barriers=False)
+
+
+def pma_2q_trimer_nobranch(K=1):
+    """PMA senza branching: stato iniziale fisso (X su q0), K cicli di
+    [RBS sui 3 bond] + [Ry indipendenti sui 3 qubit]. 6K parametri."""
+    nparam = 6 * K
+    p = ParameterVector("p", nparam)
+    qc = QuantumCircuit(3)
+    qc.x(0)  # stato iniziale FISSO -- non dipende da J, J', b
+
+    idx = 0
+    for _ in range(K):
+        rbs_block(qc, p[idx], *BOND12); idx += 1
+        rbs_block(qc, p[idx], *BOND23); idx += 1
+        rbs_block(qc, p[idx], *BOND31); idx += 1
+        qc.ry(p[idx], 0); idx += 1
+        qc.ry(p[idx], 1); idx += 1
+        qc.ry(p[idx], 2); idx += 1
+    return qc
+
+
+def _energy(params, ansatz, hamiltonian, estimator):
+    pub = (ansatz, hamiltonian, [params])
+    return float(estimator.run([pub]).result()[0].data.evs.item())
+
+
+def run_vqe(J, Jp, b, K=1, n_restarts=5, seed=42, dm_mode=None, D=0.0):
+    """VQE con l'ansatz senza branching. Interfaccia analoga a run_vqe degli
+    altri moduli, ma senza ansatz_type/reps (qui c'e' solo questo PMA)."""
+    rng = np.random.default_rng(seed)
+    hamiltonian = trimer_hamiltonian_dm(J, Jp, b, dm_mode, D)
+    estimator = StatevectorEstimator()
+    ansatz = pma_2q_trimer_nobranch(K)
+    n_params = ansatz.num_parameters
+
+    if dm_mode is not None and D != 0:
+        res_exact = exact_sweep_dm([b], J, Jp, dm_mode, D)
+        P0, _, deg = ground_state_projector_dm(J, Jp, b, dm_mode, D)
+    else:
+        res_exact = exact_sweep([b], J=J, Jp=Jp)
+        P0, _, deg = ground_state_projector(J, Jp, b)
+    e_exact = float(res_exact["gs_energy"][0])
+    mz_exact = float(res_exact["gs_mz"][0])
+    Mz_mat = magnetization_operator().to_matrix()
+
+    best_e, best_params = np.inf, None
+    for _ in range(n_restarts):
+        x0 = rng.uniform(-np.pi, np.pi, n_params)
+        r1 = minimize(_energy, x0, args=(ansatz, hamiltonian, estimator),
+                      method="COBYLA", options={"maxiter": 3000, "tol": 1e-10})
+        r2 = minimize(_energy, r1.x, args=(ansatz, hamiltonian, estimator),
+                      method="L-BFGS-B", options={"maxiter": 3000, "ftol": 1e-14})
+        if r2.fun < best_e:
+            best_e, best_params = r2.fun, r2.x
+
+    sv = Statevector(ansatz.assign_parameters(best_params)).data
+    mz_vqe = float(np.real(sv.conj() @ Mz_mat @ sv))
+    fid = float(np.real(sv.conj() @ P0 @ sv))
+
+    return {
+        "J": J, "Jp": Jp, "b": b, "e_vqe": best_e, "e_exact": e_exact,
+        "delta_e": best_e - e_exact, "fidelity": fid,
+        "mz_vqe": mz_vqe, "mz_exact": mz_exact,
+        "n_params": n_params, "degeneracy": deg, "dm_mode": dm_mode, "D": D,
+    }
+
+
+def vqe_sweep(b_values, J=1.0, Jp=0.4, K=1, n_restarts=5, seed=42,
+              dm_mode=None, D=0.0, verbose=True):
+    results = []
+    for i, b in enumerate(b_values):
+        r = run_vqe(J, Jp, b, K=K, n_restarts=n_restarts, seed=seed + i,
+                    dm_mode=dm_mode, D=D)
+        results.append(r)
+        if verbose:
+            print(f"  b={b:5.2f}  E={r['e_vqe']:9.4f}  dE={r['delta_e']:+.2e}  "
+                  f"F={r['fidelity']:.6f}  (deg={r['degeneracy']})")
+    return results

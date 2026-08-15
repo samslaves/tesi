@@ -232,3 +232,84 @@ $e^{i\theta/4}$) — probabilità identiche, fase strutturalmente diversa.
    la proprietà chiave del PMA si eredita intatta nel passaggio a N=3.
 4. Il vincolo va **ridiscusso** solo se in futuro si introduce un termine DM immaginario sul
    triangolo (non in scope ora).
+
+---
+
+## 7. Perché RBS trova il ground state anche sopra soglia ($b/J>2$)
+
+### Il problema: RBS da solo conserva $M$
+
+Un singolo blocco RBS agisce solo sul settore $\{|01\rangle,|10\rangle\}$ e lascia
+invariati $|00\rangle$ e $|11\rangle$. Partendo da $|01\rangle$:
+
+$$\mathrm{RBS}(\varphi)|01\rangle = \cos\varphi\,|01\rangle + \sin\varphi\,|10\rangle,$$
+
+cioè lo stato rimane sempre a $M=0$. Il ground state sopra soglia ($b/J>2$) è
+$|t_-\rangle=|11\rangle$ con $M=-1$: irraggiungibile applicando solo RBS.
+
+Questa è la stessa ragione per cui il PMA di base (1 parametro, solo un blocco RBS
+dopo lo stato iniziale $X|00\rangle=|10\rangle$) fallisce a $b/J>2$ anche con $D=0$:
+non è un effetto del termine DM, è semplicemente l'assenza di un meccanismo per uscire
+dal settore $M=0$.
+
+### La soluzione: gli strati $R_y$ rompono la conservazione di $M$
+
+L'ansatz PMA-2q non è solo RBS. Ogni strato ha la struttura
+
+$$\bigl(R_y(\alpha_k)\otimes R_y(\beta_k)\bigr)\cdot\mathrm{RBS}(\varphi_k),$$
+
+con $\alpha_k \neq \beta_k$ in generale (parametri indipendenti sui due qubit). Un gate
+$R_y(\alpha)$ su un singolo qubit $q_i$ agisce localmente come
+
+$$R_y(\alpha)|0\rangle = \cos\tfrac{\alpha}{2}|0\rangle - \sin\tfrac{\alpha}{2}|1\rangle,\quad
+R_y(\alpha)|1\rangle = \sin\tfrac{\alpha}{2}|0\rangle + \cos\tfrac{\alpha}{2}|1\rangle,$$
+
+e quindi **mescola $|0\rangle$ e $|1\rangle$ su quel qubit**. Applicato dopo RBS (che ha
+prodotto uno stato in $M=0$), un $R_y$ locale redistribuisce ampiezza verso settori
+$M=\pm1$, incluso $|11\rangle$. La sequenza completa esplora tutto lo spazio reale dei
+2 qubit, non solo il settore $M=0$.
+
+**Meccanismo esplicito.** Dopo il blocco RBS lo stato è
+$|\psi\rangle = a|01\rangle+b|10\rangle$ (con $a,b$ reali, $a^2+b^2=1$).
+Applicando $R_y(\alpha)\otimes R_y(\beta)$:
+
+$$\bigl(R_y(\alpha)\otimes R_y(\beta)\bigr)(a|01\rangle+b|10\rangle)$$
+$$= a\bigl(\cos\tfrac\alpha2|0\rangle-\sin\tfrac\alpha2|1\rangle\bigr)\otimes
+\bigl(\sin\tfrac\beta2|0\rangle+\cos\tfrac\beta2|1\rangle\bigr)$$
+$$+\ b\bigl(\sin\tfrac\alpha2|0\rangle+\cos\tfrac\alpha2|1\rangle\bigr)\otimes
+\bigl(\cos\tfrac\beta2|0\rangle-\sin\tfrac\beta2|1\rangle\bigr).$$
+
+Espandendo, il coefficiente di $|11\rangle$ è
+$-a\sin\tfrac\alpha2\cos\tfrac\beta2 + b\cos\tfrac\alpha2\sin\tfrac\beta2$,
+che è zero solo se $\alpha=\beta$ oppure $a=b=0$. Per $\alpha\neq\beta$ generici
+lo stato ha componente non nulla su $|11\rangle$ (settore $M=-1$): l'ottimizzatore
+può quindi portare $E(\boldsymbol\theta)$ verso l'energia di $|11\rangle$ sopra soglia.
+
+### Perché $W$ non aveva questo problema (ma per una ragione diversa da quella apparente)
+
+$W_{ij}(\theta)=e^{-i\theta\,\mathbf{s}_i\cdot\mathbf{s}_j}$ **conserva anch'esso $M$**
+(è diagonale nella base $\{$singoletto, tripletto$\}$, che è una base con $M$ definito).
+La ragione per cui il PMA originale di Crippa et al. funzionava sopra soglia non è che $W$
+esce dal settore $M=0$, ma che nell'implementazione di Crippa il gate $W$ era sempre
+accompagnato da rotazioni locali, esattamente come nel PMA-2q qui — quelle rotazioni
+locali sono il meccanismo che popola $|11\rangle$, non $W$ in sé.
+
+### Tabella riassuntiva
+
+| componente | conserva $M$? | raggiunge $|11\rangle$? | ruolo |
+|---|---|---|---|
+| $\mathrm{RBS}(\varphi)$ da solo | sì ($M=0$) | no | entangler nel settore $M=0$ |
+| $R_y(\alpha)\otimes R_y(\alpha)$ (parametro condiviso) | no | sì | ma non abbastanza per $\mathcal{F}=1$ (vedi `analisi_rotazioni_PMA.ipynb`) |
+| $R_y(\alpha)\otimes R_y(\beta)$ (parametri indipendenti) | no | sì | popola tutti i settori, necessario per $\mathcal{F}=1$ |
+| PMA-2q·3 (K=1, 3 parametri totali) | no | sì | $\mathcal{F}=1$ su tutto il range con il numero minimo teorico di parametri |
+
+**Nota sulla ridondanza del parametro condiviso.** Se $\alpha=\beta$ (stessa rotazione su
+entrambi i qubit), il coefficiente di $|11\rangle$ diventa
+$\sin\tfrac\alpha2\cos\tfrac\alpha2(b-a) = \tfrac12\sin\alpha\,(b-a)$,
+che si annulla per $a=b$ (mescolamento massimo, cioè proprio $b/J=2$, il punto critico).
+Questo spiega quantitativamente perché un parametro condiviso non basta: fallisce
+esattamente nel punto più difficile, dove il mescolamento singoletto/$|t_-\rangle$ è
+massimo e il ground state richiede componenti uguali di entrambi.
+
+**Riferimento.** Dimostrazione completa con tutti i casi che falliscono:
+`analisi_rotazioni_PMA.ipynb`.

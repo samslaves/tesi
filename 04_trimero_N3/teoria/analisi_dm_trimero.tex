@@ -1,0 +1,281 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{graphicx}
+\usepackage{geometry}
+\geometry{margin=2.6cm}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\vs}[1]{\mathbf{s}_{#1}}
+\newcommand{\vS}{\mathbf{S}}
+
+\definecolor{colA}{RGB}{230,126,34}
+\definecolor{colB}{RGB}{41,128,185}
+\definecolor{colC}{RGB}{39,174,96}
+\definecolor{optA}{RGB}{39,174,96}
+\definecolor{optB}{RGB}{192,57,43}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Trimero isoscele — analisi del termine DM}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\title{\bfseries Il termine DM sul trimero isoscele:\\
+perché una scelta apre il gap all'incrocio e l'altra no}
+\author{Note di studio — Tesi triennale, Samuele Schiavi\\ \small Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Questo documento ricostruisce per intero l'analisi che ha portato a una conclusione
+non ovvia: fra due forme plausibili del termine di Dzyaloshinskii--Moriya (DM) sul
+trimero isoscele, \emph{una sola} apre effettivamente il gap all'incrocio di livello
+$b_c$, mentre l'altra — pur sembrando ragionevole e pur avendo un residuo numerico
+non nullo se calcolato nel punto sbagliato — lascia l'incrocio \emph{esatto}. La
+spiegazione finale è una regola di simmetria precisa (non un dettaglio numerico), e il
+documento la deriva passo per passo, includendo l'errore metodologico in cui siamo
+incappati durante l'analisi e come lo abbiamo scoperto.
+\end{abstract}
+
+\section{Il punto di partenza: cosa già sappiamo}
+
+Nella teoria esatta del trimero isoscele (decomposizione di Kambe), l'Hamiltoniana
+\[
+H_0 = J\,\boldsymbol\sigma_1\cdot\boldsymbol\sigma_2
++ J'(\boldsymbol\sigma_2\cdot\boldsymbol\sigma_3+\boldsymbol\sigma_3\cdot\boldsymbol\sigma_1)
++ b\sum_{i=1}^3 Z_i
+\]
+si risolve in forma chiusa grazie alla conservazione di $\mathbf S_{12}^2$ (simmetria
+di scambio $1\leftrightarrow2$) oltre a $\mathbf S^2,S_z$. Tre multipletti: $A$
+($S_{12}{=}1,S{=}\tfrac32$), $B$ ($S_{12}{=}1,S{=}\tfrac12$), $C$
+($S_{12}{=}0,S{=}\tfrac12$). Al punto di lavoro scelto ($J{=}1,J'{=}0.4$), il
+fondamentale passa da $C$ ad $A$ a $b_c=2J+J'=2.4$: un \textbf{incrocio vero}, non un
+anticrossing — le due curve di energia $E_C(b)=-3J-b$ e $E_A(b)=J+2J'-3b$ si
+attraversano senza repulsione, verificato a precisione macchina.
+
+\textbf{La domanda di questo documento.} Se si aggiunge un termine DM (che in generale
+rompe $M$, e quindi collega stati con $\Delta M=\pm1$), questo incrocio si trasforma
+in un anticrossing — cioè il gap si apre — per \emph{qualunque} forma di DM, o solo
+per alcune?
+
+\section{La forma generale del DM e la sua riduzione}
+
+L'interazione DM fra due spin è $\vec D_{ij}\cdot(\vs i\times\vs j)$, con $\vec
+D_{ij}$ un vettore (pseudo-vettore) che dipende dalla geometria del legame. Nel lavoro
+sul dimero, per una singola componente non nulla, questo si riduce a
+\[
+H_{DM}^{(ij)} = D\,(X_iZ_j - Z_iX_j),
+\]
+la stessa forma reale già validata e discussa in \texttt{simmetrie\_dmi\_spin.pdf}. Per
+il trimero, la generalizzazione naturale è un termine di questo tipo su \emph{ciascun}
+legame:
+\[
+H_{DM} = D_{12}(X_1Z_2-Z_1X_2) + D_{23}(X_2Z_3-Z_2X_3) + D_{31}(X_3Z_1-Z_3X_1).
+\]
+Restano da fissare i tre coefficienti $D_{12},D_{23},D_{31}$.
+
+\section{Vincolo di simmetria: quali disposizioni sono ammissibili}
+
+\subsection{Perché serve un vincolo}
+
+L'intera teoria del trimero isoscele assume che l'Hamiltoniana sia invariante per lo
+scambio dei siti $1,2$ (rappresentato dall'operatore di permutazione $P_{12}$ sui
+qubit). Se aggiungiamo $H_{DM}$ senza vincoli, rischiamo di introdurre una rottura di
+questa simmetria non giustificata dalla geometria del problema — un'incoerenza interna
+rispetto a tutto il resto della teoria costruita sopra quell'ipotesi.
+
+\subsection{Verifica esplicita, caso per caso}
+
+Ho costruito esplicitamente $P_{12}$ come matrice di permutazione $8\times8$ e
+verificato $\|P_{12}H_{DM}P_{12}^\dagger - H_{DM}\|$ per tutte le combinazioni di
+segno di $(D_{12},D_{23},D_{31})\propto(J,J',J')$, a $r=0.15$:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{cccc}
+\toprule
+$\mathrm{segno}(D_{12})$ & $\mathrm{segno}(D_{23})$ & $\mathrm{segno}(D_{31})$ & $\|[P_{12},H_{DM}]\|$ \\
+\midrule
+$0$ & $+$ & $-$ & $\mathbf{0}$ \quad (simmetrica) \\
+$0$ & $-$ & $+$ & $\mathbf{0}$ \quad (simmetrica) \\
+$0$ & $+$ & $+$ & $0.24$ \\
+$+$ & $+$ & $+$ & $0.42$ \\
+$+$ & $+$ & $-$ & $0.30$ \\
+\ldots & & & (tutte le altre combinazioni: $\neq0$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Risultato netto:} fra tutte le disposizioni testate, \emph{una sola} rispetta
+esattamente la simmetria di scambio: \textbf{nessun DM sul legame di base}
+($D_{12}=0$), con segno \textbf{opposto} sui due legami laterali equivalenti
+($D_{23}=-D_{31}\equiv D'$).
+
+\subsection{Le due opzioni che restano sul tavolo}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{2.3cm}p{6.3cm}p{6.3cm}@{}}
+\toprule
+& \textbf{Opzione A} (simmetrica) & \textbf{Opzione B} (proposta del relatore) \\
+\midrule
+forma & $D'\big[(X_2Z_3{-}Z_2X_3)-(X_3Z_1{-}Z_3X_1)\big]$ &
+$r\big[J(X_1Z_2{-}Z_1X_2)+J'(X_2Z_3{-}Z_2X_3)+J'(X_3Z_1{-}Z_3X_1)\big]$ \\
+simmetria $P_{12}$ & rispettata esattamente & rotta \\
+$[\,H,\mathbf S_{12}^2\,]$ & $=0$ esatto (verificato, $\|\cdot\|\sim10^{-16}$) & $\neq0$
+($\|\cdot\|\sim1.4$ a $r{=}0.15$) \\
+struttura residua & blocco $2{\times}2$ ($C$) $+$ blocco $6{\times}6$ ($A{+}B$ misti) &
+nessuna, $8\times8$ pieno \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Un errore metodologico, e come lo abbiamo scoperto}
+
+\subsection{Il controllo sbagliato: gap a $b_c$ fisso}
+
+Il primo controllo fatto è stato calcolare il gap fra i due autovalori più bassi
+\emph{esattamente} al vecchio punto critico $b_c=2.4$ (quello di $D=0$), per diversi
+valori del parametro DM:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{cccc}
+\toprule
+parametro & gap Opzione A a $b{=}2.4$ & gap Opzione B a $b{=}2.4$ \\
+\midrule
+$0.05$ & $0.0058$ & $0.0853$ \\
+$0.15$ & $0.0579$ & $0.2612$ \\
+$0.30$ & $0.1702$ & $0.4577$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A prima vista, sembra che \emph{entrambe} le opzioni aprano il gap — solo l'Opzione B
+lo apre di più. \textbf{Questa conclusione è sbagliata.}
+
+\subsection{Cosa c'è di sbagliato}
+
+Calcolare il gap a $b=2.4$ presuppone implicitamente che il punto di incrocio resti
+esattamente lì anche con il DM acceso. Non c'è alcuna ragione per cui debba essere
+così: aggiungere un termine all'Hamiltoniana può spostare il punto in cui le energie
+si toccano, non solo aprirle o lasciarle chiuse. Un valore di gap positivo calcolato
+in un punto che non è più il vero punto critico non dice nulla sull'apertura
+dell'incrocio — dice solo che le due curve, spostato il punto di confronto, non sono
+più esattamente sovrapposte lì.
+
+\subsection{Il controllo corretto: minimizzare il gap su tutto $b$}
+
+Il controllo corretto è cercare, per ciascun valore del parametro DM, il \emph{minimo
+assoluto} del gap su tutto l'asse $b$ (non il valore a $b=2.4$ fisso), usando
+un'ottimizzazione numerica di precisione:
+\[
+g_\text{min}(D) = \min_b\ \big[E_1(b;D) - E_0(b;D)\big].
+\]
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{ccccc}
+\toprule
+parametro & $g_\text{min}$ Opzione A & $b$ al minimo (A) & $g_\text{min}$ Opzione B & $b$ al minimo (B) \\
+\midrule
+$0.009$ & $1.7\times10^{-8}$ & $2.3999$ & $0.0149$ & $2.4000$ \\
+$0.073$ & $2.7\times10^{-8}$ & $2.3933$ & $0.1240$ & $2.4017$ \\
+$0.148$ & $1.6\times10^{-8}$ & $2.3725$ & $0.2511$ & $2.4068$ \\
+$0.300$ & $2.6\times10^{-8}$ & $2.2866$ & $0.5072$ & $2.4275$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il quadro cambia completamente. \textbf{Opzione A}: il gap vero resta a
+precisione numerica zero ($\sim10^{-8}$, compatibile con l'errore
+di arrotondamento) per \emph{ogni} intensità del DM testata — il punto di incrocio si
+sposta (da $b=2.4$ fino a $b\approx2.29$ per $D'=0.3$), ma resta un incrocio
+\emph{vero}. Il valore positivo trovato prima a $b=2.4$ fisso era un artefatto:
+misurava la distanza fra due curve nel punto sbagliato, non l'apertura reale.
+\textbf{Opzione B}: il gap vero è positivo e cresce linearmente, il punto critico si
+sposta di poco ($2.4\to2.43$) — qui la conclusione precedente resta valida.
+
+\begin{center}
+\includegraphics[width=0.95\textwidth]{confronto_dm_CORRETTO.png}
+\end{center}
+\begin{center}
+\small\textit{In alto a sinistra: gap vero (minimizzato su $b$) in funzione del
+parametro DM — la curva verde (Opzione A) resta a zero, la rossa (Opzione B) cresce
+linearmente. In basso a destra: zoom sul punto critico di ciascuna opzione — le curve
+verdi si toccano, le rosse si respingono visibilmente.}
+\end{center}
+
+\section{Perché succede: la regola di non-incrocio}
+
+\subsection{Il risultato generale (von Neumann--Wigner)}
+
+Per una famiglia di matrici hermitiane $H(b)$ dipendenti da un solo parametro reale
+$b$, due autovalori generici \emph{tendono a evitarsi} (anticrossing) al variare di
+$b$: farli coincidere esattamente richiederebbe di annullare simultaneamente più
+condizioni indipendenti (per matrici reali simmetriche, tipicamente due condizioni),
+un evento non generico con un solo parametro libero. Un incrocio vero (senza
+repulsione) può quindi accadere \emph{solo} se una simmetria residua — un operatore
+$\hat Q$ che commuta con $H(b)$ per ogni $b$ — etichetta i due stati con autovalori
+diversi di $\hat Q$: in tal caso l'elemento di matrice $\langle\psi_1|H|\psi_2\rangle$
+che causerebbe la repulsione è vincolato a essere \emph{esattamente} zero per ogni
+$b$ (non solo approssimativamente), perché connetterebbe due settori diversi di
+$\hat Q$ — proibito se $[\hat Q,H]=0$.
+
+\subsection{Applicazione al nostro caso}
+
+L'incrocio a $b_c$ è fra uno stato del blocco $C$ ($S_{12}=0$) e uno del blocco $A$
+($S_{12}=1$) — \textbf{settori diversi} dell'operatore $\mathbf S_{12}^2$.
+
+\begin{itemize}[leftmargin=1.4em]
+\item \textbf{Opzione A}: $[\mathbf S_{12}^2, H]=0$ esattamente (verificato). L'elemento
+di matrice fra lo stato di $C$ e quello di $A$ è quindi vincolato a zero per
+costruzione, qualunque sia $D'$: il DM può spostare il punto in cui i due livelli si
+toccano (perché altera le energie dei due rami separatamente), ma \textbf{non può mai
+aprire quell'incrocio}, perché la simmetria che protegge la loro indipendenza resta
+intatta.
+\item \textbf{Opzione B}: $[\mathbf S_{12}^2,H]\neq0$. Non c'è più alcun numero
+quantico conservato che distingua i due stati: l'elemento di matrice che li connette
+non è più vincolato a zero, e generically si apre un gap — esattamente quello che si
+osserva.
+\end{itemize}
+
+\textbf{Nota a margine, verificata numericamente.} Anche con l'Opzione A, DENTRO il
+settore $S_{12}=1$ (dove $A$ e $B$ si mescolano, perché lì $\mathbf S^2_\text{tot}$
+\emph{non} è conservato) si trova un piccolo gap reale altrove
+($\sim1.6\times10^{-4}$ a $b\approx1.07$ e $D'=0.15$) — coerente con la regola:
+l'Opzione A protegge \emph{solo} gli incroci fra settori diversi di $S_{12}$, non
+tutti gli incroci del sistema.
+
+\section{Conclusioni e implicazioni per la tesi}
+
+\begin{enumerate}[leftmargin=1.4em]
+\item Solo l'Opzione B (DM su tutti e tre i legami, stesso segno, proporzionale a $J$)
+apre realmente il gap all'incrocio $C\to A$ che interessa il punto di lavoro scelto.
+L'Opzione A (simmetrica, coerente con la teoria in forma chiusa) non lo fa mai, per
+una ragione di simmetria esatta, non per una coincidenza numerica.
+\item Il prezzo dell'Opzione B è la perdita completa della struttura a blocchi:
+serve la diagonalizzazione $8\times8$ piena, non c'è più alcuna riduzione algebrica
+disponibile.
+\item Il controllo del gap va sempre fatto cercando il minimo assoluto su tutto
+l'intervallo di campo, mai a un valore di campo fissato a priori — il punto critico
+può spostarsi, e un valore di gap positivo calcolato nel punto sbagliato è privo di
+significato fisico.
+\item La spiegazione ultima è la regola di non-incrocio di von Neumann--Wigner
+applicata a $\mathbf S_{12}^2$: un termine che preserva un numero quantico non può mai
+aprire un incrocio fra stati che quel numero quantico distingue, indipendentemente
+dalla sua intensità.
+\end{enumerate}
+
+\end{document}

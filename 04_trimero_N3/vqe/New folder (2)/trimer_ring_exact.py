@@ -292,54 +292,6 @@ def dm_min_gap(J, Jp, mode, D, search_half_width=None):
     return res.fun, res.x
 
 
-def exact_sweep_dm(b_values, J, Jp, mode, D):
-    """Come exact_sweep, ma con H_dm al posto di H. Serve come benchmark per
-    il VQE quando il DM e' acceso (exact_sweep resta la forma chiusa pura,
-    D=0, e non va toccata).
-
-    NOTA: con mode="B" (o comunque quando S12^2 non e' piu' conservato),
-    gs_S12sq NON e' un numero quantico buono -- e' comunque riportato come
-    valore di aspettazione, utile per vedere quanto il fondamentale vero si
-    allontana dal carattere di blocco puro (A/B/C) al crescere di D.
-    """
-    Mz = magnetization_operator().to_matrix()
-    S12sq = S12_squared_operator().to_matrix()
-    Stotsq = S_total_squared_operator().to_matrix()
-
-    energies, gs_energy, gs_state = [], [], []
-    gs_mz, gs_S12sq, gs_Stotsq = [], [], []
-
-    for b in b_values:
-        H = trimer_hamiltonian_dm(J, Jp, b, mode, D).to_matrix()
-        w, v = np.linalg.eigh(H)
-        g = v[:, 0]
-        energies.append(w)
-        gs_energy.append(w[0])
-        gs_state.append(g)
-        gs_mz.append(np.real(g.conj() @ Mz @ g))
-        gs_S12sq.append(np.real(g.conj() @ S12sq @ g))
-        gs_Stotsq.append(np.real(g.conj() @ Stotsq @ g))
-
-    return {
-        "b": np.asarray(b_values),
-        "energies": np.asarray(energies),
-        "gs_energy": np.asarray(gs_energy),
-        "gs_state": np.asarray(gs_state),
-        "gs_mz": np.asarray(gs_mz),
-        "gs_S12sq": np.asarray(gs_S12sq),
-        "gs_Stotsq": np.asarray(gs_Stotsq),
-    }
-
-
-def ground_state_projector_dm(J, Jp, b, mode, D, tol=1e-9):
-    """Come ground_state_projector, ma con H_dm al posto di H."""
-    H = trimer_hamiltonian_dm(J, Jp, b, mode, D).to_matrix()
-    w, v = np.linalg.eigh(H)
-    degenerate = np.abs(w - w[0]) < tol
-    V0 = v[:, degenerate]
-    return V0 @ V0.conj().T, w[0], int(degenerate.sum())
-
-
 def _self_test_dm():
     """Verifica le proprieta' di simmetria e il comportamento del gap per
     entrambe le opzioni di DM, agli stessi valori gia' controllati a mano
@@ -391,15 +343,6 @@ def _self_test_dm():
             - trimer_hamiltonian(J, Jp, 1.5).to_matrix())
     print(f"    max|H_dm(mode=None) - H_base| = {np.max(np.abs(diff)):.3e}")
     assert np.max(np.abs(diff)) < 1e-14
-
-    print("[self-test DM 5] exact_sweep_dm e ground_state_projector_dm coerenti")
-    b_test = np.array([1.0, 2.4, 3.5])
-    res = exact_sweep_dm(b_test, J, Jp, "B", D)
-    for i, b in enumerate(b_test):
-        P, E0, deg = ground_state_projector_dm(J, Jp, b, "B", D)
-        err_E = abs(E0 - res["gs_energy"][i])
-        assert err_E < 1e-10, f"energia proiettore/sweep incoerente a b={b}"
-    print(f"    coerenza energia proiettore <-> sweep: OK su {len(b_test)} punti")
 
     print("=" * 70)
     print("[self-test DM] TUTTI I TEST SUPERATI")

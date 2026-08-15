@@ -47,7 +47,6 @@ from qiskit.quantum_info import Statevector
 from trimer_ring_exact import (
     trimer_hamiltonian, exact_sweep, critical_field,
     magnetization_operator, kambe_states, ground_state_projector,
-    trimer_hamiltonian_dm, exact_sweep_dm, ground_state_projector_dm,
 )
 
 # bond fisici (coppie di qubit), convenzione site1->q2, site2->q1, site3->q0
@@ -169,19 +168,8 @@ def _energy(params, ansatz, hamiltonian, estimator):
 
 
 def run_vqe(J, Jp, b, ansatz_type="PMA", reps=2, K=1,
-            n_restarts=6, seed=42, dm_mode=None, D=0.0):
-    """VQE a un singolo punto (J,J',b), con termine DM opzionale.
-
-    dm_mode, D: come trimer_hamiltonian_dm (vedi trimer_ring_exact.py).
-    Default dm_mode=None, D=0 -> identico al caso senza DM (nessun cambio
-    di comportamento per il codice gia' esistente).
-
-    L'ansatz (RBS, M-conservante per costruzione) NON viene modificato
-    quando il DM e' acceso: e' voluto -- l'obiettivo e' vedere se un
-    ansatz che conserva M riesce comunque a rappresentare il vero
-    fondamentale quando M non e' piu' un buon numero quantico (stessa
-    domanda gia' posta e osservata nel dimero, sezione 7 del notebook
-    corrispondente).
+            n_restarts=6, seed=42):
+    """VQE a un singolo punto (J,J',b).
 
     Ottimizzazione a due stadi (mandato del relatore): per ciascun
     restart, COBYLA seguito da polish L-BFGS-B; il migliore fra gli
@@ -189,10 +177,10 @@ def run_vqe(J, Jp, b, ansatz_type="PMA", reps=2, K=1,
 
     Ritorna dict con: b, e_vqe, e_exact, delta_e, fidelity (proiettore sul
     multipletto fondamentale, robusta a degenerazione), mz_vqe, mz_exact,
-    n_params, degenerazione, ansatz_type, converged, dm_mode, D.
+    n_params, degenerazione, ansatz_type, converged.
     """
     rng = np.random.default_rng(seed)
-    hamiltonian = trimer_hamiltonian_dm(J, Jp, b, dm_mode, D)
+    hamiltonian = trimer_hamiltonian(J, Jp, b)
     estimator = StatevectorEstimator()
 
     if ansatz_type == "HA":
@@ -202,16 +190,12 @@ def run_vqe(J, Jp, b, ansatz_type="PMA", reps=2, K=1,
 
     n_params = ansatz.num_parameters
 
-    # benchmark esatto (forma chiusa se D=0, numerico via H_dm altrimenti)
-    if dm_mode is not None and D != 0:
-        res_exact = exact_sweep_dm([b], J, Jp, dm_mode, D)
-        P0, _, deg = ground_state_projector_dm(J, Jp, b, dm_mode, D)
-    else:
-        res_exact = exact_sweep([b], J=J, Jp=Jp)
-        P0, _, deg = ground_state_projector(J, Jp, b)
+    # benchmark esatto
+    res_exact = exact_sweep([b], J=J, Jp=Jp)
     e_exact = float(res_exact["gs_energy"][0])
     mz_exact = float(res_exact["gs_mz"][0])
     Mz_mat = magnetization_operator().to_matrix()
+    P0, _, deg = ground_state_projector(J, Jp, b)
 
     best_e, best_params, converged = np.inf, None, False
     for _ in range(n_restarts):
@@ -239,7 +223,6 @@ def run_vqe(J, Jp, b, ansatz_type="PMA", reps=2, K=1,
         "fidelity": fid, "mz_vqe": mz_vqe, "mz_exact": mz_exact,
         "n_params": n_params, "degeneracy": deg,
         "ansatz_type": ansatz_type, "converged": converged,
-        "dm_mode": dm_mode, "D": D,
     }
 
 

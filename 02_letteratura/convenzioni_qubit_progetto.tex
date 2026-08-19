@@ -1,0 +1,263 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{seqsplit}
+\usepackage{array}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Convenzioni sito$\leftrightarrow$qubit nel progetto — documento di riferimento}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Perché questo documento}
+
+Il progetto usa \textbf{due convenzioni diverse e incompatibili} per
+mappare i siti fisici (spin $1,2,3,\dots$) sugli indici dei qubit Qiskit,
+a seconda del modulo. Nessuna delle due è "sbagliata" — ogni modulo è
+internamente autoconsistente, con i propri self-test a precisione
+macchina — ma \textbf{mescolare stati o operatori provenienti da moduli
+con convenzioni diverse senza tradurli produce errori di segno
+silenziosi}, difficili da diagnosticare perché non danno crash: danno
+numeri plausibili ma sbagliati (tipicamente invisibili su osservabili
+reali come $\langle\sigma^z\rangle$, ma che flippano il segno su
+$\langle\sigma^y\rangle$ o su correlatori misti).
+
+Questo documento è organizzato \textbf{nello stesso ordine in cui il
+lavoro di tesi è stato svolto}: dimero (N=2) prima, poi trimero ad anello
+(N=3, catena chiusa), poi trimero a catena aperta (N=3). Per ciascun
+blocco tematico: quali file lo compongono, a cosa serve ciascuno, quale
+famiglia di convenzione usa e \emph{perché} è stata scelta proprio quella
+in quel punto del lavoro — non per riportare una regola statica, ma per
+ricostruire la logica (spesso storica, non sempre "ottimale a
+tavolino") con cui le scelte si sono succedute.
+
+\section{La regola generale di Qiskit (little-endian)}
+
+Qiskit indicizza i qubit in modo che, in una stringa di Pauli o in un ket
+scritto come stringa di bit a $n$ caratteri, \textbf{il carattere più a
+sinistra corrisponde al qubit con indice più alto} ($n-1$), quello più a
+destra al qubit $0$. In simboli: la posizione $k$ della stringa (contando
+da sinistra, $k=0,\dots,n-1$) agisce sul qubit $n-1-k$. Questa regola è
+fissa (built-in in Qiskit); quello che \emph{è} una scelta del progetto è
+\emph{quale sito fisico si mette a quale posizione della stringa}.
+
+Due famiglie di scelta ricorrono nel progetto:
+
+\begin{itemize}
+\item \textbf{Famiglia 1} — "sito 1 a sinistra": sito$_i\to$qubit$(N{-}i)$.
+Per $N=2$: sito1$\to$qubit1, sito2$\to$qubit0. Per $N=3$: sito1$\to$qubit2,
+sito2$\to$qubit1, sito3$\to$qubit0. Vantaggio: la label Pauli letta da
+sinistra a destra coincide con l'ordine fisico $|q_1q_2\dots q_N\rangle$
+usato in tutta la derivazione teorica — nessuna reindicizzazione fra
+teoria e codice.
+\item \textbf{Famiglia 2} — "sito 1 a destra": sito$_i\to$qubit$(i{-}1)$.
+Per $N=2$: sito1$\to$qubit0, sito2$\to$qubit1.
+\end{itemize}
+
+\section{Parte 1 — Dimero (N=2)}
+
+\subsection{1.1 Struttura statica: benchmark esatto, VQE}
+
+\textbf{Perché Famiglia 1.} È il punto di partenza dell'intero progetto:
+\texttt{dimer\_exact.py} fissa la convenzione apposta per far leggere la
+label Pauli nello stesso ordine della notazione fisica
+$|q_1q_2\rangle$ — una scelta di leggibilità, non imposta da Qiskit, fatta
+una volta all'inizio e poi ereditata da tutto ciò che dipende
+direttamente da questo file.
+
+\begin{longtable}{@{}p{4.7cm}p{6.3cm}p{2.5cm}@{}}
+\toprule
+File & A cosa serve & Mappa\\
+\midrule
+\endhead
+\texttt{\seqsplit{dimer\_exact.py}} & Benchmark esatto (diagonalizzazione) del dimero, autovalori analitici; sorgente unica del \texttt{SparsePauliOp} riusato da VQE. & $1{\to}1,2{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_dimer.py}} & Implementazione VQE (ansatz PMA-2q$\cdot$3) per il ground state del dimero, validata contro \texttt{dimer\_exact.py}. & $1{\to}1,2{\to}0$\\[4pt]
+\texttt{\seqsplit{confronto\_ansatz\_entangler.ipynb}} & Confronto sistematico di ansatz (Ry+entangler A--D, famiglie PMA) per scegliere l'ansatz canonico del dimero. & $1{\to}1,2{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_ground\_state\_test2.ipynb}} & Ground state VQE al punto di lavoro "test 2" ($b/J=0.35$, $D/J=0.80$), da riusare come stato iniziale delle correlazioni dinamiche. & $1{\to}1,2{\to}0$\\
+\bottomrule
+\end{longtable}
+
+\subsection{1.2 Quantum simulation (evoluzione temporale, Suzuki--Trotter)}
+
+\textbf{Perché Famiglia 2 — l'unica eccezione del progetto.} Il notebook
+di partenza fornito con il corso
+(\texttt{\seqsplit{Quantum\_simulation\_TIM\_noiseless.ipynb}}, modello di Ising
+trasverso) usa già \texttt{q0,q1} per il sistema fisico e \texttt{q2} come
+ancilla. Quando è stato costruito l'analogo per il dimero, la convenzione
+qubit del materiale di partenza è stata mantenuta per continuità con
+l'esempio fornito dal relatore — non è stata scelta ex-novo come per
+\texttt{dimer\_exact.py}, è stata ereditata.
+
+\begin{longtable}{@{}p{4.7cm}p{6.3cm}p{2.5cm}@{}}
+\toprule
+File & A cosa serve & Mappa\\
+\midrule
+\endhead
+\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.md}} & Derivazione teorica completa (Pauli, fattorizzazione $H_1/H_2$, errore di Trotter $O(t^2/N)$) a monte dei due notebook. Teoria pura, nessuna convenzione qubit dichiarata. & ---\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter.ipynb}} & Notebook completo: derivazione fisica del punto di lavoro R1, implementazione Trotter, verifica di convergenza. & $1{\to}0,2{\to}1$\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_semplificato.ipynb}} & Versione ridotta (solo il richiesto dal relatore), esplorazione interattiva dei parametri con widget. & $1{\to}0,2{\to}1$\\
+\bottomrule
+\end{longtable}
+
+\subsection{1.3 Correlazioni dinamiche (Hadamard test con ancilla)}
+
+\textbf{Perché Famiglia 1, nonostante segua cronologicamente il
+Trotter.} Le correlazioni dinamiche ripartono esplicitamente dalla
+convenzione di \texttt{dimer\_exact.py} (stesso \texttt{SparsePauliOp},
+stesso ground state VQE come stato iniziale) piuttosto che dal notebook
+Trotter appena scritto: è una scelta di continuità con la parte
+"statica" del progetto, non con l'ultima cosa scritta in ordine
+cronologico. Per costruire il blocco $U(t)$ necessario, invece di
+convertire i gate del notebook Trotter (Famiglia 2) in Famiglia 1, è
+stato ricostruito da zero come esponenziale di matrice
+(\texttt{scipy.linalg.expm}) — un modo per evitare il problema di
+conversione piuttosto che risolverlo, dichiarato esplicitamente nel
+notebook principale.
+
+\begin{longtable}{@{}p{4.7cm}p{6.3cm}p{2.5cm}@{}}
+\toprule
+File & A cosa serve & Mappa\\
+\midrule
+\endhead
+\texttt{\seqsplit{correlazioni\_dimero\_esplorazione.ipynb}} & Notebook \textbf{principale}: calcolo esplorativo di tutte le 36 combinazioni $C_{ij}^{\alpha\beta}(t)$, senza presupporre simmetrie; selezione dei correlatori per il circuito. & $1{\to}1,2{\to}0$\\[4pt]
+\texttt{\seqsplit{correlazioni\_dimero\_simmetria\_U.ipynb}} & Notebook \textbf{secondario}, sincronizzato col principale: costruzione e verifica della simmetria $U=\mathrm{SWAP}\cdot(R_z(\pi)\otimes R_z(\pi))$ che dimezza le combinazioni indipendenti. & $1{\to}1,2{\to}0$\\[4pt]
+\texttt{\seqsplit{verifica\_simmetrie\_correlatori.ipynb}} / \texttt{\seqsplit{\_pdf.ipynb}} & Verifica numerica indipendente (non solo simbolica) degli zeri strutturali e della simmetria $U$, a confronto con \texttt{simmetrie\_correlatori\_dimero.pdf}. & $1{\to}1,2{\to}0$\\[4pt]
+\texttt{\seqsplit{circuito\_correlazioni\_tutte.ipynb}} & Notebook snello e finale: dal ground state al circuito con ancilla, misura di tutte le 36 combinazioni, visualizzazione interattiva. & $1{\to}1,2{\to}0$\\
+\bottomrule
+\end{longtable}
+
+\section{Parte 2 — Trimero N=3, anello (catena chiusa)}
+
+\textbf{Perché Famiglia 1.} Continuazione diretta della parte statica del
+dimero: stessa logica di \texttt{dimer\_exact.py} applicata a $N=3$,
+esplicitamente dichiarata in \texttt{trimer\_ring\_exact.py} proprio per
+mantenere la corrispondenza diretta fra label Pauli e notazione fisica
+$|q_1q_2q_3\rangle$ usata nella teoria (Kambe, $S_{12}^2$). Tutti e tre i
+moduli VQE (\texttt{vqe\_trimer\_ring.py} e le sue due varianti)
+dichiarano esplicitamente nel proprio docstring "convenzione sito
+$\leftrightarrow$ qubit IDENTICA a \texttt{trimer\_ring\_exact.py}": nessuna
+scelta nuova, solo eredità diretta.
+
+\begin{longtable}{@{}p{4.7cm}p{6.3cm}p{2.5cm}@{}}
+\toprule
+File & A cosa serve & Mappa\\
+\midrule
+\endhead
+\texttt{\seqsplit{teoria\_trimero\_isoscele.pdf}} & Teoria esatta (decomposizione di Kambe, spettro chiuso, campo critico, mappa dei segni). Notazione fisica, nessun codice. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{derivazione\_stati\_kambe\_trimero.pdf}} & Derivazione esplicita degli otto autostati nella base computazionale, via operatore di abbassamento $S_-$. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{trimer\_ring\_exact.py}} & Benchmark esatto: Hamiltoniana come \texttt{SparsePauliOp}, spettro analitico, stati di Kambe verificati contro l'operatore Qiskit, termini DM candidati. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_trimer\_ring.py}} & Modulo di produzione: ansatz HA e PMA con RBS e branching sullo stato iniziale. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_trimer\_ring\_spiegato.ipynb}} & Guida interattiva al modulo precedente. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_trimer\_ring\_W.py}} & Variante con il gate $W_{ij}(\theta)$ di Crippa al posto di RBS, mirror diretto di \texttt{vqe\_dimer.py}. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_trimer\_ring\_W\_spiegato.ipynb}} & Guida interattiva alla variante W, mirror di \texttt{vqe\_dimer\_spiegato.ipynb}. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{vqe\_trimer\_ring\_nobranch.py}} & Ansatz PMA senza branching (stato iniziale fisso), più robusto al DM della versione a branching. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_unico.ipynb}} & Confronto sistematico di 10 ansatz VQE per il trimero (famiglie generiche e PMA), fidelity con e senza DM. Importa direttamente da \texttt{trimer\_ring\_exact.py}. & $1{\to}2,2{\to}1,3{\to}0$\\
+\bottomrule
+\end{longtable}
+
+\textbf{Ancora da fare — quantum simulation e correlazioni dell'anello.}
+A differenza del dimero, per il trimero ad anello Trotter e correlazioni
+dinamiche non sono ancora stati implementati. Quando verranno svolti,
+questo documento verrà aggiornato aggiungendo qui, subito sotto questa
+riga, le stesse tre sottosezioni già usate per il dimero (teoria,
+Trotter, correlazioni) — non in una sezione a parte in fondo al
+documento, per mantenere l'ordine cronologico/tematico del lavoro.
+
+\section{Parte 3 — Trimero N=3, catena aperta}
+
+\textbf{Perché Famiglia 1.} Continuazione diretta dell'anello: stessa
+motivazione di continuità (non reinventare la convenzione per ogni nuova
+topologia) esplicitamente richiamata in
+\texttt{\seqsplit{teoria\_trimero\_catena\_aperta.pdf}} e
+\texttt{\seqsplit{derivazione\_stati\_kambe\_trimero\_catena.pdf}}, in modo da poter
+riusare gli otto stati di Kambe già derivati senza alcuna conversione.
+
+\begin{longtable}{@{}p{4.7cm}p{6.3cm}p{2.5cm}@{}}
+\toprule
+File & A cosa serve & Mappa\\
+\midrule
+\endhead
+\texttt{\seqsplit{teoria\_trimero\_catena\_aperta.pdf}} & Teoria esatta della catena uniforme: simmetria $P_{13}$, Casimir $S_{13}^2$, spettro chiuso, campo critico $b_c=3J$, incroci veri (non anticrossing). & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{derivazione\_stati\_kambe\_trimero\_catena.pdf}} & Derivazione esplicita degli otto autostati, con gestione esplicita del riordino (coppia di classificazione $1,3$ non adiacente nel registro). & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{trimer\_chain\_exact.py}} & Benchmark esatto, analogo di \texttt{trimer\_ring\_exact.py} per la topologia a catena; 8 self-test a precisione macchina. & $1{\to}2,2{\to}1,3{\to}0$\\[4pt]
+\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_catena.ipynb}} & Confronto sistematico di 10 ansatz VQE per la catena ($D=0$); ansatz canonico individuato (\texttt{D: Ry-RBS-Ry}). & $1{\to}2,2{\to}1,3{\to}0$\\
+\bottomrule
+\end{longtable}
+
+\textbf{Ancora da fare.} VQE con termine DM (Fase 5), se richiesto dal
+relatore, e — più avanti, dopo l'anello — quantum simulation e
+correlazioni dinamiche sulla catena. Stessa logica di aggiornamento: le
+nuove sottosezioni verranno aggiunte qui, in ordine, non in coda al
+documento.
+
+\section{Ricetta di conversione}
+
+Per tradurre un ket o un operatore dalla Famiglia 1 alla Famiglia 2 (o
+viceversa) per lo stesso numero di siti $N$: \textbf{si inverte l'ordine
+dei bit/caratteri della stringa} — un'inversione globale, non uno scambio
+a coppie.
+
+\begin{itemize}
+\item $N=2$: \texttt{"ab"} (Famiglia 1) $\leftrightarrow$ \texttt{"ba"}
+(Famiglia 2). Es.: $|01\rangle_{F1} = |10\rangle_{F2}$ (stesso stato
+fisico, stringa diversa).
+\item $N=3$: \texttt{"abc"} (Famiglia 1) $\leftrightarrow$ \texttt{"cba"}
+(Famiglia 2).
+\end{itemize}
+
+Per una label Pauli, stessa regola: \texttt{"XZI"} (Famiglia 1, $X$ su
+sito1) diventa \texttt{"IZX"} (Famiglia 2, $X$ ancora su sito1 ma ora la
+label si legge al contrario).
+
+\textbf{Verifica pratica.} Prima di usare uno stato o un operatore
+importato da un modulo con convenzione diversa: costruire
+l'operatore/stato in entrambe le rappresentazioni e verificare che
+l'azione su un osservabile fisico (es. $\langle S_z^{\text{totale}}\rangle$,
+invariante per costruzione) coincida; se coincide solo dopo l'inversione
+di stringa, la conversione è confermata corretta.
+
+\section{Raccomandazione operativa}
+
+Non è necessario né conveniente unificare retroattivamente le due
+famiglie: sono entrambe internamente coerenti, coperte da self-test, e
+riscriverle introdurrebbe rischio senza benefici a ridosso della scadenza
+di settembre. La raccomandazione resta:
+
+\begin{enumerate}
+\item \textbf{Per tutto ciò che segue sulla catena aperta} (Fase 3 in
+poi): restare in Famiglia 1, continuità diretta con l'anello — nessuna
+conversione necessaria.
+\item \textbf{Se e quando servirà collegare Trotter (Famiglia 2) con
+VQE/stati di Kambe (Famiglia 1)} — rilevante per il task di quantum
+simulation del dimero se lo stato iniziale verrà preparato via PMA: due
+strade equivalenti già verificate praticabili, l'inversione di stringa
+esplicita (sez.~5) oppure il precedente delle correlazioni dinamiche
+(ricostruire $U(t)$ direttamente in Famiglia 1 come esponenziale di
+matrice, senza riusare i gate del notebook Trotter così come sono).
+\item \textbf{In ogni nuovo modulo}, dichiarare la convenzione scelta nel
+docstring/prima cella, come già fanno tutti i file di questo documento —
+è l'unica misura che ha impedito finora che questa disparità causasse un
+errore reale.
+\end{enumerate}
+
+\section{Stato di verifica}
+
+Tutti i moduli elencati sono stati verificati direttamente sul codice
+sorgente o sul notebook, non per deduzione da documenti di riepilogo:
+nessun punto resta aperto o "presunto". Questo documento verrà aggiornato
+mano a mano che le parti mancanti (quantum simulation e correlazioni per
+l'anello, VQE e seguito per la catena aperta) saranno completate,
+inserendo le nuove sottosezioni nella collocazione cronologica corretta
+anziché in coda.
+
+\end{document}

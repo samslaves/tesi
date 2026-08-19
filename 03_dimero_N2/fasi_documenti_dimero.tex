@@ -53,7 +53,8 @@ File & A cosa serve\\
 \texttt{\seqsplit{dimero\_sintesi.pdf}} & Sintesi ragionata della fase preliminare: inquadramento del problema, termine DM, piano operativo per $N=2$ (24 giugno 2026).\\[4pt]
 \texttt{\seqsplit{dimero\_spin.pdf}} & Derivazione completa dal modello di Hubbard all'Hamiltoniana di scambio di Heisenberg per il dimero.\\[4pt]
 \texttt{\seqsplit{dimero\_DM.pdf}} & Spettro del dimero con campo e termine DM: matrice $4\times4$, blocco $3\times3$, polinomio cubico, limiti analitici, anti-incrocio.\\[4pt]
-\texttt{\seqsplit{simmetrie\_dmi\_spin.pdf}} & Simmetria/antisimmetria dell'Hamiltoniana di scambio fra due spin 1/2: operatore di permutazione $P_{12}$, componente simmetrica (Heisenberg) vs antisimmetrica (DM).\\
+\texttt{\seqsplit{simmetrie\_dmi\_spin.pdf}} & Simmetria/antisimmetria dell'Hamiltoniana di scambio fra due spin 1/2: operatore di permutazione $P_{12}$, componente simmetrica (Heisenberg) vs antisimmetrica (DM).\\[4pt]
+\texttt{\seqsplit{decomposizione\_pauli\_verificata.pdf}} & Fondamenti della decomposizione in stringhe di Pauli (base, coefficienti, convenzione little-endian di Qiskit, misura su hardware), con applicazione esplicita e verificata al dimero: $E_0=-3J$ per il singoletto.\\
 \bottomrule
 \end{longtable}
 
@@ -64,7 +65,8 @@ File & A cosa serve\\
 File & A cosa serve\\
 \midrule
 \endhead
-\texttt{\seqsplit{dimer\_exact.py}} & Benchmark esatto (diagonalizzazione), autovalori analitici per il caso base $D=0$; la stessa funzione \texttt{dimer\_hamiltonian(b,J,D)} supporta anche $D\neq0$ -- sorgente unica del \texttt{SparsePauliOp} riusata da tutto ciò che segue (VQE, Trotter, correlazioni). Concettualmente precede il VQE, non ne fa parte: è il riferimento con cui il VQE viene validato, esattamente come \texttt{trimer\_chain\_exact.py} per la catena.\\
+\texttt{\seqsplit{dimer\_exact.py}} & Benchmark esatto (diagonalizzazione), autovalori analitici per il caso base $D=0$; la stessa funzione \texttt{dimer\_hamiltonian(b,J,D)} supporta anche $D\neq0$ -- sorgente unica del \texttt{SparsePauliOp} riusata da tutto ciò che segue (VQE, Trotter, correlazioni). Concettualmente precede il VQE, non ne fa parte: è il riferimento con cui il VQE viene validato, esattamente come \texttt{trimer\_chain\_exact.py} per la catena.\\[4pt]
+\texttt{\seqsplit{dimer\_exact\_completo.pdf}} & Spiegazione concettuale (formula chiusa vs diagonalizzazione numerica, catena di validazione formula--\texttt{eigh}--VQE) e lettura dei risultati (self-test, figura spettro/magnetizzazione, ruolo nel progetto), in un unico documento.\\
 \bottomrule
 \end{longtable}
 
@@ -86,7 +88,7 @@ File & A cosa serve\\
 \midrule
 \endhead
 \texttt{\seqsplit{VQE\_dimer\_noiseless.ipynb}} & Notebook esplorativo iniziale (ansatz hardware-efficient generico, import IBM runtime), solo $D=0$ -- precursore, superato dalla coppia \texttt{dimer\_exact.py}/\texttt{vqe\_dimer.py}.\\[4pt]
-\texttt{\seqsplit{scelta\_ansatz\_RBS\_vs\_W.md}} & \textbf{Contributo originale}: confronto esplicito RBS vs $W_{ij}(\theta)$ di Crippa et al. per il blocco $M$-conservante del PMA -- scelta del gate, indipendente dal valore di $D$.\\
+\texttt{\seqsplit{scelta\_ansatz\_RBS\_vs\_W.pdf}} & \textbf{Contributo originale}: confronto esplicito RBS vs $W_{ij}(\theta)$ di Crippa et al. per il blocco $M$-conservante del PMA -- scelta del gate, indipendente dal valore di $D$.\\
 \bottomrule
 \end{longtable}
 
@@ -98,11 +100,12 @@ File & A cosa serve\\
 \midrule
 \endhead
 \texttt{\seqsplit{vqe\_dimer.py}} & Implementazione VQE canonica (ansatz PMA-2q$\cdot$3); l'output standard del modulo è la griglia a 4 pannelli HA/PMA $\times$ $D{=}0$/$D{=}0.2$, non solo il caso isotropo. Validata contro \texttt{dimer\_exact.py} (Fase 2).\\[4pt]
-\texttt{\seqsplit{vqe\_dimer\_spiegato.ipynb}} & Guida interattiva a \texttt{vqe\_dimer.py}: perché il VQE dà un limite superiore, come l'estimator calcola $\langle H\rangle_{\boldsymbol\theta}$, differenza ansatz HA vs PMA -- culmina nella spiegazione del perché il PMA fallisce con $D=0.2$.\\[4pt]
+\texttt{\seqsplit{vqe\_dimer\_completo.pdf}} & Spiegazione concettuale (principio variazionale, estimator, i due ansatz HA/PMA con derivazione esplicita del blocco $W_{01}(\theta)$, fidelity) e lettura dei risultati riga per riga (le 4 configurazioni HA/PMA $\times$ $D{=}0$/$D{=}0.2$), in un unico documento.\\[4pt]
 \texttt{\seqsplit{confronto\_ansatz\_entangler.ipynb}} & Confronto sistematico di 11 ansatz (quattro $R_y$+entangler A--D, due famiglie PMA a più conteggi di parametri), sia a $D=0$ sia al crescere di $D$ fino a $1.0$ -- include la dimostrazione esplicita che impilare blocchi $M$-conservanti (RBS) non basta a superare il limite di espressività.\\[4pt]
-\texttt{\seqsplit{confronto\_ansatz\_entangler\_note.md}} & Note di lettura del notebook precedente: distinzione fra fallimenti dovuti alla sola assenza di rottura di simmetria (già a $D=0$, $b/J>2$) e fallimenti specificamente indotti dal DM (vicino a $b/J=2$).\\[4pt]
-\texttt{\seqsplit{risultati\_vqe\_test2.md}} & Ground state VQE al punto di lavoro "test 2" ($b/J=0.35$, $D/J=0.80$) -- il punto usato in \texttt{relazione\_test\_parametri.md} (Fase 4) e poi riusato come stato iniziale delle correlazioni dinamiche.\\[4pt]
-\texttt{\seqsplit{vqe\_ground\_state\_test2.ipynb}} & Notebook che implementa il calcolo di \texttt{risultati\_vqe\_test2.md}.\\
+\texttt{\seqsplit{confronto\_ansatz\_entangler\_note.pdf}} & Note di lettura del notebook precedente: distinzione fra fallimenti dovuti alla sola assenza di rottura di simmetria (già a $D=0$, $b/J>2$) e fallimenti specificamente indotti dal DM (vicino a $b/J=2$).\\[4pt]
+\texttt{\seqsplit{analisi\_rotazioni\_PMA.ipynb}} & Derivazione completa, con tutti i casi che falliscono, di perché servano rotazioni $R_y$ indipendenti (non condivise) su entrambi i qubit per rompere $M$ in modo reale -- giustifica quantitativamente la scelta PMA-2q su PMA-1q.\\[4pt]
+\texttt{\seqsplit{risultati\_vqe\_test2.pdf}} & Ground state VQE al punto di lavoro "test 2" ($b/J=0.35$, $D/J=0.80$) -- il punto usato in \texttt{relazione\_test\_parametri.md} (Fase 4) e poi riusato come stato iniziale delle correlazioni dinamiche.\\[4pt]
+\texttt{\seqsplit{vqe\_ground\_state\_test2.ipynb}} & Notebook che implementa il calcolo di \texttt{risultati\_vqe\_test2.pdf}.\\
 \bottomrule
 \end{longtable}
 
@@ -113,17 +116,18 @@ File & A cosa serve\\
 File & A cosa serve\\
 \midrule
 \endhead
-\texttt{\seqsplit{quantum\_simulation\_domande\_al\_relatore.md}} & Domande aperte sul task Trotter appena ricevuto (serve un qubit ausiliario per le correlazioni? quale stato iniziale?).\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_domande\_al\_relatore.pdf}} & Domande aperte sul task Trotter appena ricevuto (serve un qubit ausiliario per le correlazioni? quale stato iniziale?).\\[4pt]
 \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.md}} & Derivazione teorica completa: fattorizzazione esatta $U_J(t)$, $H_1$ (campo+scambio), $U_2(t)$ (blocco DM), errore di Trotter $O(t^2/N)$ via BCH.\\[4pt]
 \texttt{\seqsplit{relazione\_test\_parametri.md}} & (vedi Fase 3) -- i cinque set di parametri testati per l'evoluzione Trotter, con circuito e confronto con la dinamica esatta.\\[4pt]
 \texttt{\seqsplit{quantum\_simulation\_relazione\_domande\_tecniche.md}} & Note tecniche di riferimento rapido (criterio di non monocromaticità, rapporto $a_2/a_1$) a supporto della discussione col relatore sui risultati Trotter.\\[4pt]
-\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_note.md}} & Note di convenzione: ordinamento sito$\to$qubit (Famiglia 2, ereditata dall'esempio del corso), convenzioni di segno delle frequenze.\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_note.pdf}} & Note di convenzione e approfondimento: oscillazioni monocromatiche, criterio di selezione del regime, convenzioni di segno, cronologia del punto di lavoro R1, discrepanza aperta con \texttt{simmetrie\_dmi\_spin.pdf}.\\[4pt]
 \texttt{\seqsplit{quantum\_simulation\_dimero\_applicazione.pdf}} & Relazione che inquadra il deliverable Trotter completo: derivazione del punto di lavoro R1, riferimento ai due notebook.\\[4pt]
 \texttt{\seqsplit{quantum\_simulation\_dimero\_trotter.ipynb}} & Notebook \textbf{completo}: derivazione fisica di R1, implementazione Trotter, verifica di convergenza.\\[4pt]
 \texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_semplificato.ipynb}} & Versione \textbf{ridotta} (solo il richiesto dal relatore), esplorazione interattiva dei parametri con widget.\\[4pt]
-\texttt{\seqsplit{costo\_gate\_trotter.md}} & Conteggio dei gate per passo di Trotter e per $N$ passi, con la decomposizione \texttt{cx-rz-cx} al posto del gate nativo \texttt{RZZ}.\\[4pt]
-\texttt{\seqsplit{circuito\_compatto\_teoria\_e\_limiti.md}} & Analisi collaterale su richiesta del relatore: un circuito più compatto (2 CNOT invece di 8 gate a due qubit) è possibile in teoria, ma perché non si usa per gli scopi di questo progetto -- verifica numerica con due metodi indipendenti.\\[4pt]
-\texttt{\seqsplit{spiegazione\_shot\_rumore\_statistico.md}} & Spiegazione autosufficiente della soglia $1/\sqrt{N_{\rm shots}}$ per il rumore statistico, usata nei notebook Trotter in fase di esecuzione sul circuito.\\
+\texttt{\seqsplit{verifica\_convenione\_tetha\_qiskit.ipynb}} & Verifica numerica puntuale della convenzione $R_{XX}(\theta)=e^{-i\theta/2\,XX}$ (matrice di \texttt{RXXGate}), a supporto della derivazione di $U_J(t)$ in \texttt{quantum\_simulation\_dimero\_teoria.md}.\\[4pt]
+\texttt{\seqsplit{costo\_gate\_trotter.pdf}} & Conteggio dei gate per passo di Trotter e per $N$ passi, con la decomposizione \texttt{cx-rz-cx} al posto del gate nativo \texttt{RZZ}.\\[4pt]
+\texttt{\seqsplit{circuito\_compatto\_teoria\_e\_limiti.pdf}} & Analisi collaterale su richiesta del relatore: un circuito più compatto (2 CNOT invece di 8 gate a due qubit) è possibile in teoria, ma perché non si usa per gli scopi di questo progetto -- verifica numerica con due metodi indipendenti.\\[4pt]
+\texttt{\seqsplit{spiegazione\_shot\_rumore\_statistico.pdf}} & Spiegazione autosufficiente della soglia $1/\sqrt{N_{\rm shots}}$ per il rumore statistico, usata nei notebook Trotter in fase di esecuzione sul circuito.\\
 \bottomrule
 \end{longtable}
 

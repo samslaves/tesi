@@ -1,0 +1,422 @@
+{
+ "grid|PMA-2qC.K1|0.05": {
+  "fidelity": 0.9981282241074363,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|0.389": {
+  "fidelity": 0.9988672522903793,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|0.729": {
+  "fidelity": 0.9992395059932117,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|1.068": {
+  "fidelity": 0.9994632302124864,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|1.407": {
+  "fidelity": 0.9996235078304025,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|1.746": {
+  "fidelity": 0.9997290584091751,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|2.086": {
+  "fidelity": 0.9997929349457791,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|2.4": {
+  "fidelity": 0.9998977346363186,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|2.425": {
+  "fidelity": 0.9999173353676498,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|2.764": {
+  "fidelity": 0.9999963979318933,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|3.104": {
+  "fidelity": 0.9999992726291752,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|3.443": {
+  "fidelity": 0.9999997472627772,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|3.782": {
+  "fidelity": 0.9999998876961113,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|4.121": {
+  "fidelity": 0.9999978072751384,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|4.461": {
+  "fidelity": 0.9999988270518458,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2qC.K1|4.8": {
+  "fidelity": 0.9999999322136267,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "gridmin|PMA-2qC.K1": {
+  "b_min": 0.05,
+  "fid_min": 0.9981282241074363
+ },
+ "grid|PMA-2q.6|0.05": {
+  "fidelity": 0.9981282241074363,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|0.389": {
+  "fidelity": 0.9988672522903793,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|0.729": {
+  "fidelity": 0.9992395059932117,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|1.068": {
+  "fidelity": 0.9994632302124864,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|1.407": {
+  "fidelity": 0.9996235078304025,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|1.746": {
+  "fidelity": 0.9997290584091751,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|2.086": {
+  "fidelity": 0.9997929349457791,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|2.4": {
+  "fidelity": 0.9998977346363186,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|2.425": {
+  "fidelity": 0.9999173353676498,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|2.764": {
+  "fidelity": 0.9999963979318933,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|3.104": {
+  "fidelity": 0.9999992726291752,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|3.443": {
+  "fidelity": 0.9999997472627772,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|3.782": {
+  "fidelity": 0.9999998876961113,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|4.121": {
+  "fidelity": 0.9999978072751384,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|4.461": {
+  "fidelity": 0.9999988270518458,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.6|4.8": {
+  "fidelity": 0.9999999322136267,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "gridmin|PMA-2q.6": {
+  "b_min": 0.05,
+  "fid_min": 0.9981282241074363
+ },
+ "grid|PMA-2q.9|0.05": {
+  "fidelity": 0.9981281860393438,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|0.389": {
+  "fidelity": 0.998867228972047,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|0.729": {
+  "fidelity": 0.9992395201801166,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|1.068": {
+  "fidelity": 0.9994632537992316,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|1.407": {
+  "fidelity": 0.9996235118733693,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|1.746": {
+  "fidelity": 0.9997290560065835,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|2.086": {
+  "fidelity": 0.9997929518336911,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|2.4": {
+  "fidelity": 0.9998977367262627,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|2.425": {
+  "fidelity": 0.9999173423244512,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|2.764": {
+  "fidelity": 0.9999963986366848,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|3.104": {
+  "fidelity": 0.999999272334914,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|3.443": {
+  "fidelity": 0.9999997473881427,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|3.782": {
+  "fidelity": 0.9999998873987794,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|4.121": {
+  "fidelity": 0.9999999411803266,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|4.461": {
+  "fidelity": 0.9999999667256387,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-2q.9|4.8": {
+  "fidelity": 0.9999993182844862,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "gridmin|PMA-2q.9": {
+  "b_min": 0.05,
+  "fid_min": 0.9981281860393438
+ },
+ "grid|PMA-1q.6|0.05": {
+  "fidelity": 0.9962240145536752,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|0.389": {
+  "fidelity": 0.9978121586015799,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|0.729": {
+  "fidelity": 0.9985861067379145,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|1.068": {
+  "fidelity": 0.9990174196102104,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|1.407": {
+  "fidelity": 0.9992820325619787,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|1.746": {
+  "fidelity": 0.9994578325462381,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|2.086": {
+  "fidelity": 0.9995938653176893,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|2.4": {
+  "fidelity": 0.999848585655653,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|2.425": {
+  "fidelity": 0.9998901515115104,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|2.764": {
+  "fidelity": 0.9999963974170072,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|3.104": {
+  "fidelity": 0.9999992721074451,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|3.443": {
+  "fidelity": 0.9999997474318378,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|3.782": {
+  "fidelity": 0.999999887281552,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|4.121": {
+  "fidelity": 0.9999999415845868,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|4.461": {
+  "fidelity": 0.9999999665872422,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.6|4.8": {
+  "fidelity": 0.9999999794174348,
+  "n_params": 6,
+  "degeneracy": 1
+ },
+ "gridmin|PMA-1q.6": {
+  "b_min": 0.05,
+  "fid_min": 0.9962240145536752
+ },
+ "grid|PMA-1q.9|0.05": {
+  "fidelity": 0.9948279561998398,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|0.389": {
+  "fidelity": 0.9978226831341951,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|0.729": {
+  "fidelity": 0.9985898411854573,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|1.068": {
+  "fidelity": 0.9990180172783051,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|1.407": {
+  "fidelity": 0.9992813449343306,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|1.746": {
+  "fidelity": 0.9994567743998933,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|2.086": {
+  "fidelity": 0.9995934844767342,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|2.4": {
+  "fidelity": 0.9999999999998564,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|2.425": {
+  "fidelity": 0.9999999999993544,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|2.764": {
+  "fidelity": 0.9999999991311035,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|3.104": {
+  "fidelity": 0.9999999993470516,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|3.443": {
+  "fidelity": 0.9999999996863934,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|3.782": {
+  "fidelity": 0.9999999998044937,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|4.121": {
+  "fidelity": 0.999999989554803,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|4.461": {
+  "fidelity": 0.9999999966983141,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "grid|PMA-1q.9|4.8": {
+  "fidelity": 0.9999999894547312,
+  "n_params": 9,
+  "degeneracy": 1
+ },
+ "gridmin|PMA-1q.9": {
+  "b_min": 0.05,
+  "fid_min": 0.9948279561998398
+ }
+}

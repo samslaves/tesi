@@ -1,0 +1,393 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+% --- palette ---
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{notebar}{HTML}{9C6B12}
+
+% --- titoli di sezione ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}RBS vs $W_{ij}(\theta)$: scelta del blocco $M$-conservante}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+% --- box riutilizzabili ---
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}RBS vs $W_{ij}(\theta)$\\[0.1em]
+\Large\normalfont\color{softgray}Perché il blocco $M$-conservante del PMA-2q resta RBS anche per il trimero}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+\textbf{Contesto.} In \texttt{confronto\_ansatz\_entangler.ipynb} ($N=2$) il
+blocco $M$-conservante del PMA è realizzato come rotazione di Givens
+reale (RBS). Crippa et al.\ (\emph{Magnetochemistry} 7, 117, 2021), nel
+costruire il PMA per anelli di spin a $N=4,6$, usano invece un gate
+diverso, $W_{ij}(\theta)=e^{-i\theta\,\mathbf s_i\cdot\mathbf s_j}$.
+Questo documento deriva esplicitamente la differenza fra i due gate,
+quantifica il costo in gate e l'espressività, e motiva la scelta di
+\textbf{restare su RBS} anche per l'estensione a $N=3$ (triangolo
+isoscele).
+
+\section{Il gate RBS}
+
+Nel sottospazio a due qubit, ristretto al settore $M=0$ (cioè allo
+spazio $\{|01\rangle,|10\rangle\}$), RBS è la rotazione di Givens reale:
+\begin{keyeq}
+\centering
+$\mathrm{RBS}(\varphi)=\begin{pmatrix}1&0&0&0\\0&\cos\varphi&-\sin\varphi&0\\0&\sin\varphi&\cos\varphi&0\\0&0&0&1\end{pmatrix}$
+\quad (base $|00\rangle,|01\rangle,|10\rangle,|11\rangle$)
+\end{keyeq}
+Identità su $|00\rangle,|11\rangle$; sul sottospazio
+$\{|01\rangle,|10\rangle\}$ agisce come $R_y(2\varphi)$ reale (a meno di
+parametrizzazione dell'angolo). Applicato a $|01\rangle$:
+$$\mathrm{RBS}(\varphi)\,|01\rangle=\cos\varphi\,|01\rangle+\sin\varphi\,|10\rangle.$$
+\textbf{Punto chiave:} i coefficienti sono \textbf{reali} per ogni
+$\varphi$.
+
+Implementazione già validata nel progetto (self-test $\sim10^{-16}$
+contro il target):
+$$\mathrm{RBS}(\varphi)=(H\otimes H)\;\mathrm{CZ}\;\big(R_y(\varphi)_{q_0}\otimes R_y(-\varphi)_{q_1}\big)\;\mathrm{CZ}\;(H\otimes H).$$
+Costo: \textbf{2 gate a due qubit} ($CZ$, equivalenti a CNOT tramite
+$CZ=(I\otimes H)\,\mathrm{CNOT}\,(I\otimes H)$).
+
+\section{Il gate $W_{ij}(\theta)$ (Crippa et al.)}
+
+$$W_{ij}(\theta)=e^{-i\theta\,\mathbf s_i\cdot\mathbf s_j}, \qquad \mathbf s=\boldsymbol\sigma/2.$$
+
+\subsection*{Spettro di $\mathbf s_i\cdot\mathbf s_j$}
+
+Per due spin-1/2, usando
+$\mathbf s_i\cdot\mathbf s_j=\tfrac12(\mathbf S^2-s_i^2-s_j^2)$ con
+$s_i^2=s_j^2=\tfrac34$:
+\begin{itemize}[leftmargin=1.3em,itemsep=0.1em]
+\item \textbf{Tripletto} ($S=1$): $\mathbf s_i\cdot\mathbf s_j=\tfrac12(2-\tfrac34-\tfrac34)=\tfrac14$;
+\item \textbf{Singoletto} ($S=0$): $\mathbf s_i\cdot\mathbf s_j=\tfrac12(0-\tfrac34-\tfrac34)=-\tfrac34$.
+\end{itemize}
+Quindi $W_{ij}(\theta)$ è \textbf{diagonale nella base
+singoletto/tripletto}, con autovalori $e^{-i\theta/4}$ (tripletto) ed
+$e^{i3\theta/4}$ (singoletto) --- una fase relativa fra i due settori,
+non una rotazione reale.
+
+\subsection*{Azione esplicita su $|01\rangle$}
+
+Scrivendo $|01\rangle$ nella base singoletto/tripletto e applicando
+$W_{ij}(\theta)$, dopo aver raccolto la fase globale $e^{-i\theta/4}$:
+$$W_{ij}(\theta)\,|01\rangle=\frac{e^{-i\theta/4}}{2}\Big[(1+e^{i\theta})|01\rangle+(1-e^{i\theta})|10\rangle\Big].$$
+
+\subsection*{Confronto diretto con RBS: stesse probabilità, fase diversa}
+
+Usando $1+e^{i\theta}=2\cos(\theta/2)e^{i\theta/2}$ e
+$1-e^{i\theta}=-2i\sin(\theta/2)e^{i\theta/2}$, a meno della fase
+globale $e^{i\theta/4}$ e ponendo $\varphi=\theta/2$:
+
+\begin{okbox}{Risultato del confronto}
+$$W_{ij}(2\varphi)\,|01\rangle \;\dot=\; \cos\varphi\,|01\rangle-i\sin\varphi\,|10\rangle
+\qquad\text{contro}\qquad
+\mathrm{RBS}(\varphi)\,|01\rangle=\cos\varphi\,|01\rangle+\sin\varphi\,|10\rangle.$$
+\end{okbox}
+
+Le \textbf{probabilità} di misurare $|01\rangle$ o $|10\rangle$ sono
+identiche in entrambi i casi ($\cos^2\varphi$, $\sin^2\varphi$): i due
+gate sono equivalenti \emph{a livello di popolazioni}. Quello che li
+distingue è la \textbf{fase relativa} fra le due ampiezze: reale ($+1$,
+riassorbibile nel segno) per RBS, \textbf{immaginaria} ($-i$) per $W$.
+Non è un dettaglio di convenzione: è una proprietà strutturale del
+generatore. $\mathbf s_i\cdot\mathbf s_j$, ristretto al sottospazio
+$\{|01\rangle,|10\rangle\}$, è proporzionale a una matrice di Pauli $X$
+effettiva (scambio puro), il cui esponenziale genera rotazioni con
+off-diagonal immaginario --- la stessa famiglia del gate iSWAP, non
+quella del gate SWAP/Givens reale. RBS, per costruzione ($R_y$ reali
+coniugati da Hadamard/CZ), resta nella famiglia delle rotazioni
+\textbf{reali}.
+
+\needspace{10\baselineskip}
+\section{Costo in gate}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lp{5.2cm}c@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Gate} & \textbf{Decomposizione} & \textbf{Gate a 2 qubit}\\
+\midrule
+$\mathrm{RBS}(\varphi)$ & $H\text{-}CZ\text{-}R_y\text{-}R_y\text{-}CZ\text{-}H$ & \textbf{2} ($CZ$)\\
+$W_{ij}(\theta)$ (Crippa, eq.\ 6) & sequenza a gate singolo qubit + CNOT & \textbf{3} (CNOT)\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Sostituire RBS con $W$ \textbf{non} rende l'ansatz più compatto: lo
+appesantisce di un gate a due qubit per blocco (50\% in più).
+
+\begin{editnote}
+Nota per evitare un'ambiguità di lettura. Questo costo aggiuntivo è un
+argomento \emph{a favore} di RBS, non a favore di $W$ --- vale ancora
+di più, non di meno, quando in Parte 2 si introduce il rumore: ogni
+gate a due qubit (CNOT o CZ) è un canale di errore in più
+(depolarizzazione, errori di gate, ecc.\ --- coerente con l'analisi già
+fatta in \texttt{costo\_gate\_trotter.md} per il blocco Trotter del
+dimero, dove il conteggio di CNOT è stato esplicitamente il criterio
+per confrontare le decomposizioni). Meno CNOT per blocco significa un
+ansatz più robusto quando si passa al simulatore rumoroso. RBS resta
+quindi la scelta giusta anche in Parte 2, a maggior ragione, non solo
+in Parte 1.
+\end{editnote}
+
+Va sottolineato che il passaggio a Parte 2 cambia la \emph{dinamica}
+(stato puro $\to$ operatore densità, evoluzione unitaria $\to$ canali
+di Kraus/Lindblad), non l'\emph{Hamiltoniana}: $H$ resta la stessa
+matrice reale simmetrica. L'argomento di realtà della sez.~4 (teorema
+spettrale $\Rightarrow$ ground state reale $\Rightarrow$ RBS
+espressivamente sufficiente) dipende solo da $H$, non da come si
+esegue la ricerca variazionale né da quanto rumore è presente nel
+circuito. Il rumore (bit-flip, $T_1$, $T_2$, ecc.) non richiede fasi
+complesse nell'\emph{ansatz} per essere modellato: agisce come canale
+separato sull'output del circuito, non sui parametri variazionali. Le
+due motivazioni --- realtà di $H$ e minor costo in gate --- si
+sommano, non si sostituiscono a vicenda.
+
+\section{Espressività: perché la fase immaginaria è superflua qui}
+
+\textbf{Argomento di realtà (teorema spettrale).} L'Hamiltoniana del
+trimero isoscele,
+$$H=J\,\boldsymbol\sigma_1\cdot\boldsymbol\sigma_2+J'(\boldsymbol\sigma_2\cdot\boldsymbol\sigma_3+\boldsymbol\sigma_3\cdot\boldsymbol\sigma_1)+b\sum_iZ_i,$$
+è \textbf{reale simmetrica} in ogni base computazionale:
+$\boldsymbol\sigma_i\cdot\boldsymbol\sigma_j=X_iX_j+Y_iY_j+Z_iZ_j$ ha
+matrice reale (anche $Y_iY_j$: il prodotto di due entrate immaginarie
+di $Y$ dà un'entrata reale --- stesso argomento già verificato per il
+dimero), e $\sum_iZ_i$ è diagonale reale. Per il teorema spettrale, una
+matrice reale simmetrica ammette una base ortonormale di
+\textbf{autovettori reali}: lo stato fondamentale può sempre essere
+scelto reale, qualunque sia la degenerazione.
+
+\textbf{Conseguenza per l'ansatz.} Un ansatz che deve raggiungere solo
+stati reali non ha bisogno di esplorare fasi complesse. $W_{ij}(\theta)$
+esplora l'intero $U(2)$ ristretto al settore $M=0$ della coppia
+(include la fase $-i$ di iSWAP); RBS esplora solo il sottogruppo reale
+$SO(2)$. La differenza è esattamente lo stesso tipo di ridondanza già
+isolata e quantificata per gli ansatz A--D nel dimero (dove
+$n_\text{par}-3$ parametri risultavano gauge, non fisici): qui il
+"parametro extra" non è un angolo in più ma un \textbf{grado di libertà
+di fase per blocco}, sempre sprecato.
+
+\textbf{Quando smetterebbe di essere superfluo.} Il vincolo di realtà
+cade se si introduce un termine che rende $H$ genuinamente complessa.
+Il DM già usato nel dimero, nella forma $D(X_iZ_j-Z_iX_j)$, resta
+\textbf{reale} (stessa argomentazione) --- quindi anche estendendolo al
+triangolo con la stessa forma, RBS continuerebbe a bastare. Servirebbe
+passare a $W$ (o equivalentemente aggiungere $R_z$ nel blocco) solo con
+un termine genuinamente immaginario, come il DM "canonico"
+$D(X_iY_j-Y_iX_j)$ --- esplicitamente fuori dallo scope attuale (vedi
+punto 9 di \texttt{domande\_relatore.md}).
+
+\needspace{12\baselineskip}
+\section{Verifica numerica di quanto derivato sopra}
+
+Controllo diretto (non solo simbolico) che $W_{ij}(2\varphi)$ e
+$\mathrm{RBS}(\varphi)$ diano le stesse probabilità ma fasi diverse,
+per alcuni valori di $\varphi$:
+
+\begin{panelbox}{Codice di verifica}
+\small
+\begin{verbatim}
+import numpy as np
+
+def sdot(theta):
+    """W_ij(theta) = exp(-i*theta*s_i.s_j), spin s=sigma/2,
+       base |00>,|01>,|10>,|11>."""
+    X = np.array([[0,1],[1,0]], dtype=complex)
+    Y = np.array([[0,-1j],[1j,0]], dtype=complex)
+    Z = np.array([[1,0],[0,-1]], dtype=complex)
+    s = [0.5*X, 0.5*Y, 0.5*Z]
+    sdotop = sum(np.kron(a,a) for a in s)
+    w, v = np.linalg.eigh(sdotop)
+    return v @ np.diag(np.exp(-1j*theta*w)) @ v.conj().T
+
+def rbs(phi):
+    c, s = np.cos(phi), np.sin(phi)
+    return np.array([[1,0,0,0],[0,c,-s,0],[0,s,c,0],[0,0,0,1]],
+                     dtype=complex)
+
+ket01 = np.array([0,1,0,0], dtype=complex)
+for phi in [0.3, 0.9, 1.4]:
+    out_W   = sdot(2*phi) @ ket01
+    out_RBS = rbs(phi) @ ket01
+    print(f"phi={phi:.2f}  W: {out_W.round(4)}   "
+          f"RBS: {out_RBS.round(4)}  "
+          f"|prob uguali|: "
+          f"{np.allclose(np.abs(out_W)**2, np.abs(out_RBS)**2)}")
+\end{verbatim}
+\end{panelbox}
+
+Atteso (coerente con la derivazione della sez.~2.3): componente su
+$|01\rangle$ reale e uguale in entrambi i casi ($\cos\varphi$);
+componente su $|10\rangle$ reale positiva per RBS ($\sin\varphi$),
+immaginaria negativa per $W$ ($-i\sin\varphi$, a meno della fase
+globale $e^{i\theta/4}$) --- probabilità identiche, fase
+strutturalmente diversa.
+
+\needspace{10\baselineskip}
+\section{Conclusione operativa}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item \textbf{RBS resta il blocco $M$-conservante di riferimento},
+anche per il trimero: stesso potere espressivo di $W$ sulle
+popolazioni, costo inferiore (2 vs 3 gate a due qubit per blocco),
+nessuna capacità aggiuntiva sprecata dato che $H$ è reale.
+\item Quello che vale la pena \textbf{riusare concettualmente} dal
+paper di Crippa et al.\ non è il gate, ma la \textbf{struttura}: layer
+su più legami (qui i tre bond $12,23,31$), stato iniziale scelto nel
+settore di simmetria del multipletto target (qui, guidato dalla
+decomposizione di Kambe: $S_{12}=0$ per il blocco C, $S_{12}=1$ per
+A/B), e l'euristica sull'ordine dei legami (applicare prima il bond che
+porta lo stato locale singoletto/tripletto).
+\item Il blocco RBS applicato su una coppia qualunque, con il terzo
+qubit spettatore, \textbf{conserva comunque $M$ totale} a 3 qubit
+(conserva $m_i+m_j$ della coppia, lascia $m_k$ invariato): la proprietà
+chiave del PMA si eredita intatta nel passaggio a $N=3$.
+\item Il vincolo va \textbf{ridiscusso} solo se in futuro si introduce
+un termine DM immaginario sul triangolo (non in scope ora).
+\end{enumerate}
+
+\section{Perché RBS trova il ground state anche sopra soglia ($b/J>2$)}
+
+\subsection*{Il problema: RBS da solo conserva $M$}
+
+Un singolo blocco RBS agisce solo sul settore $\{|01\rangle,|10\rangle\}$
+e lascia invariati $|00\rangle$ e $|11\rangle$. Partendo da $|01\rangle$:
+$$\mathrm{RBS}(\varphi)|01\rangle=\cos\varphi\,|01\rangle+\sin\varphi\,|10\rangle,$$
+cioè lo stato rimane sempre a $M=0$. Il ground state sopra soglia
+($b/J>2$) è $|t_-\rangle=|11\rangle$ con $M=-1$: irraggiungibile
+applicando solo RBS.
+
+Questa è la stessa ragione per cui il PMA di base (1 parametro, solo un
+blocco RBS dopo lo stato iniziale $X|00\rangle=|10\rangle$) fallisce a
+$b/J>2$ anche con $D=0$: non è un effetto del termine DM, è
+semplicemente l'assenza di un meccanismo per uscire dal settore $M=0$.
+
+\subsection*{La soluzione: gli strati $R_y$ rompono la conservazione di $M$}
+
+L'ansatz PMA-2q non è solo RBS. Ogni strato ha la struttura
+$$\bigl(R_y(\alpha_k)\otimes R_y(\beta_k)\bigr)\cdot\mathrm{RBS}(\varphi_k),$$
+con $\alpha_k\neq\beta_k$ in generale. Un gate $R_y(\alpha)$ su un
+singolo qubit $q_i$ agisce localmente come
+$$R_y(\alpha)|0\rangle=\cos\tfrac\alpha2|0\rangle-\sin\tfrac\alpha2|1\rangle,\quad
+R_y(\alpha)|1\rangle=\sin\tfrac\alpha2|0\rangle+\cos\tfrac\alpha2|1\rangle,$$
+e quindi \textbf{mescola $|0\rangle$ e $|1\rangle$ su quel qubit}.
+Applicato dopo RBS (che ha prodotto uno stato in $M=0$), un $R_y$
+locale redistribuisce ampiezza verso settori $M=\pm1$, incluso
+$|11\rangle$. La sequenza completa esplora tutto lo spazio reale dei 2
+qubit, non solo il settore $M=0$.
+
+\textbf{Meccanismo esplicito.} Dopo il blocco RBS lo stato è
+$|\psi\rangle=a|01\rangle+b|10\rangle$ (con $a,b$ reali,
+$a^2+b^2=1$). Applicando $R_y(\alpha)\otimes R_y(\beta)$, il
+coefficiente di $|11\rangle$ nel risultato è
+$$-a\sin\tfrac\alpha2\cos\tfrac\beta2+b\cos\tfrac\alpha2\sin\tfrac\beta2,$$
+che è zero solo se $\alpha=\beta$ oppure $a=b=0$. Per $\alpha\neq\beta$
+generici lo stato ha componente non nulla su $|11\rangle$ (settore
+$M=-1$): l'ottimizzatore può quindi portare $E(\boldsymbol\theta)$
+verso l'energia di $|11\rangle$ sopra soglia.
+
+\subsection*{Perché $W$ non aveva questo problema (ma per una ragione diversa da quella apparente)}
+
+$W_{ij}(\theta)=e^{-i\theta\,\mathbf s_i\cdot\mathbf s_j}$
+\textbf{conserva anch'esso $M$} (è diagonale nella base
+$\{$singoletto, tripletto$\}$, che è una base con $M$ definito). La
+ragione per cui il PMA originale di Crippa et al.\ funzionava sopra
+soglia non è che $W$ esce dal settore $M=0$, ma che
+nell'implementazione di Crippa il gate $W$ era sempre accompagnato da
+rotazioni locali, esattamente come nel PMA-2q qui --- quelle rotazioni
+locali sono il meccanismo che popola $|11\rangle$, non $W$ in sé.
+
+\subsection*{Tabella riassuntiva}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{3.6cm}cc p{4.4cm}@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Componente} & \textbf{Conserva $M$?} & \textbf{Raggiunge $|11\rangle$?} & \textbf{Ruolo}\\
+\midrule
+$\mathrm{RBS}(\varphi)$ da solo & sì ($M{=}0$) & no & entangler nel settore $M=0$\\
+$R_y(\alpha)\otimes R_y(\alpha)$ (par.\ condiviso) & no & sì & non abbastanza per $\mathcal F{=}1$ (vedi \texttt{\seqsplit{analisi\_rotazioni\_PMA.ipynb}})\\
+$R_y(\alpha)\otimes R_y(\beta)$ (par.\ indipendenti) & no & sì & popola tutti i settori, necessario per $\mathcal F{=}1$\\
+PMA-2q$\cdot$3 ($K{=}1$, 3 par.\ totali) & no & sì & $\mathcal F{=}1$ su tutto il range col numero minimo teorico di parametri\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{editnote}
+Nota sulla ridondanza del parametro condiviso. Se $\alpha=\beta$
+(stessa rotazione su entrambi i qubit), il coefficiente di $|11\rangle$
+diventa $\sin\tfrac\alpha2\cos\tfrac\alpha2(b-a)=\tfrac12\sin\alpha\,(b-a)$,
+che si annulla per $a=b$ (mescolamento massimo, cioè proprio $b/J=2$,
+il punto critico). Questo spiega quantitativamente perché un parametro
+condiviso non basta: fallisce esattamente nel punto più difficile, dove
+il mescolamento singoletto/$|t_-\rangle$ è massimo e il ground state
+richiede componenti uguali di entrambi.
+\end{editnote}
+
+\bigskip
+\noindent\textbf{Riferimento.} Dimostrazione completa con tutti i casi
+che falliscono: \texttt{analisi\_rotazioni\_PMA.ipynb}.
+
+\end{document}

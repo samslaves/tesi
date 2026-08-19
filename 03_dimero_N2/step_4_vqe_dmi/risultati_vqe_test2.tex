@@ -1,0 +1,187 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+% --- palette ---
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+
+% --- titoli di sezione ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.7em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Risultati VQE --- punto di lavoro test 2}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+% --- box riutilizzabili ---
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Ground state VQE --- punto di lavoro test 2\\[0.2em]
+\Large\normalfont\color{softgray}$b/J=0.35$,\ $D/J=0.80$,\ $J=1$}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.2em}
+
+File: \texttt{vqe\_test2.py}. Punto di lavoro: $b/J=0.35$, $D/J=0.80$,
+$J=1$ (parametri del test 2 in \texttt{relazione\_test\_parametri.md}).
+
+\section*{Metodologia (nessuna scelta nuova)}
+\addcontentsline{toc}{section}{Metodologia}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.25em]
+\item \textbf{Hamiltoniana:} stessa convenzione di \texttt{dimer\_exact.py}
+/ \texttt{confronto\_ansatz\_entangler.ipynb},
+$$H=J(X_1X_2+Y_1Y_2+Z_1Z_2)+b(Z_1+Z_2)+D(X_1Z_2-Z_1X_2).$$
+\item \textbf{Ansatz:} \textbf{PMA-2q$\cdot$3} (blocco RBS + $R_y$
+indipendenti sui due qubit, 3 parametri) --- il riferimento canonico
+deciso in \texttt{confronto\_ansatz\_entangler.ipynb}.
+\item \textbf{Ottimizzazione:} multistart $R=6$ (COBYLA, reinizializzazione
+nel ciclo esterno) seguito da un \textbf{polish L-BFGS-B} dal miglior
+punto trovato. Il polish è un'aggiunta rispetto al notebook di confronto:
+lì l'obiettivo era il confronto qualitativo fra ansatz su tutto un range
+di $b/J$, qui serve uno stato preciso a precisione macchina perché
+diventerà l'input del circuito con l'ancilla nello stadio successivo ---
+un residuo $\mathcal O(10^{-5})$ in energia (quanto lasciava COBYLA da
+solo) propagherebbe un errore sistematico non controllato nelle
+correlazioni.
+\end{itemize}
+
+\section*{Risultato}
+\addcontentsline{toc}{section}{Risultato}
+
+\begin{okbox}{Convergenza a precisione macchina}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$E_0$ (esatto) & $-3.57321145$\\
+$E$ (VQE) & $-3.57321145$\\
+$|E_\text{VQE}-E_0|$ & $7.75\times10^{-11}$\\
+Fidelity & $1.00000000$ (a precisione macchina)\\
+$\langle M_z\rangle$ & $-0.034730$\\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{okbox}
+
+\medskip
+\noindent Stato (base $|00\rangle,|01\rangle,|10\rangle,|11\rangle$,
+reale come atteso --- vedi nota di rigore in
+\texttt{confronto\_ansatz\_entangler.ipynb} sul perché il DM in forma
+$XZ-ZX$ mantiene $H$ reale):
+
+\begin{keyeq}
+\centering
+$|\psi_0\rangle \simeq 0.2017\,|00\rangle + 0.6648\,|01\rangle -
+0.6648\,|10\rangle + 0.2746\,|11\rangle$
+\end{keyeq}
+
+\noindent Parametri ottimali: $(p_0,p_1,p_2) = (3.978569,\ 1.226719,\
+1.914748)$ rad.
+
+\section*{Lettura fisica}
+\addcontentsline{toc}{section}{Lettura fisica}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.3em]
+\item $\langle M_z\rangle\simeq-0.035$: il ground state resta vicino al
+settore $M=0$ (il campo $b/J=0.35$ è modesto rispetto a $J$), ma non è
+puro $M=0$ --- la piccola componente $|11\rangle$ ($0.2746$) e
+l'asimmetria fra $|00\rangle$ e $|11\rangle$ vengono dal termine DM
+($D/J=0.8$, non trascurabile) che mescola i settori.
+\item Il peso dominante è sulla combinazione antisimmetrica
+$|01\rangle-|10\rangle$ (verso il singoletto
+$|S\rangle=(|01\rangle-|10\rangle)/\sqrt2$): coerente con l'aspettativa
+che a $D/J\lesssim1$ e campo piccolo il ground state resti "vicino" al
+singoletto del caso $D=0,b=0$, deformato dal DM.
+\item Il fatto che $\langle\psi_\text{exact}|\psi_\text{VQE}\rangle$ sia
+reale e positivo (non solo $|\cdot|=1$) conferma che non c'è una fase
+relativa residua da fissare a mano prima di usare questo stato come
+input di un circuito.
+\end{itemize}
+
+\section*{Dispersione del multistart}
+\addcontentsline{toc}{section}{Dispersione del multistart}
+
+Le 6 energie finali di COBYLA (prima del polish) hanno dispersione
+$6.73\times10^{-3}$ --- indica che il paesaggio a 3 parametri ha
+comunque minimi locali non banali a questo punto di lavoro (diversamente
+da $D=0$), motivo in più per non fidarsi del solo COBYLA e applicare il
+polish.
+
+\needspace{10\baselineskip}
+\section*{Prossimo passo}
+\addcontentsline{toc}{section}{Prossimo passo}
+
+Lo stato $|\psi_0^\text{VQE}\rangle$ (equivalentemente i 3 parametri
+ottimali dell'ansatz PMA-2q$\cdot$3) è salvato in
+\texttt{ground\_state\_test2.npz} ed è pronto per essere preparato come
+stato iniziale nel circuito con l'ancilla per le correlazioni
+dinamiche.
+
+\begin{advisorbox}{Risposta del relatore ricevuta}
+Nessuna restrizione --- sia auto-correlazione (stesso sito) sia
+correlazione fra spin diversi sono di interesse, e vale la pena provare
+più componenti ($S_z,S_x,S_y$); alcune combinazioni si annulleranno per
+simmetria dell'Hamiltoniana (atteso, non un errore). Prima di
+implementare il circuito: controllo classico di quali combinazioni sono
+strutturalmente nulle a questo punto di lavoro. Vedi
+\texttt{log\_decisioni.md} e \texttt{domande\_relatore.md} per il
+dettaglio.
+\end{advisorbox}
+
+\end{document}

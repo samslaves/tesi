@@ -1,0 +1,455 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Circuito compatto per il passo di Trotter}
+
+\title{\vspace{-1.5em}\color{inkblue}Circuito compatto per il passo di Trotter\\[0.1em]
+\Large\normalfont\color{softgray}Teoria, verifica, e perché non si usa (per ora)}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Nota di riferimento su un'analisi collaterale fatta durante il lavoro
+sul dimero: il Prof.\ Chiesa ha chiesto se il circuito del passo di
+Trotter potesse essere reso più compatto (esempio: con 2 CNOT invece
+degli 8 gate a due qubit attuali). Questo file raccoglie la teoria
+usata, la verifica numerica fatta (con due metodi indipendenti), il
+risultato, e --- soprattutto --- perché quel risultato \textbf{non va
+usato ingenuamente} quando si passerà a discutere di rumore (sistema
+aperto) e di ricerca del ground state. Pensato per essere caricato come
+riferimento all'inizio di quella discussione.
+
+\section{Il problema}
+
+Il circuito attuale per un singolo passo di Trotter usa \textbf{8 gate
+a due qubit}: $1\times R_{XX}+1\times R_{YY}+6\times\text{CNOT}$ (i 6
+CNOT vengono dai tre blocchi $R_{ZZ}$ scritti esplicitamente come
+CNOT--$R_z$--CNOT: uno per lo scambio, due per il termine DM).
+Profondità 15.
+
+La domanda del relatore: si può fare con meno gate, ad esempio con 2
+CNOT?
+
+\section{La teoria: quanti CNOT servono per un'unitaria a 2 qubit qualsiasi}
+
+\subsection*{Il risultato generale (letteratura)}
+
+Ogni operatore unitario a 2 qubit $U\in SU(4)$ si può scrivere, a meno
+di trasformazioni locali a un qubit (che non costano CNOT), nella forma
+canonica di Cartan:
+\begin{keyeq}
+\centering
+$U_{\rm local} = \exp\!\left[-\dfrac{i}{2}\big(c_1\,X\!\otimes\!X + c_2\,Y\!\otimes\!Y + c_3\,Z\!\otimes\!Z\big)\right]$,
+\quad $0\le c_3\le c_2\le c_1\le\dfrac\pi2$
+\end{keyeq}
+I tre numeri $(c_1,c_2,c_3)$ --- le \textbf{coordinate di Weyl} ---
+classificano completamente la "non-località" del gate,
+indipendentemente da come è vestito con rotazioni a un qubit. Il
+numero minimo di CNOT necessari a realizzare $U$ dipende \textbf{solo}
+da queste coordinate:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Condizione su $(c_1,c_2,c_3)$} & \textbf{CNOT minimi}\\
+\midrule
+$c_1=c_2=c_3=0$ & 0 (gate locale, nessun entanglement)\\
+$(c_1,c_2,c_3)=(\pi/4,0,0)$ & 1 (classe di equivalenza locale del CNOT)\\
+$c_3=0$ (ma non nel caso sopra) & 2\\
+$c_3\neq0$ & 3 (il caso generico)\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection*{Bibliografia --- verificata con fonti indipendenti (non solo plausibile)}
+
+Ogni citazione qui sotto è stata controllata contro fonti terze
+(pagine ufficiali degli editori, bibliografie di altri lavori) prima
+di essere inclusa:
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.4em]
+\item \textbf{F.\ Vatan, C.\ Williams}, \emph{Optimal Quantum Circuits
+for General Two-Qubit Gates}, Phys.\ Rev.\ A \textbf{69}, 032315
+(2004). Dimostra che 3 CNOT bastano sempre e sono necessari nel caso
+generico, con costruzione esplicita indipendente. \textbf{Riferimento
+primario consigliato per questo teorema}: nessuna correzione nota in
+letteratura.
+\item \textbf{G.\ Vidal, C.\ M.\ Dawson}, \emph{A Universal Quantum
+Circuit for Two-Qubit Transformations With Three CNOT Gates}, Phys.\
+Rev.\ A \textbf{69}, 010301 (2004). Stesso risultato, costruzione
+diversa.
+\begin{editnote}
+Attenzione: esiste un Comment pubblicato --- M.\ W.\ Coffey, R.\
+Deiotte, T.\ Semi, \emph{Phys.\ Rev.\ A} \textbf{77}, 066301 (2008) ---
+che segnala errori nella costruzione esplicita presentata in questo
+paper. Non è stato possibile verificare il dettaglio dell'errore
+(testo a pagamento), ma il teorema principale (3 CNOT necessari e
+sufficienti nel caso generico) resta lo standard accettato: citato
+senza riserve in decine di lavori successivi fino al 2024--2025, ed è
+comunque corroborato indipendentemente dal punto precedente
+(Vatan--Williams) e dalla verifica numerica fatta qui sotto con il
+codice di Qiskit.
+\end{editnote}
+\item \textbf{Y.\ Makhlin}, \emph{Nonlocal Properties of Two-Qubit
+Gates and Mixed States and Optimization of Quantum Computations},
+Quantum Inf.\ Process.\ \textbf{1}, 243 (2002) --- introduce gli
+invarianti locali (equivalenti alle coordinate di Weyl).
+\item \textbf{J.\ Zhang, J.\ Vala, S.\ Sastry, K.\ B.\ Whaley},
+\emph{Geometric theory of nonlocal two-qubit operations}, Phys.\ Rev.\
+A \textbf{67}, 042313 (2003) --- lega gli invarianti di Makhlin alla
+decomposizione di Cartan e alla "camera di Weyl".
+\end{itemize}
+
+\subsection*{Perché conta $c_3$ e non $c_1,c_2$}
+
+Intuitivamente: $c_1$ e $c_2$ si possono sempre "assorbire" in parte
+con trasformazioni locali astute; è la terza coordinata, quella più
+piccola nella convenzione ordinata $c_1\ge c_2\ge c_3$, a essere
+l'ostacolo residuo che nessuna rotazione locale può eliminare. Un CNOT
+(o CZ, equivalente a meno di locali) ha $(c_1,c_2,c_3)=(\pi/4,0,0)$:
+$c_3=0$ esattamente, il caso più semplice possibile per un gate
+davvero entanglante. Un'operazione con $c_3\neq0$ non può quindi mai
+essere raggiunta con un solo CNOT, né con due (che restano confinati a
+$c_3=0$), e servono 3.
+
+\needspace{10\baselineskip}
+\section{Verifica del metodo su casi noti}
+
+Prima di applicare il criterio al passo di Trotter, è stato validato
+su quattro casi di cui il risultato è già certo, usando
+\texttt{qiskit.synthesis.TwoQubitWeylDecomposition}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Gate} & \textbf{Coord.\ di Weyl $(a,b,c)$} & \textbf{CNOT minimi (atteso)} & \textbf{Verificato}\\
+\midrule
+identità & $(0,0,0)$ & 0 & \checkmark\\
+CNOT & $(\pi/4,0,0)$ & 1 & \checkmark\\
+iSWAP & $(\pi/4,\pi/4,0)$ & 2 & \checkmark\\
+SWAP & $(\pi/4,\pi/4,\pi/4)$ & 3 & \checkmark\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Applicazione al passo di Trotter del dimero}
+
+Con $b/J=-0.18$, $D/J=1$ (il punto di lavoro adottato) e $\tau$
+variabile:
+$$U_{\rm step}(\tau) = e^{-iH_2\tau}\,e^{-iH_1\tau}$$
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\rowcolor{inkblue!10}
+$\tau$ & Weyl $(a,b,c)$ & CNOT minimi & \\
+\midrule
+0.10 & $(0.035,\,0.035,\,-0.025)$ & 3 & \\
+0.50 & $(0.173,\,0.173,\,-0.125)$ & 3 & \\
+1.00 & $(0.319,\,0.319,\,-0.250)$ & 3 & \\
+1.50 & $(0.391,\,0.391,\,-0.375)$ & 3 & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La terza coordinata $c\neq0$ per \textbf{ogni} $\tau\neq0$ testato (e
+per costruzione, per ogni $\tau\neq0$ in generale, dato che
+$c\propto-\tau/4$ in questo caso --- proporzionale al termine DM).
+Verificato anche nel caso $D=0$ (senza termine DM): $c\neq0$ comunque,
+quindi nemmeno l'assenza del DM riporta al caso a 2 CNOT --- lo scambio
+isotropo da solo già impone $c\neq0$.
+
+\subsection*{Seconda verifica, con un metodo Qiskit indipendente dal primo}
+
+Oltre a \texttt{TwoQubitWeylDecomposition}, il risultato è stato
+ricontrollato con \texttt{TwoQubitBasisDecomposer} (un algoritmo di
+sintesi diverso, non solo una lettura delle coordinate), forzando
+esplicitamente un numero fissato di CNOT e misurando la fedeltà
+effettivamente raggiunta rispetto a $U_{\rm step}(\tau=1)$:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}cc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{CNOT forzati} & \textbf{Fedeltà raggiunta}\\
+\midrule
+0 & $0.764$\\
+1 & $0.676$\\
+2 & $0.939$\\
+3 & $1.000$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Fedeltà esatta \textbf{solo} a partire da 3 CNOT --- mai con 2, per
+quanta ottimizzazione numerica si tenti. Il metodo
+\texttt{num\_basis\_gates()} di Qiskit, che implementa autonomamente
+questa stessa ricerca, restituisce \textbf{3} in modo indipendente.
+
+\begin{okbox}{Conclusione sulla domanda originale}
+2 CNOT sono matematicamente impossibili per questo passo, confermato
+da due algoritmi diversi. Il minimo raggiungibile è 3.
+\end{okbox}
+
+\needspace{10\baselineskip}
+\section{Dal minimo teorico (3) al circuito realizzato: due strade diverse}
+
+\subsection*{Comprimere il singolo passo}
+
+Il circuito attuale usa 8 gate a due qubit per passo; il minimo è 3.
+Il circuito compatto è stato ottenuto in tre passaggi distinti, ed è
+importante tenerli separati per capire cosa produce davvero:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.25em]
+\item \textbf{Calcolo classico preliminare}: la matrice $4\times4$
+esatta del passo, $U_{\rm step}=e^{-iH_2\tau}e^{-iH_1\tau}$, calcolata
+con \texttt{scipy.linalg.expm} --- non un circuito, pura algebra
+lineare classica.
+\item \textbf{La matrice passata come blocco numerico opaco}:
+\texttt{qc.unitary(U\_step, [0,1])} --- a questo punto Qiskit ha in
+mano solo 16 numeri complessi, non sa che provengono da
+un'Hamiltoniana con un termine di scambio e un termine DM.
+\item \textbf{Sintesi via transpiler}:
+\texttt{transpile(qc, basis\_gates=['cx','rz','sx','x'],
+optimization\_level=3)}, che internamente usa la decomposizione di
+Cartan/KAK descritta in sez.~2 per ricostruire \emph{qualunque} matrice
+$4\times4$ con il minor numero di CNOT possibile.
+\end{enumerate}
+
+\begin{editnote}
+Il punto cruciale è nel passaggio 2--3: l'ottimizzatore non sa cosa sia
+$H_1$, $H_2$, lo scambio isotropo o il termine DM --- vede solo "questa
+matrice $4\times4$, riproducila con meno gate possibile". È pura
+ottimizzazione numerica sulla matrice finale, \emph{indifferente a come
+quella matrice si è generata}. Per questo il circuito compatto che ne
+esce ha angoli $R_z$ senza alcun significato fisico leggibile (non si
+legge più "questo pezzo è lo scambio, questo è il DM") --- non è un
+dettaglio implementativo, è la conseguenza diretta del fatto che
+l'informazione sulla struttura fisica è stata scartata già al
+passaggio 2, quando l'Hamiltoniana è stata ridotta a una matrice di
+numeri senza etichette. Il file \texttt{circuito\_compatto.png} mostra
+il risultato di questi tre passaggi, con fedeltà $1.0$ rispetto al
+passo esatto.
+\end{editnote}
+
+\subsection*{Comprimere l'intero circuito a $N$ passi --- il punto concettualmente più importante}
+
+Qui emerge un fatto che a prima vista sembra sorprendente: comprimendo
+l'\textbf{intero} prodotto
+$U_{\rm Trotter}(t,N)=\big[e^{-iH_2\tau}e^{-iH_1\tau}\big]^N$ (non passo
+per passo, ma il prodotto finale), il risultato resta \textbf{sempre
+un'unica unitaria a 2 qubit} --- e quindi si comprime anch'esso a
+\textbf{3 CNOT, indipendentemente da $N$}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+\rowcolor{inkblue!10}
+$N$ & gate 2q (esplicito) & gate 2q (compresso) & risparmio & \\
+\midrule
+1 & 8 & 3 & 62\% & \\
+2 & 16 & 3 & 81\% & \\
+5 & 40 & 3 & 92\% & \\
+20 & 160 & 3 & 98\% & \\
+100 & 800 & 3 & 99.6\% & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Verificato: la fedeltà del circuito compresso rispetto a
+$U_{\rm Trotter}(t,N)$ (non rispetto all'evoluzione esatta) resta
+$1.0$ per ogni $N$ --- cioè il circuito compresso realizza
+\textbf{esattamente} la stessa unitaria approssimata di Trotter, solo
+con meno gate. L'errore di Trotter (rispetto all'evoluzione vera) è
+identico prima e dopo la compressione, a qualunque $N$: comprimere
+\textbf{non cambia l'accuratezza}, cambia solo quanti gate fisici
+servono per realizzarla.
+
+\needspace{12\baselineskip}
+\section{Perché questa scorciatoia non regge per il lavoro con il rumore (e va dichiarata come tale)}
+
+Questo è il punto da avere chiaro \textbf{prima} di passare alla Parte
+2.
+
+\begin{warnbox}{Il compromesso $N$-vs-rumore sparisce}
+Tutta l'idea della Parte 2 è studiare come l'errore \emph{algoritmico}
+di Trotter (che scala come $\sim1/N$, e quindi vuole $N$ grande) e
+l'errore \emph{fisico} dei gate sotto un modello di rumore (che scala
+con il numero di gate, e quindi vuole $N$ piccolo) si bilancino fra
+loro, per trovare un compromesso ottimale. Se si usa il circuito
+compresso, il costo in gate resta fisso a 3 \textbf{qualunque sia $N$}:
+il compromesso a cui la Parte 2 è interessata smette di esistere nel
+grafico. Si misurerebbe il rumore su un'unitaria diversa dall'oggetto
+di studio.
+\end{warnbox}
+
+\subsection*{La compressione richiede un calcolo classico pregresso, quindi non è "vero" Trotter}
+
+Lo stesso meccanismo descritto per il singolo passo (calcolo classico
+della matrice, poi sintesi) si applica identico all'intero prodotto:
+per ottenere il circuito a 3 CNOT bisogna \textbf{prima} calcolare
+classicamente $U_{\rm Trotter}(t,N)$ come matrice $4\times4$ (con
+\texttt{scipy}), e solo \emph{dopo} comprimerla in gate. Su un sistema
+più grande di 2 qubit --- cioè il caso per cui Trotter è stato
+inventato --- questo calcolo classico preliminare è esattamente quello
+che si vuole evitare (matrice $2^n\times2^n$, intrattabile per $n$
+grande). La compressione funziona qui solo perché il dimero è un
+giocattolo a 2 qubit comodo da diagonalizzare a mano: è una
+scorciatoia specifica di questo caso di test, non un metodo
+generalizzabile a sistemi più grandi.
+
+\subsection*{Dove la forma compatta avrebbe senso, con l'avvertenza giusta}
+
+Se in futuro si vuole discutere "qual è il rumore minimo possibile per
+realizzare \emph{questa specifica} evoluzione a un tempo $t$ fissato"
+(una domanda a sé, legittima ma diversa), il circuito compresso è lo
+strumento giusto. Ma va tenuto esplicitamente \textbf{separato} dal
+test "vero" di Trotter con rumore, che deve usare il circuito esplicito
+(o comunque uno il cui conteggio di gate scali con $N$), altrimenti si
+confondono due esperimenti concettualmente diversi.
+
+\needspace{12\baselineskip}
+\section{Riepilogo per la discussione futura}
+
+Quando si affronterà il rumore su un sistema quantistico aperto
+(generico su X, Y, Z) e la ricerca del ground state, tenere presente:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item \textbf{Il conteggio di gate del circuito esplicito scala
+linearmente con $N$} (8 gate a due qubit per passo, $8N$ in totale) ---
+è quello giusto da usare per studiare il compromesso Trotter/rumore,
+perché riflette il costo fisico reale che si avrebbe anche su un
+sistema più grande.
+\item \textbf{Il circuito compresso a 3 CNOT è una scorciatoia valida
+solo per la verifica puntuale su questo sistema-giocattolo a 2 qubit}
+--- utile per sapere "qual è il limite fisico minimo", ma da non usare
+come sostituto del circuito di Trotter quando si introduce il rumore,
+pena perdere il fenomeno che si vuole studiare.
+\item Se il lavoro sul ground state passerà per metodi variazionali
+(VQE) o evoluzione in tempo immaginario, la stessa distinzione tornerà
+utile: un circuito "compresso/ottimizzato numericamente" che riproduce
+un risultato target non è la stessa cosa di un circuito costruito con
+una struttura fisica interpretabile (ansatz), anche quando le due
+unitarie coincidono esattamente --- la prima non generalizza, non è
+ispezionabile termine a termine, e non dice nulla sul comportamento
+sotto rumore realistico a scala più grande.
+\end{enumerate}
+
+\needspace{15\baselineskip}
+\section*{Appendice: comandi Qiskit usati per la verifica}
+\addcontentsline{toc}{section}{Appendice}
+
+\begin{panelbox}{Codice}
+\small
+\begin{verbatim}
+from qiskit.synthesis import TwoQubitWeylDecomposition, \
+    TwoQubitBasisDecomposer
+from qiskit.circuit.library import CXGate
+from qiskit.quantum_info import Operator, process_fidelity
+from qiskit import QuantumCircuit, transpile
+
+# metodo 1: coordinate di Weyl di un'unitaria U (matrice numpy 4x4)
+d = TwoQubitWeylDecomposition(Operator(U))
+a, b, c = d.a, d.b, d.c   # c=0 -> 2 CNOT bastano; c!=0 -> servono 3
+
+# metodo 2 (indipendente): sintesi forzata a N CNOT, verifica fedelta'
+decomposer = TwoQubitBasisDecomposer(CXGate())
+for n in [0, 1, 2, 3]:
+    qc = decomposer(Operator(U), _num_basis_uses=n)
+    print(n, process_fidelity(Operator(qc), Operator(U)))
+print("minimo autonomo:", decomposer.num_basis_gates(Operator(U)))
+
+# compressione automatica a CNOT minimi (per generare il circuito finale)
+qc = QuantumCircuit(2)
+qc.unitary(U, [0, 1])
+compresso = transpile(qc, basis_gates=['cx', 'rz', 'sx', 'x'],
+                       optimization_level=3)
+\end{verbatim}
+\end{panelbox}
+
+\end{document}

@@ -1,0 +1,276 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Note su \texttt{quantum\_simulation\_dimero\_trotter.ipynb}}
+
+\title{\vspace{-1.5em}\color{inkblue}Note di approfondimento\\[0.1em]\texttt{quantum\_simulation\_dimero\_trotter.ipynb}}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Materiale a corredo del notebook, tenuto fuori dalle celle per
+mantenerlo snello.
+
+\section{Cosa vuol dire "oscillazioni non monocromatiche"}
+
+Il termine viene dall'ottica: una luce monocromatica ha una sola
+frequenza (un solo colore). Un'oscillazione \textbf{monocromatica} è un
+segnale con una sola frequenza pura:
+$$f(t)=A\cos(\omega t+\phi)$$
+Un'oscillazione \textbf{non monocromatica} è invece una sovrapposizione
+di più frequenze diverse:
+$$f(t)=A_1\cos(\omega_1 t+\phi_1)+A_2\cos(\omega_2 t+\phi_2)+\dots$$
+
+\subsection*{Applicazione al dimero}
+
+$\langle S_z\rangle(t)$ è per costruzione una somma di modi a frequenze
+di Bohr $\Delta_{kl}=E_l-E_k$ (sezione 3 del notebook):
+\begin{keyeq}
+\centering
+$\langle S_z\rangle(t)=\text{costante}+\displaystyle\sum_{k<l}2\,\mathrm{Re}\!\left[c_k^*c_l(S_z)_{kl}\,e^{-i\Delta_{kl}t}\right]$
+\end{keyeq}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.2em]
+\item Se \textbf{un solo} termine domina, il grafico è un coseno pulito
+e regolare. È il caso del regime R0 ($D/J=1/6$, rapporto
+$a_2/a_1=0.04$).
+\item Se \textbf{due o più} termini hanno ampiezze confrontabili e
+frequenze diverse, si sommano e producono \textbf{battimenti}: massimi
+e minimi irregolari, senza periodicità semplice. È il caso di R1
+($a_2/a_1=0.74$).
+\end{itemize}
+
+\subsection*{Perché il relatore lo chiede}
+
+Un'oscillazione monocromatica equivale dinamicamente a un sistema a due
+livelli, e non mette alla prova né il codice Trotter né lo sviluppo su
+più autostati --- un singolo coseno si ottiene anche a mano. Un regime
+non monocromatico costringe la dinamica su più autostati a entrare in
+gioco.
+
+\begin{editnote}
+\textbf{Precisazione da tenere presente} (sez.~3.1 del notebook):
+poiché $|T_0\rangle$ è esattamente disaccoppiato, la dinamica è
+effettivamente a \textbf{3 livelli}, con solo \textbf{2 frequenze
+indipendenti} (la terza è la somma delle altre due, vincolo automatico
+fra gap di livelli). Il passaggio R0 $\to$ R1 è quindi da 1 a 2
+frequenze indipendenti, non da 2 a 4 livelli: da riportare con questa
+precisione, perché il guadagno è reale ma più modesto di quanto
+suggerirebbe il conteggio dei livelli.
+\end{editnote}
+
+\section{Criterio di selezione del regime: cosa è stato usato e cosa no}
+
+Nel notebook la scelta del punto di lavoro usa due grandezze
+\textbf{trasparenti e verificabili a mano}, entrambe calcolate dalla
+dinamica esatta:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.2em]
+\item \textbf{escursione} picco-picco di $\langle S_z\rangle(t)$ --- il
+segnale deve essere leggibile sopra il rumore statistico
+$\sim1/\sqrt{N_\text{shots}}$;
+\item \textbf{$a_2/a_1$} --- rapporto fra le ampiezze dei due modi
+dominanti, $\approx0$ per un segnale monocromatico, $\approx1$ per due
+frequenze equilibrate.
+\end{enumerate}
+
+Servono entrambe: un segnale grande ma monocromatico non soddisfa la
+richiesta del relatore (caso della risonanza $b=-J$), e un segnale
+spettralmente ricco ma minuscolo è inutilizzabile.
+
+\begin{editnote}
+\textbf{Nota storica.} In una versione precedente il criterio era
+un'\emph{entropia spettrale pesata} $A\cdot S$ con
+$S=-\sum_m p_m\ln p_m$. È stata rimossa: il concetto generale esiste in
+signal processing (Kapur \& Kesavan 1992, entropia di Shannon su una
+distribuzione di potenza spettrale), ma la sua applicazione a un
+insieme discreto di ampiezze di transizione fra autostati non risulta
+da alcuna fonte, né dal materiale del corso --- era una proposta
+originale non richiesta. Inoltre risultava poco robusta: lo scarto di
+punteggio fra 1° e 5° classificato era del $4\%$, e un criterio
+alternativo rimescolava completamente la graduatoria. Il criterio a due
+colonne attuale è più semplice, altrettanto efficace e direttamente
+verificabile dal relatore.
+\end{editnote}
+
+\needspace{10\baselineskip}
+\section{Nota sulla convenzione di segno delle frequenze}
+
+La convenzione standard in letteratura (Cohen-Tannoudji e affini) è
+$$\omega_{kl}\equiv\frac{E_k-E_l}{\hbar}$$
+cioè il primo indice porta il segno positivo. Nel notebook si usa
+invece
+\begin{keyeq}
+\centering
+$\Delta_{kl}\equiv E_l-E_k>0 \qquad (k<l)$
+\end{keyeq}
+con indici esplicitamente ordinati, per avere frequenze positive senza
+dover ricordare la convenzione di segno a ogni passaggio:
+$\Delta_{kl}=\omega_{lk}$. La scelta non incide sul risultato fisico
+--- $\langle S_z\rangle(t)$ è reale e ogni modo entra come
+$2|z|\cos(\Delta_{kl}t-\arg z)$, quindi invertire il segno di una
+frequenza si riassorbe nella fase --- ma va tenuta coerente nel resto
+della tesi.
+
+\section{Convenzioni da dichiarare insieme}
+
+Le tre convenzioni che, prese singolarmente, sembrano innocue e che
+insieme producono la maggior parte degli errori di segno difficili da
+diagnosticare:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item \textbf{Endianness di Qiskit}: \texttt{Pauli('AB')} ha $B$ sul
+qubit 0. Con spin 1 $\to$ qubit 0, quindi $X_1Z_2\equiv$
+\texttt{Pauli('ZX')}.
+\item \textbf{Segno del termine DM}: con $H_2'=-H_2$ cambiano segno
+\emph{entrambi} gli angoli dei due $R_{ZZ}$, la struttura del circuito
+resta identica. Per l'osservabile $S_z$ da $|00\rangle$ il risultato
+non cambia (i due casi sono legati dallo scambio $1\leftrightarrow2$,
+che lascia invarianti sia $|00\rangle$ sia $S_z$).
+\item \textbf{Fattori $1/2$ dei gate}: $R_z(\phi)=e^{-i\phi Z/2}$,
+$R_{ZZ}(\phi)=e^{-i\phi ZZ/2}$ --- da cui $\theta=Jt/2$ e non $Jt/4$
+nei blocchi di scambio.
+\end{enumerate}
+
+\needspace{14\baselineskip}
+\section{Provenienza del punto di lavoro R1 --- cronologia}
+
+Vale la pena registrarla, perché il punto è cambiato due volte e il
+relatore potrebbe chiedere conto del percorso.
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item \textbf{Prima versione (scartata).} R1
+$=(b/J=-0.15,\;D/J=1)$ veniva da uno scan automatico su 2349 punti
+classificati con un'\emph{entropia spettrale pesata} $A\cdot S$.
+Criterio poco robusto (scarto 1°--5° classificato del 4\%) e non
+riconducibile ad alcuna fonte: rimosso.
+\item \textbf{Seconda versione (scartata).} Stessa coppia di valori, ma
+giustificata con una tabella di regimi candidati. Era una
+razionalizzazione \emph{a posteriori}: la tabella era stata costruita
+con R1 già dentro, quindi non permetteva di ricostruire come ci si
+fosse arrivati.
+\item \textbf{Versione attuale.} R1 $=(b/J=-0.18,\;D/J=1)$
+\textbf{derivato} dalla struttura a V dell'Hamiltoniana (sez.~3.1--3.4
+del notebook): due condizioni indipendenti (ampiezza del segnale dalla
+formula di Rabi; numero di frequenze dai due detuning
+$\Delta_\pm=J\pm b$) e due scan 1D. I due modi dominanti risultano
+bilanciati a $a_2/a_1=0.995$.
+\end{enumerate}
+
+Il valore $-0.15$ resta comunque dentro il plateau
+$b/J\in[-0.22,-0.14]$: se serve mantenerlo per coerenza con materiale
+già scritto, basta cambiarlo nel setup senza invalidare la derivazione.
+
+\section{Bibliografia: cosa è citabile e cosa no}
+
+La sezione 8 del notebook contiene la tabella completa. In sintesi, per
+la derivazione di R1 \textbf{non è stata consultata alcuna fonte
+esterna}: la struttura è stata ricavata e verificata numericamente. Gli
+ingredienti sono però standard, e due sono già documentati nel progetto
+stesso (\texttt{simmetrie\_dmi\_spin.pdf} \S 11.1, \S 11.2.2, \S 12,
+\S 13.3).
+
+\begin{editnote}
+L'unico elemento senza riferimento preciso è la formula di Rabi per il
+trasferimento di popolazione a due livelli: è un risultato da manuale,
+ma non è stata verificata una citazione specifica e \textbf{non va
+inventata}. Se serve in tesi, va presa da un testo che hai
+effettivamente in mano.
+\end{editnote}
+
+La combinazione dei due criteri in una procedura di selezione è
+costruzione originale di questo lavoro, e va presentata come tale.
+
+\needspace{8\baselineskip}
+\section{Discrepanza aperta con \texttt{simmetrie\_dmi\_spin.pdf}}
+
+\begin{warnbox}{Da chiarire con il relatore}
+Vedi sez.~8.1 del notebook per la verifica numerica completa. In
+breve: gli elementi di matrice della DMI riportati nel documento
+(\S 11.2.1 e \S 11.2.2) risultano \textbf{doppi} rispetto al calcolo
+diretto. Il controllo di covarianza rotazionale
+($\|(\vec s_1\times\vec s_2)_a|0,0\rangle\|=1/2$ per ogni asse $a$)
+supporta il valore ricavato qui. Se confermato, va corretta anche
+l'espressione di \S 13.2 per $E_\pm$. Da chiarire con il relatore
+prima di portare l'una o l'altra versione in tesi.
+\end{warnbox}
+
+\end{document}

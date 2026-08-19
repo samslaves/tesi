@@ -1,0 +1,294 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Costo in gate del circuito di Trotter}
+
+\title{\vspace{-1.5em}\color{inkblue}Costo in gate del circuito di Trotter}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Analisi del numero di gate del circuito per il singolo passo di Trotter
+e per $N$ passi, con la decomposizione \texttt{cx}-\texttt{rz}-\texttt{cx}
+al posto del gate nativo \texttt{RZZ} (vedi la sostituzione applicata a
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_semplificato.ipynb}}
+e \texttt{\seqsplit{quantum\_simulation\_dimero\_trotter.ipynb}}).
+
+\section{Per un singolo passo di Trotter}
+
+Con la decomposizione attuale (\texttt{cx}-\texttt{rz}-\texttt{cx} al
+posto di \texttt{RZZ}):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Tipo} & \textbf{Quantità}\\
+\midrule
+\texttt{rz} (campo + le 3 rotazioni sostitutive di RZZ) & 5\\
+\texttt{h} (Hadamard, coniugazione del blocco DM) & 4\\
+\texttt{rxx}, \texttt{ryy} & 1 + 1\\
+\texttt{cx} (3 coppie CNOT--Rz--CNOT) & \textbf{6}\\
+\texttt{barrier} (separatore, non un gate fisico) & 1\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keyeq}
+\centering
+\textbf{Totale: 17 gate per passo} (9 a un qubit + 8 a due qubit:
+$1\,R_{XX}+1\,R_{YY}+6\,CX$), profondità 15.
+\end{keyeq}
+
+\subsection*{Scala linearmente con $N$}
+
+$$\text{gate totali} = 17N, \qquad \text{gate a 2 qubit} = 8N, \qquad \text{profondità} = 15N$$
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+\rowcolor{inkblue!10}
+$N$ & gate 1-qubit & gate 2-qubit & totale & profondità\\
+\midrule
+1 & 9 & 8 & 17 & 15\\
+2 & 18 & 16 & 34 & 30\\
+5 & 45 & 40 & 85 & 75\\
+\textbf{20} & \textbf{180} & \textbf{160} & \textbf{340} & \textbf{300}\\
+50 & 450 & 400 & 850 & 750\\
+100 & 900 & 800 & 1700 & 1500\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La riga $N=20$ è quella riportata nel notebook (\S 8, esecuzione con
+shot a $t=30$): \textbf{160 gate a due qubit}, coerente col numero che
+si vede nel notebook.
+
+\section{Alternativa più efficiente: gate nativo \texttt{RZZ}}
+
+La decomposizione \texttt{cx}-\texttt{rz}-\texttt{cx} non è l'unica
+scelta possibile: Qiskit mette a disposizione anche il gate primitivo
+\texttt{RZZGate}, richiamabile con \texttt{qc.rzz(theta, 0, 1)}, che
+implementa la stessa operazione unitaria
+$R_{ZZ}(\theta)=e^{-i\frac\theta2 ZZ}$ in un'unica istruzione
+\textbf{astratta}, senza scomporla esplicitamente in gate a un qubit e
+CNOT.
+
+\subsection*{Da dove viene: la \texttt{.definition} di Qiskit}
+
+\texttt{RZZGate} non è un gate "magico" indipendente: porta con sé una
+\texttt{.definition} interna, che Qiskit costruisce automaticamente ed
+è \textbf{esattamente} la stessa decomposizione
+\texttt{cx}-\texttt{rz}-\texttt{cx} usata sopra:
+
+\begin{panelbox}{Circuito (per $\theta=0.5$, da \texttt{RZZGate(0.5).definition})}
+\begin{verbatim}
+q_0: ----[X]----------[X]----
+           |             |
+q_1: ------*----[Rz(0.5)]-*---
+\end{verbatim}
+\end{panelbox}
+
+Questo conferma che le due versioni del circuito sono \textbf{identiche
+a livello di operazione fisica}: cambia solo il livello di astrazione a
+cui viene scritto e contato il circuito, non il calcolo che
+rappresentano.
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.2em]
+\item Scrivendo \texttt{qc.rzz(theta, 0, 1)}, Qiskit tiene l'istruzione
+\textbf{come blocco unico} finché non la si scompone esplicitamente
+(\texttt{qc.decompose()}) o si passa per \texttt{transpile()}.
+\item Solo al \texttt{transpile()} verso un \emph{basis gate set} che
+non include \texttt{rzz} nativamente (es.\ $\{$cx, rz, sx, x$\}$,
+tipico di molti backend a superconduttori IBM), il transpiler la
+espande automaticamente nella stessa sequenza \texttt{cx}-\texttt{rz}-\texttt{cx}
+--- cioè fa lui, in automatico, il lavoro che nella versione
+"esplicita" del notebook viene fatto a mano nel codice Python.
+\end{itemize}
+
+\subsection*{Perché è più efficiente (nel conteggio astratto)}
+
+Contando le operazioni \textbf{prima} di qualunque transpile, un gate
+\texttt{rzz} conta come \textbf{1} operazione, non 3
+(\texttt{cx}+\texttt{rz}+\texttt{cx}). Il risparmio per passo è quindi
+di $3-1=2$ operazioni per ciascuna delle tre \texttt{RZZ} presenti nel
+passo (una in $H_1$, due in $H_2$), cioè \textbf{6 operazioni in meno
+per passo}.
+
+\subsection*{Per un singolo passo di Trotter (versione RZZ nativa)}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Tipo} & \textbf{Quantità}\\
+\midrule
+\texttt{rz} (solo il campo, 2 rotazioni) & 2\\
+\texttt{h} (Hadamard, coniugazione del blocco DM) & 4\\
+\texttt{rxx}, \texttt{ryy} & 1 + 1\\
+\texttt{rzz} (le tre esponenziali $ZZ$, come blocco unico) & \textbf{3}\\
+\texttt{barrier} & 1\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{keyeq}
+\centering
+\textbf{Totale: 11 gate per passo} (6 a un qubit + 5 a due qubit:
+$1\,R_{XX}+1\,R_{YY}+3\,R_{ZZ}$), profondità 9.
+\end{keyeq}
+
+\subsection*{Scala linearmente con $N$}
+
+$$\text{gate totali} = 11N, \qquad \text{gate a 2 qubit} = 5N, \qquad \text{profondità} = 9N$$
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+\rowcolor{inkblue!10}
+$N$ & gate 1-qubit & gate 2-qubit & totale & profondità\\
+\midrule
+1 & 6 & 5 & 11 & 9\\
+2 & 12 & 10 & 22 & 18\\
+5 & 30 & 25 & 55 & 45\\
+\textbf{20} & \textbf{120} & \textbf{100} & \textbf{220} & \textbf{180}\\
+50 & 300 & 250 & 550 & 450\\
+100 & 600 & 500 & 1100 & 900\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\needspace{10\baselineskip}
+\subsection*{Confronto diretto fra le due versioni}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Grandezza (per passo)} & \texttt{cx-rz-cx} esplicito & \texttt{RZZ} nativo & differenza\\
+\midrule
+gate a 1 qubit & 9 & 6 & $-3$\\
+gate a 2 qubit & 8 & 5 & $-3$\\
+totale & 17 & 11 & $-6$\\
+profondità & 15 & 9 & $-6$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A $N=20$ ($t=30$, come nel notebook): 340 vs 220 gate totali, 160 vs
+100 gate a due qubit, profondità 300 vs 180.
+
+\subsection*{Quando conviene l'una o l'altra}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.3em]
+\item \textbf{\texttt{RZZ} nativo (astratto)} è la scelta più efficiente
+ed è quella corretta se l'obiettivo è ragionare sul circuito a livello
+di algoritmo, o se il backend di destinazione supporta \texttt{RZZ}
+come gate fisico nativo (es.\ alcuni processori a ioni intrappolati o
+superconduttori con accoppiamento $ZZ$ diretto): in quel caso il
+conteggio astratto coincide con quello reale su hardware, e usare la
+forma esplicita \texttt{cx}-\texttt{rz}-\texttt{cx} aggiungerebbe solo
+gate superflui che il transpiler dovrebbe poi ri-ottimizzare.
+\item \textbf{\texttt{cx}-\texttt{rz}-\texttt{cx} esplicito} è la
+scelta più realistica quando il backend di destinazione ha
+\textbf{solo} \texttt{CNOT} come gate nativo a due qubit (il caso più
+comune sui processori a superconduttori IBM): in quel caso il
+conteggio astratto di \texttt{RZZ} sottostimerebbe il costo reale,
+perché il transpiler dovrà comunque espanderla in
+\texttt{cx}-\texttt{rz}-\texttt{cx} più avanti --- scriverla esplicita
+nel notebook rende visibile fin da subito il costo che il circuito
+avrà davvero una volta compilato su quel tipo di hardware.
+\end{itemize}
+
+\begin{okbox}{In sintesi}
+Le due versioni non sono in competizione come "corretta vs sbagliata",
+ma rappresentano due livelli di astrazione diversi della stessa
+identità matematica; quale usare dipende da cosa si vuole misurare
+(costo algoritmico astratto, o costo di compilazione su un hardware
+con un set di gate nativi specifico).
+\end{okbox}
+
+\end{document}

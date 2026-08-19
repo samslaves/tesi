@@ -1,0 +1,357 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+% --- palette ---
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+% --- titoli di sezione ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}La decomposizione di Pauli per Hamiltoniane quantistiche}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+% --- box riutilizzabili ---
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+% nota editoriale in stile "blockquote", per le correzioni segnalate in corsivo nell'originale
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}La decomposizione di Pauli\\[0.1em]per Hamiltoniane quantistiche}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+\begin{advisorbox}{Nota di verifica (A.\ Chiesa / UniPR)}
+Documento rivisto per coerenza con la convenzione di 6-Applications e
+Crippa et al., \emph{Magnetochemistry} \textbf{7}, 117 (2021). Le
+correzioni rispetto alla versione originale sono segnalate, qui, nei
+riquadri laterali in corsivo.
+\end{advisorbox}
+
+\section{La base di Pauli}
+
+In meccanica quantistica, l'Hamiltoniana $H$ di un sistema a $N$ qubit è
+una matrice hermitiana di dimensioni $2^N\times2^N$. Le matrici di Pauli
+a singolo qubit, insieme alla matrice identità, formano un insieme di 4
+operatori:
+$$\{\sigma_0=I,\quad\sigma_1=X,\quad\sigma_2=Y,\quad\sigma_3=Z\}.$$
+Per un sistema di $N$ qubit, le \textbf{stringhe di Pauli} sono tutti i
+prodotti tensoriali di $N$ operatori:
+$$P_{\boldsymbol\mu}=\sigma_{\mu_1}\otimes\sigma_{\mu_2}\otimes\cdots\otimes\sigma_{\mu_N},
+\qquad \mu_i\in\{0,1,2,3\}.$$
+Il numero totale di stringhe è $4^N$. Esse formano una \textbf{base
+ortonormale completa} dello spazio vettoriale delle matrici
+$2^N\times2^N$ rispetto al prodotto scalare di Hilbert--Schmidt:
+$$\frac{1}{2^N}\operatorname{Tr}(P_{\boldsymbol\mu}^\dagger\,P_{\boldsymbol\nu})=\delta_{\boldsymbol\mu\boldsymbol\nu}.$$
+Di conseguenza, qualsiasi hamiltoniana hermitiana $H$ ammette la
+decomposizione \textbf{esatta e unica}:
+\begin{keyeq}
+\centering
+$H = \displaystyle\sum_{\boldsymbol\mu} h_{\boldsymbol\mu}\, P_{\boldsymbol\mu}$
+\end{keyeq}
+con coefficienti \textbf{reali} (la hermitianità di $H$ garantisce
+$h_{\boldsymbol\mu}\in\mathbb R$).
+
+\section{Come si trovano i coefficienti}
+
+Per isolare il peso di una specifica stringa di Pauli $P_k$ si sfrutta
+l'ortogonalità:
+\begin{keyeq}
+\centering
+$h_k = \dfrac{1}{2^N}\operatorname{Tr}(P_k\,H)$
+\end{keyeq}
+Il calcolo è esplicito: poiché $P_k$ è hermitiana e unitaria, $P_k^2=I$,
+quindi $\operatorname{Tr}(P_k\cdot P_j)=2^N\delta_{kj}$.
+
+\section{Convenzione di notazione Qiskit (little-endian)}
+
+In Qiskit, le stringhe di Pauli sono scritte in ordine
+\textbf{little-endian}: il carattere più a \textbf{destra} della
+stringa corrisponde al qubit con indice \textbf{0}, quello più a
+sinistra al qubit con indice più alto.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}cc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Stringa Qiskit} & \textbf{Operatore matematico}\\
+\midrule
+\texttt{"ZI"} & $Z_1\otimes I_0$\\
+\texttt{"IZ"} & $I_1\otimes Z_0$\\
+\texttt{"XX"} & $X_1\otimes X_0$\\
+\texttt{"XY"} & $X_1\otimes Y_0$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Questa convenzione si applica a \texttt{SparsePauliOp} in Qiskit 2.x ed
+è \textbf{invertita} rispetto alla notazione matematica standard (dove
+il primo indice è il qubit più a sinistra nel prodotto tensoriale).
+Tenerne conto è essenziale nella costruzione di
+\texttt{SparsePauliOp.from\_list(...)}.
+
+\section{Sistemi non a qubit: fermioni e bosoni}
+
+Se l'Hamiltoniana descrive elettroni (fermioni) o campi (bosoni), non
+nasce direttamente in termini di Pauli, ma in termini di operatori di
+creazione e annichilazione $\hat a_i^\dagger,\hat a_j$.
+
+Per i \textbf{sistemi fermionici} (es.\ elettroni in una molecola) si
+usano mappature come:
+\begin{itemize}[leftmargin=1.3em,itemsep=0.1em]
+\item \textbf{Jordan--Wigner}: mappa locale, ma genera stringhe di Pauli
+di lunghezza $O(N)$;
+\item \textbf{Bravyi--Kitaev}: stringhe mediamente più corte, overhead
+minore.
+\end{itemize}
+Queste trasformazioni preservano le relazioni di anticommutazione e
+quindi lo spettro energetico. Per i \textbf{sistemi bosonici} (spazio
+di Hilbert infinito-dimensionale) occorre prima troncare lo spazio a un
+numero massimo di occupazione, poi mappare i livelli risultanti su
+qubit.
+
+\begin{editnote}
+Vantaggio dei sistemi spin-1/2 (rilevante per la tesi): ogni spin-1/2 si
+mappa \emph{direttamente} su un qubit senza alcun mapping aggiuntivo ---
+questo è il punto chiave sottolineato da Crippa et al.\ e dal Prof.\
+Chiesa in 6-Applications.
+\end{editnote}
+
+\section{Un esempio esplicito: due qubit interagenti}
+
+Consideriamo la seguente matrice hermitiana $4\times4$:
+$$H=\begin{pmatrix}1.0&0.0&0.0&0.5\\0.0&-1.0&0.5&0.0\\0.0&0.5&-1.0&0.0\\0.5&0.0&0.0&1.0\end{pmatrix}.$$
+Applicando la formula dei coefficienti si ottiene
+$$H = 0.5\,(Z\otimes I)+0.5\,(I\otimes Z)+0.5\,(X\otimes X),$$
+ovvero, in notazione con pedici fisici, $H=0.5\,Z_1+0.5\,Z_0+0.5\,X_1X_0$.
+Il valore atteso su uno stato $|\psi\rangle$ si calcola per linearità:
+\begin{keyeq}
+\centering
+$\langle H\rangle = 0.5\,\langle Z_1\rangle+0.5\,\langle Z_0\rangle+0.5\,\langle X_1X_0\rangle$
+\end{keyeq}
+
+\needspace{8\baselineskip}
+\section{Il modello di Heisenberg isotropo per il dimero (convenzione 6-Applications)}
+
+\begin{editnote}
+Sezione aggiunta per chiarire la convenzione della tesi.
+\end{editnote}
+
+In 6-Applications e in Crippa et al., il dimero di Heisenberg è scritto
+come
+$$H = J_xX_1X_2+J_yY_1Y_2+J_zZ_1Z_2+b(Z_1+Z_2)$$
+dove $X_i,Y_i,Z_i$ \textbf{sono già operatori di Pauli} (non operatori
+di spin $s_i=\sigma_i/2$). Nel caso isotropo $J_x=J_y=J_z=J$:
+\begin{keyeq}
+\centering
+$H = J(X_1X_2+Y_1Y_2+Z_1Z_2)+b(Z_1+Z_2)$
+\end{keyeq}
+
+\begin{editnote}
+Attenzione alla convenzione: questo va distinto dall'Hamiltoniana
+scritta in termini di operatori di spin $\vec s_i=\vec\sigma_i/2$, che
+darebbe $H=2J\,\vec s_1\cdot\vec s_2+\ldots$ con un fattore di scala 4
+sulle energie. In 6-Applications la scrittura in Pauli è quella diretta
+(nessun fattore $1/4$).
+\end{editnote}
+
+L'energia del \textbf{ground state} (singoletto, $b=0$) per questa
+convenzione è $E_0=-3J$.
+
+\section{Come si misura una stringa di Pauli su hardware quantistico}
+
+I computer quantistici commerciali (IBM, Rigetti, ecc.) misurano
+nativamente solo lungo l'asse $Z$ (base computazionale
+$|0\rangle,|1\rangle$). Per misurare un termine diverso si applica una
+\textbf{rotazione di base} prima della misura:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}cc@{}}
+\toprule
+\rowcolor{inkblue!10}
+\textbf{Operatore da misurare} & \textbf{Porta(e) prima della misura}\\
+\midrule
+$Z$ & Nessuna (base nativa)\\
+$X$ & $H$ (Hadamard)\\
+$Y$ & $S^\dagger$ poi $H$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La corrispondenza bit $\to$ autovalore è: $0\mapsto+1$, $1\mapsto-1$.
+
+\subsection*{Esempio: misura della stringa $X_0Y_1Z_2$}
+
+\begin{panelbox}{Circuito di misura}
+\begin{verbatim}
+|psi_0>  --[ H ]------------[ M ]   <- asse X
+|psi_1>  --[ S+]--[ H ]-----[ M ]   <- asse Y
+|psi_2>  ---------------------[ M ]   <- asse Z (nativo)
+\end{verbatim}
+\end{panelbox}
+
+Per ogni \emph{shot} (es.\ risultato \texttt{010}):
+$$0\to+1,\quad 1\to-1,\quad 0\to+1 \;\Longrightarrow\; (+1)\times(-1)\times(+1)=-1.$$
+Il valore atteso $\langle X_0Y_1Z_2\rangle$ è la media su tutti gli
+\emph{shot}.
+
+\section{Misura dell'Hamiltoniana del dimero isotropo}
+
+Per $H=J(X_1X_2+Y_1Y_2+Z_1Z_2)$ sono necessari \textbf{tre circuiti di
+misura distinti}, poiché le stringhe $XX$, $YY$, $ZZ$ non sono
+simultaneamente diagonalizzabili nella stessa base (non commutano tutte
+a coppie: ad esempio $[X_1X_2,Y_1Y_2]\neq0$).
+
+\begin{editnote}
+Il documento originale usava la formula "non commutano tutte
+simultaneamente" senza precisare perché questo implica circuiti
+separati. Il motivo è che ciascuna stringa è diagonalizzabile nella
+propria base di autostati, ma le tre basi sono diverse, quindi non
+esiste un'unica rotazione che diagonalizzi tutte e tre
+contemporaneamente.
+\end{editnote}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.25em]
+\item \textbf{Circuito 1} --- misura di $Z_1Z_2$ (base nativa, nessuna
+rotazione): $00\to+1,\ 01\to-1,\ 10\to-1,\ 11\to+1$;
+\item \textbf{Circuito 2} --- misura di $X_1X_2$ ($H$ su entrambi i
+qubit, poi misura): post-processing identico a $ZZ$;
+\item \textbf{Circuito 3} --- misura di $Y_1Y_2$ ($S^\dagger H$ su
+entrambi i qubit, poi misura): post-processing identico a $ZZ$.
+\end{itemize}
+
+\begin{keyeq}
+\centering
+$\langle H\rangle = J\big(\langle X_1X_2\rangle+\langle Y_1Y_2\rangle+\langle Z_1Z_2\rangle\big)$
+\end{keyeq}
+
+\needspace{10\baselineskip}
+\section{Verifica analitica: lo stato di singoletto}
+
+Lo stato di singoletto è $|\psi\rangle=\tfrac{1}{\sqrt2}(|01\rangle-|10\rangle)$.
+
+\begin{editnote}
+Convenzione ket Qiskit: in $|q_1q_0\rangle$, lo stato $|01\rangle$
+significa $q_1=0$, $q_0=1$.
+\end{editnote}
+
+\begin{okbox}{Termine $Z_1Z_2$}
+$(Z\otimes Z)|\psi\rangle=\frac{1}{\sqrt2}\big[(Z|0\rangle)\otimes(Z|1\rangle)-(Z|1\rangle)\otimes(Z|0\rangle)\big]
+=\frac{1}{\sqrt2}\big[-|01\rangle+|10\rangle\big]=-|\psi\rangle
+\;\Rightarrow\; \langle Z_1Z_2\rangle=-1$
+\end{okbox}
+\smallskip
+
+\begin{okbox}{Termine $X_1X_2$}
+$(X\otimes X)|\psi\rangle=\frac1{\sqrt2}\big[|10\rangle-|01\rangle\big]=-|\psi\rangle
+\;\Rightarrow\; \langle X_1X_2\rangle=-1$
+\end{okbox}
+\smallskip
+
+\begin{okbox}{Termine $Y_1Y_2$}
+$(Y\otimes Y)|\psi\rangle=\frac1{\sqrt2}\big[(i|1\rangle)\otimes(-i|0\rangle)-(-i|0\rangle)\otimes(i|1\rangle)\big]
+=\frac1{\sqrt2}\big[|10\rangle-|01\rangle\big]=-|\psi\rangle
+\;\Rightarrow\; \langle Y_1Y_2\rangle=-1$
+\end{okbox}
+
+\bigskip
+\noindent\textbf{Energia totale:}
+\begin{keyeq}
+\centering
+$\langle H\rangle = J(-1-1-1) = -3J$
+\end{keyeq}
+Per $J>0$ (accoppiamento antiferromagnetico), $-3J$ è il minimo dello
+spettro, confermando che il singoletto è lo \textbf{stato fondamentale}.
+
+\begin{editnote}
+Raccordo con la convenzione di Crippa: se si parte da
+$H=2J\sum_i\vec s_i\cdot\vec s_{i+1}$ con $\vec s_i=\vec\sigma_i/2$, il
+termine di scambio diventa $\tfrac{J}2(XX+YY+ZZ)$ e l'energia del
+singoletto è $-3J/4$. Il fattore 4 di differenza proviene da
+$s_i=\sigma_i/2$. In questo documento si usa la convenzione di
+6-Applications dove i coefficienti $J_x,J_y,J_z$ moltiplicano
+direttamente gli operatori di Pauli, senza il fattore $1/4$.
+\end{editnote}
+
+\needspace{10\baselineskip}
+\section{Il vantaggio pratico: perché la decomposizione di Pauli è il pilastro del VQE}
+
+La decomposizione in stringhe di Pauli è essenziale perché:
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.25em]
+\item \textbf{I computer quantistici non possono misurare una matrice
+generica}, ma sanno misurare $X,Y,Z$ su ogni qubit con alta efficienza;
+\item \textbf{la linearità} del valor medio permette di calcolare
+$\langle H\rangle$ come somma pesata dei valori medi dei singoli
+termini;
+\item \textbf{la sparsità} delle hamiltoniane fisiche garantisce che il
+numero di termini non nulli cresca polinomialmente in $N$ (come
+$O(N^k)$ per interazioni a $k$ corpi), rendendo il calcolo scalabile;
+\item \textbf{nel caso spin-1/2 $\to$ qubit}, l'Hamiltoniana è
+\emph{già} in forma di Pauli senza mapping aggiuntivo --- il vantaggio
+chiave sottolineato da Crippa et al.
+\end{enumerate}
+
+\end{document}

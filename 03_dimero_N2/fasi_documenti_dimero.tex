@@ -1,0 +1,161 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{longtable}
+\usepackage{seqsplit}
+\usepackage{array}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Dimero (N=2) — fasi e documenti prodotti}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section{Nota metodologica}
+
+Questo documento cataloga tutto il materiale prodotto per il dimero,
+organizzato per fase tematica (stesso principio già usato per la catena
+aperta in \texttt{fasi\_documenti\_catena\_aperta.pdf}). Le descrizioni
+sono verificate direttamente sul contenuto di ciascun file, non dedotte
+dal solo nome.
+
+\section{Fase 0 — Riferimenti bibliografici}
+
+Non prodotti da Samuele: materiale di partenza fornito dal relatore o dal
+corso.
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & Ruolo\\
+\midrule
+\endhead
+\texttt{\seqsplit{Magnetochemistry\_VQE.pdf}} & Crippa et al., \emph{Magnetochemistry} 7, 117 (2021) -- riferimento concettuale primario per tutto il progetto (VQE su anelli di spin, PMA, gate $W_{ij}$).\\[4pt]
+\texttt{\seqsplit{6Applications.pdf}} & Materiale del corso -- esempio "VQE on a spin dimer" da cui parte l'intero lavoro, e esempio Trotter sul modello di Ising trasverso (fonte della convenzione qubit Famiglia 2).\\[4pt]
+\texttt{\seqsplit{Rev\_Adv\_Q\_Tech\_QS.pdf}} & Review generale di quantum simulation, consultata come inquadramento.\\
+\bottomrule
+\end{longtable}
+
+\section{Fase 1 — Inquadramento teorico e Hamiltoniana}
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & A cosa serve\\
+\midrule
+\endhead
+\texttt{\seqsplit{dimero\_sintesi.pdf}} & Sintesi ragionata della fase preliminare: inquadramento del problema, termine DM, piano operativo per $N=2$ (24 giugno 2026).\\[4pt]
+\texttt{\seqsplit{dimero\_spin.pdf}} & Derivazione completa dal modello di Hubbard all'Hamiltoniana di scambio di Heisenberg per il dimero.\\[4pt]
+\texttt{\seqsplit{dimero\_DM.pdf}} & Spettro del dimero con campo e termine DM: matrice $4\times4$, blocco $3\times3$, polinomio cubico, limiti analitici, anti-incrocio.\\[4pt]
+\texttt{\seqsplit{simmetrie\_dmi\_spin.pdf}} & Simmetria/antisimmetria dell'Hamiltoniana di scambio fra due spin 1/2: operatore di permutazione $P_{12}$, componente simmetrica (Heisenberg) vs antisimmetrica (DM).\\
+\bottomrule
+\end{longtable}
+
+\section{Fase 2 — Benchmark esatto}
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & A cosa serve\\
+\midrule
+\endhead
+\texttt{\seqsplit{dimer\_exact.py}} & Benchmark esatto (diagonalizzazione), autovalori analitici per il caso base $D=0$; la stessa funzione \texttt{dimer\_hamiltonian(b,J,D)} supporta anche $D\neq0$ -- sorgente unica del \texttt{SparsePauliOp} riusata da tutto ciò che segue (VQE, Trotter, correlazioni). Concettualmente precede il VQE, non ne fa parte: è il riferimento con cui il VQE viene validato, esattamente come \texttt{trimer\_chain\_exact.py} per la catena.\\
+\bottomrule
+\end{longtable}
+
+\section{Fase 3 — VQE statico: scelta dell'ansatz}
+
+A differenza della catena aperta (dove il DM è una fase a sé, non ancora
+iniziata), per il dimero il confronto $D=0$ vs $D\neq0$ è stato parte
+integrante del lavoro fin da subito: quasi tutti i file trattano
+entrambi i casi nello stesso notebook/modulo, non in file separati. La
+suddivisione qui sotto riflette comunque \emph{a cosa è dedicata
+l'analisi principale} di ciascun file, per renderlo esplicito come
+richiesto.
+
+\subsection{VQE puro (Heisenberg isotropo, $D=0$)}
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & A cosa serve\\
+\midrule
+\endhead
+\texttt{\seqsplit{VQE\_dimer\_noiseless.ipynb}} & Notebook esplorativo iniziale (ansatz hardware-efficient generico, import IBM runtime), solo $D=0$ -- precursore, superato dalla coppia \texttt{dimer\_exact.py}/\texttt{vqe\_dimer.py}.\\[4pt]
+\texttt{\seqsplit{scelta\_ansatz\_RBS\_vs\_W.md}} & \textbf{Contributo originale}: confronto esplicito RBS vs $W_{ij}(\theta)$ di Crippa et al. per il blocco $M$-conservante del PMA -- scelta del gate, indipendente dal valore di $D$.\\
+\bottomrule
+\end{longtable}
+
+\subsection{VQE con termine DM ($D\neq0$)}
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & A cosa serve\\
+\midrule
+\endhead
+\texttt{\seqsplit{vqe\_dimer.py}} & Implementazione VQE canonica (ansatz PMA-2q$\cdot$3); l'output standard del modulo è la griglia a 4 pannelli HA/PMA $\times$ $D{=}0$/$D{=}0.2$, non solo il caso isotropo. Validata contro \texttt{dimer\_exact.py} (Fase 2).\\[4pt]
+\texttt{\seqsplit{vqe\_dimer\_spiegato.ipynb}} & Guida interattiva a \texttt{vqe\_dimer.py}: perché il VQE dà un limite superiore, come l'estimator calcola $\langle H\rangle_{\boldsymbol\theta}$, differenza ansatz HA vs PMA -- culmina nella spiegazione del perché il PMA fallisce con $D=0.2$.\\[4pt]
+\texttt{\seqsplit{confronto\_ansatz\_entangler.ipynb}} & Confronto sistematico di 11 ansatz (quattro $R_y$+entangler A--D, due famiglie PMA a più conteggi di parametri), sia a $D=0$ sia al crescere di $D$ fino a $1.0$ -- include la dimostrazione esplicita che impilare blocchi $M$-conservanti (RBS) non basta a superare il limite di espressività.\\[4pt]
+\texttt{\seqsplit{confronto\_ansatz\_entangler\_note.md}} & Note di lettura del notebook precedente: distinzione fra fallimenti dovuti alla sola assenza di rottura di simmetria (già a $D=0$, $b/J>2$) e fallimenti specificamente indotti dal DM (vicino a $b/J=2$).\\[4pt]
+\texttt{\seqsplit{risultati\_vqe\_test2.md}} & Ground state VQE al punto di lavoro "test 2" ($b/J=0.35$, $D/J=0.80$) -- il punto usato in \texttt{relazione\_test\_parametri.md} (Fase 4) e poi riusato come stato iniziale delle correlazioni dinamiche.\\[4pt]
+\texttt{\seqsplit{vqe\_ground\_state\_test2.ipynb}} & Notebook che implementa il calcolo di \texttt{risultati\_vqe\_test2.md}.\\
+\bottomrule
+\end{longtable}
+
+\section{Fase 4 — Quantum simulation (evoluzione temporale, Suzuki--Trotter)}
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & A cosa serve\\
+\midrule
+\endhead
+\texttt{\seqsplit{quantum\_simulation\_domande\_al\_relatore.md}} & Domande aperte sul task Trotter appena ricevuto (serve un qubit ausiliario per le correlazioni? quale stato iniziale?).\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.md}} & Derivazione teorica completa: fattorizzazione esatta $U_J(t)$, $H_1$ (campo+scambio), $U_2(t)$ (blocco DM), errore di Trotter $O(t^2/N)$ via BCH.\\[4pt]
+\texttt{\seqsplit{relazione\_test\_parametri.md}} & (vedi Fase 3) -- i cinque set di parametri testati per l'evoluzione Trotter, con circuito e confronto con la dinamica esatta.\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_relazione\_domande\_tecniche.md}} & Note tecniche di riferimento rapido (criterio di non monocromaticità, rapporto $a_2/a_1$) a supporto della discussione col relatore sui risultati Trotter.\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_note.md}} & Note di convenzione: ordinamento sito$\to$qubit (Famiglia 2, ereditata dall'esempio del corso), convenzioni di segno delle frequenze.\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_applicazione.pdf}} & Relazione che inquadra il deliverable Trotter completo: derivazione del punto di lavoro R1, riferimento ai due notebook.\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter.ipynb}} & Notebook \textbf{completo}: derivazione fisica di R1, implementazione Trotter, verifica di convergenza.\\[4pt]
+\texttt{\seqsplit{quantum\_simulation\_dimero\_trotter\_semplificato.ipynb}} & Versione \textbf{ridotta} (solo il richiesto dal relatore), esplorazione interattiva dei parametri con widget.\\[4pt]
+\texttt{\seqsplit{costo\_gate\_trotter.md}} & Conteggio dei gate per passo di Trotter e per $N$ passi, con la decomposizione \texttt{cx-rz-cx} al posto del gate nativo \texttt{RZZ}.\\[4pt]
+\texttt{\seqsplit{circuito\_compatto\_teoria\_e\_limiti.md}} & Analisi collaterale su richiesta del relatore: un circuito più compatto (2 CNOT invece di 8 gate a due qubit) è possibile in teoria, ma perché non si usa per gli scopi di questo progetto -- verifica numerica con due metodi indipendenti.\\[4pt]
+\texttt{\seqsplit{spiegazione\_shot\_rumore\_statistico.md}} & Spiegazione autosufficiente della soglia $1/\sqrt{N_{\rm shots}}$ per il rumore statistico, usata nei notebook Trotter in fase di esecuzione sul circuito.\\
+\bottomrule
+\end{longtable}
+
+\section{Fase 5 — Correlazioni dinamiche (Hadamard test con ancilla)}
+
+\begin{longtable}{@{}p{5.5cm}p{9.0cm}@{}}
+\toprule
+File & A cosa serve\\
+\midrule
+\endhead
+\texttt{\seqsplit{simmetrie\_correlatori\_dimero.pdf}} & Analisi di simmetria (per via classica, prima di implementare il circuito) di quali dei 36 correlatori $\langle\sigma_i^\alpha(t)\sigma_j^\beta(0)\rangle$ si annullano strutturalmente, sul dimero con DM.\\[4pt]
+\texttt{\seqsplit{relazione\_correlazioni.md}} & Relazione dei risultati: tutte le 36 combinazioni misurate (nessuna scartata a priori) al punto di lavoro test 2, partendo dal ground state VQE.\\[4pt]
+\texttt{\seqsplit{correlazioni\_dinamiche.jpg}} & Figura di supporto alla relazione (esempi rappresentativi dei correlatori misurati).\\[4pt]
+\texttt{\seqsplit{correlazioni\_dimero\_esplorazione.ipynb}} & Notebook \textbf{principale}: calcolo esplorativo di tutte le 36 combinazioni, senza presupporre simmetrie; selezione dei correlatori per il circuito finale.\\[4pt]
+\texttt{\seqsplit{correlazioni\_dimero\_simmetria\_U.ipynb}} & Notebook \textbf{secondario}, sincronizzato col principale: costruzione e verifica della simmetria $U=\mathrm{SWAP}\cdot(R_z(\pi)\otimes R_z(\pi))$ che dimezza le combinazioni indipendenti.\\[4pt]
+\texttt{\seqsplit{verifica\_simmetrie\_correlatori.ipynb}} / \texttt{\seqsplit{\_pdf.ipynb}} & Verifica numerica indipendente degli zeri strutturali e della simmetria $U$, a confronto con \texttt{simmetrie\_correlatori\_dimero.pdf}.\\[4pt]
+\texttt{\seqsplit{circuito\_correlazioni\_tutte.ipynb}} & Notebook snello e finale: dal ground state VQE al circuito con ancilla (Hadamard test), misura di tutte le 36 combinazioni, visualizzazione interattiva.\\
+\bottomrule
+\end{longtable}
+
+\section{Nota sulla numerazione delle fasi}
+
+A differenza della catena aperta (dove le fasi 1--4 sono state definite
+\emph{a priori} come piano di lavoro), per il dimero questa
+suddivisione è stata ricostruita \emph{a posteriori} dal materiale già
+prodotto, seguendo l'ordine cronologico/tematico reale del lavoro. La
+Fase 3 è stata scorporata in 3.1/3.2 (VQE puro / VQE con DM) su
+richiesta esplicita, ma va letta con l'avvertenza già data
+nell'introduzione della sezione: il DM non è stato un'estensione
+successiva e separata come per la catena, bensì un asse di analisi
+presente fin dall'inizio nella maggior parte dei file -- la
+suddivisione riflette l'enfasi principale di ciascun documento, non una
+cronologia realmente separata in due sotto-fasi.
+
+\end{document}

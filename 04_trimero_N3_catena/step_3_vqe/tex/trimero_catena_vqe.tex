@@ -1,0 +1,216 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{VQE senza termine DM — trimero a catena aperta}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase VQE \textbf{senza} termine DM per il
+trimero a catena aperta — mirror diretto, per $N=3$, di quanto fatto per il dimero
+(\texttt{vqe\_dimer.py}) e per l'anello (documento gemello). Un ansatz PMA con
+branching e blocco RBS (produzione principale), lo stesso con blocco $W$, un ansatz
+PMA senza branching, due notebook "spiegato" (guide interattive) e un notebook di
+confronto sistematico.
+
+\textbf{Scope.} Tutti i file qui descritti evitano deliberatamente il termine DM. Per
+la catena, il VQE con DM è ancora completamente da fare — le scelte qui descritte non
+dipendono da come verrà affrontato in futuro. Per i moduli \texttt{.py}, oltre a
+descrizione/verifiche/conclusione, sono elencate anche le funzioni interne e come si
+usa il file.
+
+\section*{\texttt{vqe\_trimer\_chain.py} + \texttt{vqe\_trimer\_chain.png}}
+
+Mirror diretto di \texttt{vqe\_trimer\_ring.py}, costruito da zero in questa sessione:
+ansatz HA (9 parametri) e PMA con RBS e branching sui soli due bond fisici $(1,2)$ e
+$(2,3)$. Per $J>0$ il fondamentale a basso campo è sempre il blocco $B$ (mai serve
+scegliere fra $B$ e $C$ come nell'anello): $2K+3$ parametri, 5 a $K=1$ — contro i 6
+dell'anello, un blocco RBS in meno.
+
+\textbf{Verifiche.} Self-test a precisione macchina ($1.9\times10^{-15}$), script
+principale completo eseguito: $\mathcal F=1$ esatto su tutti i 10 punti, per entrambi
+gli ansatz. Figura ispezionata visivamente.
+
+\textbf{Conclusione.} Modulo di produzione pronto, stesso standard di rigore
+dell'anello.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{make\_ha\_ansatz(reps)} — l'ansatz hardware-efficient generico, stesso
+ruolo della versione dell'anello.
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — il blocco RBS, identico a quello
+dell'anello.
+\item \texttt{\_select\_target\_block(J,\ b)} — sceglie \texttt{(block, M)} del
+fondamentale: sempre $B$ sotto $b_c$ per $J>0$ (nessun confronto $E_B$ vs $E_C$
+necessario, a differenza dell'anello), $A$ sopra.
+\item \texttt{\_prepare\_initial\_state(qc,\ block,\ M)} — banale (solo $X$) per
+$A$ estremo, generico (\texttt{prepare\_state}) per $B$ — qui $B$ non è mai banale
+(a differenza del blocco a basso campo tipico dell'anello).
+\item \texttt{make\_pma\_ansatz(J,\ b,\ K)} — l'ansatz PMA: stato iniziale + $K$
+layer di RBS sui \emph{due} bond fisici + $R_y$ indipendenti finali, $2K+3$
+parametri.
+\item \texttt{\_energy(params,\ ansatz,\ hamiltonian,\ estimator)} — la funzione
+obiettivo per \texttt{\seqsplit{scipy.optimize.minimize}}.
+\item \texttt{run\_vqe(J,\ b,\ ansatz\_type,\ reps,\ K,\ n\_restarts,\ seed)} — VQE
+completo a un punto (nessun \texttt{dm\_mode}/\texttt{D}: qui lo scope esclude il DM
+fin dalla firma della funzione, non solo dal suo uso).
+\item \texttt{vqe\_sweep(b\_values,\ J,\ ansatz\_type,\ reps,\ K,\ n\_restarts,\
+seed,\ verbose)} — chiama \texttt{run\_vqe} su una griglia di $b$.
+\item \texttt{\_self\_test()} — verifica l'ansatz a parametri nulli contro lo stato
+di Kambe atteso.
+\item \texttt{\_plot\_row}, \texttt{plot\_grid} — stessa funzione della versione
+dell'anello, per la figura a 2$\times$4 pannelli.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_trimer\_chain import
+run\_vqe, vqe\_sweep, \ldots}. Come script standalone: \texttt{python3
+vqe\_trimer\_chain.py} esegue il self-test, poi lo sweep completo per HA e PMA e
+salva \texttt{vqe\_trimer\_chain.png}/\texttt{.pdf}. Dipende da
+\texttt{trimer\_chain\_exact.py} nella stessa cartella.
+
+\section*{\texttt{vqe\_trimer\_chain\_W.py} + \texttt{vqe\_trimer\_chain\_W.png}}
+
+Mirror di \texttt{vqe\_trimer\_ring\_W.py}: gate $W$, branching, $2K$ parametri (2 a
+$K=1$, contro i 3 dell'anello).
+
+\textbf{Verifiche.} Self-test a precisione macchina, script principale eseguito:
+$\mathcal F=1$ esatto ovunque, con errore energetico esattamente nullo in più punti
+sopra $b_c$.
+
+\textbf{Conclusione.} Completa, insieme al file precedente, la coppia RBS/$W$ già
+disponibile per l'anello.
+
+\textbf{Funzioni interne.} Stessa struttura di \texttt{vqe\_trimer\_chain.py}, con
+queste differenze:
+\begin{itemize}
+\item \texttt{w\_block(qc,\ theta,\ q0,\ q1)} — il blocco $W$ (CNOT-$R_y$-CNOT) al
+posto di \texttt{rbs\_block}.
+\item \texttt{make\_pma\_ansatz(J,\ b,\ K)} — solo $K$ blocchi $W$ sui due bond,
+$2K$ parametri, nessun layer finale di $R_y$.
+\item \texttt{make\_pma\_ansatz\_forced(branch,\ K)} — ramo iniziale fissato
+indipendentemente da $b$; per il ramo \texttt{"basso"} usa
+\texttt{prepare\_state} sullo stato di Kambe $(B,-\tfrac12)$ (diversamente
+dall'anello, dove il ramo "basso" forzato usa la preparazione banale del
+singoletto).
+\item \texttt{run\_vqe\_forced(J,\ b,\ branch,\ K,\ n\_restarts,\ seed)} — il VQE
+con il ramo forzato.
+\item Le altre funzioni (\texttt{make\_ha\_ansatz}, \texttt{\_select\_target\_block},
+\texttt{\_prepare\_initial\_state}, \texttt{\_self\_test}, \texttt{\_energy},
+\texttt{run\_vqe}, \texttt{vqe\_sweep}, \texttt{\_plot\_row}, \texttt{plot\_grid})
+hanno lo stesso ruolo della versione RBS.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_trimer\_chain\_W import
+run\_vqe, vqe\_sweep, \ldots}. A differenza di \texttt{vqe\_trimer\_chain.py}, in
+questa sessione è stato eseguito tramite uno script esterno equivalente (stesso
+schema self-test + sweep + plot). Dipende da \texttt{trimer\_chain\_exact.py}.
+
+\section*{\texttt{vqe\_trimer\_chain\_nobranch.py}}
+
+Mirror di \texttt{vqe\_trimer\_ring\_nobranch.py}: stato iniziale fisso, RBS ripetuto
+ad ogni ciclo sui due bond fisici, $5K$ parametri (contro i $6K$ dell'anello).
+
+\textbf{Verifiche e scoperta.} Trovato e corretto un bug reale durante la
+costruzione: il conteggio dei parametri per ciclo era sbagliato (4 invece di 5),
+causava un \texttt{IndexError} immediato. Dopo la correzione, verificato un risultato
+non presunto per analogia: a $b=1.0$ (sotto $b_c$), $K=1$ (5 parametri) resta vicino al
+tetto strutturale $\approx5/6$ già noto per la famiglia "esatta" (RBS fatto una sola
+volta), ma $K=2$ (10 parametri, RBS ripetuto due volte) lo \textbf{supera},
+raggiungendo $\mathcal F=1$ esatto — coerente col pattern già visto per l'anello, dove
+la famiglia ciclica a $K=2$ recupera l'esatto sotto DM dove $K=1$ resta bloccato.
+
+\textbf{Conclusione.} Ripetere il blocco RBS (non solo aggiungere $R_y$) è ciò che
+apre nuovo spazio raggiungibile — un'osservazione strutturale, non specifica del DM,
+che vale anche nel regime $D=0$ qui documentato.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — stesso blocco RBS già validato in
+\texttt{vqe\_trimer\_chain.py}.
+\item \texttt{make\_ha\_ansatz(reps)} — l'ansatz hardware-efficient, non usato dal
+resto del modulo ma incluso per uniformità con gli altri file.
+\item \texttt{pma\_2q\_trimer\_nobranch(K)} — l'ansatz senza branching: $X$ fisso
+su un qubit, poi $K$ cicli di [RBS sui \emph{due} bond + $R_y$ indipendenti sui tre
+qubit], $5K$ parametri (era scritto erroneamente come $4K$ prima della correzione).
+\item \texttt{\_energy(params,\ ansatz,\ hamiltonian,\ estimator)} — stessa
+funzione obiettivo degli altri moduli.
+\item \texttt{run\_vqe(J,\ b,\ K,\ n\_restarts,\ seed)} — VQE a un punto, interfaccia
+analoga agli altri moduli ma senza \texttt{ansatz\_type}/\texttt{reps}.
+\item \texttt{vqe\_sweep(b\_values,\ J,\ K,\ n\_restarts,\ seed,\ verbose)} — chiama
+\texttt{run\_vqe} su una griglia di $b$.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_trimer\_chain\_nobranch
+import run\_vqe, vqe\_sweep}. Nessun blocco \texttt{\_\_main\_\_}, nessuna funzione
+di self-test dedicata — la verifica più diretta è chiamare \texttt{run\_vqe} su un
+punto qualsiasi e controllare \texttt{fidelity}. Dipende da
+\texttt{trimer\_chain\_exact.py}.
+
+\section*{\texttt{vqe\_trimer\_chain\_spiegato.ipynb}}
+
+Mirror di \texttt{vqe\_trimer\_ring\_spiegato.ipynb}, con un adattamento fisico non
+banale: il blocco a basso campo della catena ($B$) non è banale come il blocco $C$
+usato nel punto di lavoro standard dell'anello, quindi la sezione di derivazione a
+mano ($X,H,\mathrm{CX},X$) non si applica — sostituita con una verifica numerica di
+\texttt{prepare\_state}.
+
+\textbf{Verifiche e correzione.} Eseguito per intero: trovato un problema reale, non
+un bug di codice ma di \textbf{presentazione} — due celle (VQE a un punto singolo, e
+confronto su griglia) mostravano $\mathcal F=0.826612$ invece di $1.000000$, non per un
+limite strutturale ma per un minimo locale specifico del seed di default (42).
+Diagnosticato con più restart ($R=8$ risolve) e con seed diversi (qualunque seed
+$\neq42$ risolve già a $R=4$). Corretto cambiando il seed esplicito nelle due celle;
+rieseguito, ora $\mathcal F=1.000000$ esatto ovunque.
+
+\textbf{Conclusione.} Un esempio concreto, verificato sul campo, della distinzione fra
+"limite di espressività" e "artefatto di ottimizzazione" che il progetto tiene ferma
+fin dal dimero: qui il rischio di scambiare l'uno per l'altro era reale e si è
+materializzato, non solo teorico.
+
+\section*{\texttt{vqe\_trimer\_chain\_W\_spiegato.ipynb}}
+
+Mirror di \texttt{vqe\_trimer\_ring\_W\_spiegato.ipynb}, con lo stesso adattamento
+della sezione di derivazione del notebook precedente (blocco $B$ non banale).
+
+\textbf{Verifiche.} Eseguito per intero, zero errori: overlap di preparazione
+$=1.000000$, HA e PMA entrambi $\mathcal F=1$ esatto sulla griglia ridotta.
+
+\section*{Conclusione generale}
+
+La catena ha ora una famiglia di file per la fase VQE senza DM parallela a quella
+dell'anello (produzione RBS, produzione $W$, produzione senza branching, due guide
+interattive), con lo stesso livello di verifica end-to-end. Due punti di attenzione
+emersi durante la costruzione, entrambi reali e non solo teorici:
+
+\begin{itemize}
+\item \textbf{Il seed di default può ingannare}: il problema trovato in
+\texttt{vqe\_trimer\_chain\_spiegato.ipynb} mostra che un valore di fidelity
+"sospetto" (vicino a un tetto già noto per un'altra famiglia) va sempre verificato con
+più restart o seed diversi prima di essere interpretato come limite strutturale.
+\item \textbf{Ripetere un blocco non è come aggiungere parametri a un blocco fisso}:
+la scoperta su \texttt{vqe\_trimer\_chain\_nobranch.py} (K=2 supera il tetto di K=1)
+generalizza un principio già visto per l'anello sotto DM, qui confermato anche a
+$D=0$.
+\end{itemize}
+
+\textbf{Nota.} \texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_catena.ipynb}} non è
+descritto in questo documento: pur essendo attualmente $D=0$-only, è lo stesso slot
+di notebook che per l'anello è poi diventato il confronto sistematico esteso al DM
+(\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}}). Verrà documentato,
+nella sua forma definitiva, insieme al resto della Fase 5 (VQE con DM) per la catena,
+non ancora affrontata.
+
+\end{document}

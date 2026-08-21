@@ -1,0 +1,255 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{VQE con termine DM — trimero ad anello}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase VQE \textbf{con} termine DM per il
+trimero ad anello (Fase 5) — mirror diretto, per questa fase, di
+\texttt{\seqsplit{trimero\_anello\_exact.pdf}} (Fase 3) e \texttt{\seqsplit{trimero\_anello\_vqe.pdf}}
+(Fase 4, senza DM). Due file: l'indagine mirata che precede e informa il confronto
+sistematico, esattamente come per il dimero
+(\texttt{\seqsplit{analisi\_rotazioni\_PMA.ipynb}}$\to$\texttt{\seqsplit{confronto\_ansatz\_entangler.ipynb}}).
+
+\textbf{Nota sullo scope.} \texttt{\seqsplit{confronto\_dm\_CORRETTO.png}}
+appartiene all'analisi teorica del DM (\texttt{analisi\_dm\_trimero.pdf}, già
+esistente nel progetto) — Opzione A vs B, regola di non-incrocio di von
+Neumann–Wigner — non al VQE, e non è trattato qui.
+\texttt{\seqsplit{animazione\_trimero\_isoscele\_BM.html}} ha lo stesso contenuto
+teorico, ma è comunque documentato più sotto (§ dedicata) per completezza del batch
+ricevuto in questa sessione.
+
+Per ciascun notebook: cosa fa, con quali verifiche è stato controllato in questa
+sessione, e cosa se ne può concludere — comprese le funzioni interne e come si usa
+il file. Seguono poi le sezioni per le figure, le cache e i due file di supporto
+(\texttt{trimer\_ring\_exact.py} e l'animazione) allegati.
+
+\section*{\texttt{trimer\_ring\_exact.py}}
+
+Il modulo di benchmark esatto dell'anello, dipendenza comune a entrambi i notebook
+di questa fase. Il file allegato in questo caricamento è identico byte per byte
+alla versione già verificata in \texttt{trimero\_anello\_exact.pdf} (Fase 3), dove
+sono descritte per intero tutte le funzioni interne, i self-test e la figura
+associata — non ripetuti qui in dettaglio.
+
+\textbf{Funzioni rilevanti per questa fase.} Oltre alle funzioni della Fase 3
+(\texttt{trimer\_hamiltonian}, \texttt{exact\_sweep}, \texttt{kambe\_states}, ecc.),
+i due notebook di questa fase usano specificamente:
+\begin{itemize}
+\item \texttt{critical\_field(J,\ Jp)} — il campo critico $b_c$, punto di lavoro
+teorico usato in \texttt{\seqsplit{analisi\_espressivita\_PMA\_anello.ipynb}}.
+\item \texttt{trimer\_hamiltonian\_dm(J,\ Jp,\ b,\ mode,\ D)} — l'Hamiltoniana con
+il termine DM, usata da entrambi i notebook per costruire lo sweep sotto DM
+(Opzione B).
+\item \texttt{ground\_state\_projector\_dm(J,\ Jp,\ b,\ mode,\ D,\ tol)} — il
+proiettore sul fondamentale (robusto a degenerazione) con DM, usato per calcolare
+la fidelity in entrambi i notebook.
+\end{itemize}
+
+\textbf{Verifiche.} Confermato identico al file già verificato (diff byte per
+byte, nessuna differenza) — nessuna riverifica necessaria in questa sessione.
+
+\textbf{Conclusione.} Nessun aggiornamento rispetto alla Fase 3: stesso modulo,
+stesso livello di maturità.
+
+\section*{\texttt{\seqsplit{animazione\_trimero\_isoscele\_BM.html}}}
+
+Visualizzazione interattiva: geometria del triangolo, spettro in funzione del
+campo, confronto fra Opzione A e Opzione B del termine DM (stesso contenuto
+teorico di \texttt{analisi\_dm\_trimero.pdf}). Nessun riferimento a VQE, fidelity, o
+agli ansatz RBS/$W$ in tutto il file — verificato cercando esplicitamente queste
+parole chiave nel sorgente HTML.
+
+\textbf{Considerazioni.} Appartiene concettualmente alla fase teorica del DM
+(confronto con \texttt{\seqsplit{analisi\_dm\_trimero.pdf}}), non a questa — documentato qui
+solo perché ricevuto in questo stesso caricamento insieme ai file VQE+DM.
+
+\textbf{Conclusione.} Nessuna sovrapposizione di contenuto con i due notebook VQE
+di questa fase: puramente illustrativo del quadro teorico che li precede.
+
+\section*{\texttt{\seqsplit{analisi\_espressivita\_PMA\_anello.ipynb}}}
+
+Indagine mirata: risponde alla domanda specifica dell'anello (la domanda "dove
+mettere le rotazioni" è già risolta nel dimero e semplicemente ereditata) — quale
+famiglia PMA (RBS o $W$) regge meglio sotto DM. Precede e informa il notebook di
+confronto sistematico (§2), non il contrario. Punto di lavoro: $b=b_c=2.4$, il
+campo critico \textbf{teorico} (Fase 1), non un punto scoperto da uno sweep
+successivo.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — il blocco RBS.
+\item \texttt{rbs\_block\_boxed(qc,\ phi,\ q0,\ q1)} — stessa fisica, gate
+elementari racchiusi in un riquadro (\texttt{qc.box()}) per la vista "tutti i gate"
+del selettore.
+\item \texttt{w\_block(qc,\ theta,\ q0,\ q1)} — il blocco $W$
+(\texttt{CNOT-}$R_y$\texttt{-CNOT}).
+\item \texttt{w\_block\_boxed(qc,\ theta,\ q0,\ q1)} — come sopra, versione
+riquadrata.
+\item \texttt{\seqsplit{pma\_1q\_trimer(nparam,\ block)}},
+\texttt{\seqsplit{pma\_2q\_trimer\_exact(nparam,\ block)}},
+\texttt{\seqsplit{pma\_2q\_trimer\_cyclic(K,\ block)}} — le tre famiglie di ansatz,
+parametrizzate sul tipo di blocco (RBS o $W$).
+\item \texttt{mostra\_circuito(nome,\ modalita)} — il selettore interattivo (menu
+a tendina su tutti e 10 gli ansatz + toggle forma compatta/tutti i gate).
+\item \texttt{max\_fidelity(qc,\ P0,\ n\_restarts,\ seed)} — ottimizzazione diretta
+della fidelity (non dell'energia), usata per la verifica dedicata — non il VQE
+standard, per escludere che un residuo osservato sia solo un artefatto della
+funzione di costo.
+\end{itemize}
+
+\textbf{Come si usa.} Notebook, non libreria: si esegue per intero. Richiede
+\texttt{trimer\_ring\_exact.py} nella stessa cartella e la cache
+\texttt{espressivita\_anello\_cache.json} (20 punti: 10 ansatz $\times$ 2 condizioni
+$D0$/$DM$, tutti a $b=b_c$) — se assente, i punti vengono calcolati automaticamente
+in circa 1 secondo per punto (20 restart ciascuno).
+
+\textbf{Verifiche.} Rieseguito per intero in questa sessione con la cache fornita:
+zero errori, tutti i valori "(da cache)" per entrambe le sezioni ($D=0$ e DM). I
+valori confermati: a $D=0$, $\mathcal F=1$ esatto per tutte e 10 le famiglie; sotto
+DM (Opzione B, $D=0.15$), \texttt{RBS-1q.6}$=0.999890$, \texttt{RBS-2q.6/9/2qC.K1}
+$=0.999911$ (identico per le tre varianti, segno di tetto strutturale vero non di
+convergenza incompleta), \texttt{W-1q.6}$=0.868245$ (il valore peggiore), tutte le
+altre famiglie $=1.000000$ esatto.
+
+\textbf{Conclusione.} Il candidato canonico proposto qui, \texttt{W-2q.6}, è poi
+confermato su tutta la griglia in $b$ (non solo al singolo punto $b_c$) nel
+notebook di confronto sistematico (§2).
+
+\section*{\texttt{espressivita\_anello\_cache.json}}
+
+Cache dei risultati usata dal notebook precedente: 20 chiavi, formato
+\texttt{"fid20|tag|nome\_ansatz"} (\texttt{tag}$\in\{$\texttt{D0},\texttt{DM}$\}$),
+10 ansatz $\times$ 2 condizioni, tutte a $b=b_c$ con 20 restart. È la cache
+effettivamente puntata da \texttt{CACHE\_PATH} nel notebook.
+
+\section*{\texttt{plateau\_dm\_ring\_cache.json} — file obsoleto}
+
+\textbf{Non è la cache usata dal notebook finale.} Formato di chiave incompatibile
+(\texttt{"grid|nome\_ansatz|b"}, con valori di $b$ su tutta la griglia, non solo a
+$b_c$) e zero sovrapposizione con le chiavi di
+\texttt{\seqsplit{espressivita\_anello\_cache.json}} — verificato esplicitamente in
+questa sessione. È l'artefatto di una versione precedente del notebook (quando era
+strutturato come sweep su tutta la griglia $b$ per isolare il punto peggiore,
+prima di essere riorganizzato attorno al singolo punto $b_c$ teorico).
+\textbf{Candidato per l'eliminazione}: non serve né al notebook attuale né a questo
+documento.
+
+\section*{\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}}}
+
+Notebook di confronto sistematico: 15 ansatz (10 basati su blocco RBS, 5 su blocco
+$W$), sweep completo su griglia in $b$, sia a $D=0$ sia con DM (Opzione B,
+$D=0.15$). Importa la conclusione del notebook precedente (il candidato
+\texttt{W-2q.6}), non il contrario — stessa direzione di dipendenza già stabilita
+per il dimero.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — il blocco RBS, rotazione di Givens
+reale.
+\item (blocco $W$ analogo, definito nella stessa cella di setup insieme alle
+famiglie di ansatz — vedi \texttt{ANSATZE}/\texttt{ANSATZE\_BOXED} nel codice).
+\item \texttt{\_energy(params,\ ansatz,\ hamiltonian,\ estimator)} — la funzione
+obiettivo per \texttt{\seqsplit{scipy.optimize.minimize}}.
+\item \texttt{compute\_missing(tag,\ dm\_mode,\ D)} — calcola solo i punti mancanti
+in cache (per tag \texttt{"D0"} o \texttt{"DM"}), salvando dopo ogni punto.
+\item \texttt{show(qc,\ title)} — disegna un circuito con conteggio parametri.
+\item \texttt{mostra\_circuito(nome,\ modalita)} — il selettore interattivo (menu a
+tendina + toggle forma compatta/tutti i gate).
+\item \texttt{get\_series(tag,\ name,\ key)} — estrae dalla cache la serie di
+valori (fidelity o altro) per un ansatz e un tag.
+\item \texttt{plot\_grid(tag,\ title)} — la griglia 3$\times$5 di pannelli fidelity
+vs $b$, uno per ansatz.
+\end{itemize}
+
+\textbf{Come si usa.} Notebook, non libreria: si esegue per intero
+(\texttt{Run All}). Richiede \texttt{trimer\_ring\_exact.py} nella stessa cartella e
+la cache \texttt{\seqsplit{trimer\_ansatz\_sweep\_cache\_v2.json}} (600 punti già
+calcolati: 15 ansatz $\times$ 16 valori di $b$ $\times$ 2 tag $D0$/$DM$ $-$
+eccedenze) — se la cache manca o è incompleta, i punti mancanti vengono calcolati
+automaticamente (più lento, minuti anziché secondi).
+
+\textbf{Verifiche.} Rieseguito per intero in questa sessione: "0 punti nuovi
+calcolati" per entrambi i tag (conferma che tutti i 600 punti provengono dalla
+cache fornita), zero errori. Le due figure prodotte
+(\texttt{\seqsplit{confronto\_ansatz\_trimero\_anello\_fidelity\_D0.png}} e
+\texttt{\_DM.png}) rigenerate e confrontate pixel per pixel con quelle allegate:
+identiche — descritte in dettaglio nelle rispettive sezioni più sotto.
+
+\textbf{Conclusione.} A $D=0$ tutte le famiglie con 6+ parametri raggiungono
+$\mathcal F=1$ esatto. Con DM, il quadro cambia: la famiglia \texttt{RBS-2q}
+(qualunque conteggio di parametri) resta bloccata a un tetto $\mathcal
+F\approx0.9999$; la famiglia \texttt{W-2q} raggiunge invece $\mathcal F=1$ esatto.
+\texttt{RBS-1q.6} e \texttt{W-1q.6} mostrano entrambi un crollo di fidelity vicino a
+$b_c$ (più severo per \texttt{W-1q.6}), ma \texttt{RBS-1q.9} e \texttt{W-1q.9}
+recuperano $\mathcal F=1$ esatto con 9 parametri. Il candidato canonico per il
+seguito, sotto DM, è \texttt{W-2q.6}: meno parametri e meno gate della famiglia
+RBS-2q, fidelity esatta dove RBS-2q resta bloccata.
+
+\section*{\texttt{\seqsplit{trimer\_ansatz\_sweep\_cache\_v2.json}}}
+
+Cache dei risultati usata dal notebook precedente: 600 chiavi, formato
+\texttt{"tag|nome\_ansatz|b"}, 15 ansatz $\times$ 16 valori di $b$ $\times$ 2 tag
+($D0$, $DM$). Rimappatura di una cache precedente (nomi \texttt{PMA-*}
+$\to$\texttt{RBS-*}) poi estesa con i punti per gli ansatz $W$ — verificato in
+questa sessione: "0 punti nuovi calcolati" all'esecuzione, tutti i 600 punti già
+presenti.
+
+\section*{\texttt{\seqsplit{confronto\_ansatz\_trimero\_anello\_fidelity\_D0.png}}}
+
+Griglia 3$\times$5: fidelity vs $b$ per tutti e 15 gli ansatz, a $D=0$. Tutte le
+famiglie con 6+ parametri restano a $\mathcal F=1$ su tutto l'asse; solo gli ansatz
+a 3 parametri (\texttt{RBS-1q.3}, \texttt{RBS-2q.3}) falliscono ovunque, e l'ansatz
+generico \texttt{A} mostra il tipico crollo sotto $b_c$ già visto nel dimero.
+Rigenerata dal notebook precedente e confrontata pixel per pixel con quella
+allegata: identica.
+
+\section*{\texttt{\seqsplit{confronto\_ansatz\_trimero\_anello\_fidelity\_DM.png}}}
+
+Stessa griglia, con DM Opzione B ($D=0.15$) attivo. Il pannello \texttt{W-1q.6} è
+l'unico a mostrare un crollo severo e localizzato (una "buca" stretta attorno a
+$b\in[2.4,3.4]$, minimo $\mathcal F\approx0.02$) — visivamente il caso più
+drammatico di tutta la griglia, anche se non il solo a discostarsi da $\mathcal
+F=1$ (\texttt{RBS-2q} resta leggermente sotto 1 ovunque, ma la deviazione non è
+visibile a questa scala del grafico). Rigenerata e confrontata pixel per pixel con
+quella allegata: identica.
+
+\section*{Conclusione generale}
+
+La fase VQE con DM per l'anello è completa e verificata end-to-end in questa
+sessione (non solo per coerenza di output pre-esistenti, a differenza di quanto
+accaduto per l'analogo del dimero). Il risultato centrale — \texttt{W-2q.6} supera
+\texttt{RBS-2q} sotto DM — è confermato sia al singolo punto $b_c$
+(§\texttt{\seqsplit{analisi\_espressivita\_PMA\_anello.ipynb}}) sia su tutta la
+griglia in $b$ (§\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}}),
+con la stessa direzione di dipendenza (indagine $\to$ confronto) già stabilita per
+il dimero. Le due cache attive (\texttt{espressivita\_anello\_cache.json},
+\texttt{\seqsplit{trimer\_ansatz\_sweep\_cache\_v2.json}}) rendono entrambi i
+notebook riproducibili in pochi secondi.
+
+Dei dieci file allegati in questa fase, questo documento ne copre nove:
+\texttt{trimer\_ring\_exact.py} (identico alla versione già in
+\texttt{\seqsplit{trimero\_anello\_exact.pdf}}), l'animazione HTML (contenuto
+teorico, documentata qui per completezza), i due notebook, le due cache attive e le
+due figure. Solo \texttt{confronto\_dm\_CORRETTO.png} resta fuori, appartenendo
+esclusivamente all'analisi teorica del DM già pubblicata in
+\texttt{analisi\_dm\_trimero.pdf}. \texttt{plateau\_dm\_ring\_cache.json} è
+risultato essere un file obsoleto, non più usato dal notebook finale — candidato
+per l'eliminazione dalla cartella di lavoro.
+
+\end{document}

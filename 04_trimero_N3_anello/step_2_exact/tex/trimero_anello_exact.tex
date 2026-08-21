@@ -1,0 +1,158 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Benchmark esatto (Fase 3) — trimero ad anello}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i moduli di benchmark esatto per il trimero di spin-1/2
+($N=3$) in topologia ad anello (triangolo isoscele). Sono i moduli su cui tutto il
+resto del lavoro (VQE, e in futuro Trotter e correlazioni) si appoggia senza mai
+modificarli: la diagonalizzazione numerica (\texttt{eigh}) è il metro di misura con
+cui ogni risultato variazionale viene giudicato, esattamente come
+\texttt{dimer\_exact.py} lo è per il dimero.
+
+Per ciascun file: cosa fa, con quali verifiche è stato controllato in questa sessione,
+e cosa se ne può concludere — per i moduli \texttt{.py}, anche le funzioni interne e
+come si usa il file.
+
+\textbf{Nota.} \texttt{verifica.py} (ora rinominato \texttt{verifica\_anello.py}) è
+stato spostato nel documento dedicato \texttt{trimero\_anello\_verifiche.pdf}, insieme
+al suo gemello \texttt{verifica\_stati\_anello.py} — non è più descritto qui.
+
+\section*{\texttt{trimer\_ring\_exact.py}}
+
+Modulo di benchmark: Hamiltoniana come \texttt{SparsePauliOp}
+($H=J\,\boldsymbol\sigma_1\cdot\boldsymbol\sigma_2+J'(\boldsymbol\sigma_2\cdot\boldsymbol\sigma_3+\boldsymbol\sigma_3\cdot\boldsymbol\sigma_1)+b\sum_iZ_i$),
+spettro analitico via decomposizione di Kambe (simmetria di scambio
+$1\leftrightarrow2$, conservazione di $\mathbf S_{12}^2$), gli otto stati di Kambe
+espliciti in base computazionale, il campo critico $b_c(J,J')$ nei diversi regimi di
+segno, e le funzioni per il termine DM (\texttt{trimer\_hamiltonian\_dm},
+\texttt{exact\_sweep\_dm}, \texttt{ground\_state\_projector\_dm} — disponibili nel
+modulo esatto ma non usate nella fase VQE senza DM).
+
+\textbf{Verifiche.} Otto self-test a precisione macchina (spettro vs formula analitica
+su punti casuali, stati di Kambe come autostati esatti verificati contro l'operatore
+Qiskit, ortonormalità, numeri quantici, simmetria $P_{12}$, proiettore sul
+fondamentale, campo critico teorico vs numerico, magnetizzazione mediata sul
+sottospazio degenere) più tre self-test dedicati al DM. Rieseguiti in questa sessione:
+tutti superati, incluso dopo la correzione applicata a $\langle M_z\rangle(b{=}0)$
+(media sul sottospazio degenere, non un singolo autovettore arbitrario).
+
+\textbf{Considerazioni.} Il file ha subito una correzione reale durante il lavoro:
+prima della sessione corrente, $\langle M_z\rangle$ a $b=0$ (fondamentale degenere)
+veniva calcolato su un singolo autovettore restituito da \texttt{numpy.linalg.eigh},
+scelto arbitrariamente fra quelli del sottospazio degenere — il salto apparente da
+$+0.5$ a $-0.5$ osservato in una vecchia figura era un artefatto numerico, non un
+effetto fisico. Il salto \emph{vero} (fisico, discontinuità del ground state) è solo
+al campo critico $b_c$.
+
+\textbf{Conclusione.} Modulo maturo, verificato più volte in sessioni diverse con
+esito sempre positivo. È la base condivisa da ogni file VQE dell'anello.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{trimer\_hamiltonian(J,\ Jp,\ b)} — l'Hamiltoniana completa come
+\texttt{SparsePauliOp}.
+\item \texttt{magnetization\_operator()} — $M_z=(Z_1+Z_2+Z_3)/2$, convenzione di
+spin ($s=\sigma/2$).
+\item \texttt{S12\_squared\_operator()} — il Casimir della coppia base,
+$S_{12}^2=\tfrac32 I+\tfrac12\boldsymbol\sigma_1\cdot\boldsymbol\sigma_2$.
+\item \texttt{S\_total\_squared\_operator()} — il Casimir totale $S^2$.
+\item \texttt{analytic\_eigenvalues(J,\ Jp,\ b)} — le otto energie esatte
+$E(S_{12},S,M)=E_\text{blocco}+2bM$, ordinate.
+\item \texttt{critical\_field(J,\ Jp)} — il campo critico $b_c$ dell'incrocio del
+fondamentale, a seconda di chi è il ground state a $b=0$.
+\item \texttt{kambe\_states()} — dizionario \texttt{\{(blocco, M): vettore a 8
+componenti\}} con gli otto stati espliciti.
+\item \texttt{kambe\_energy(J,\ Jp,\ b,\ block,\ M)} — l'energia analitica del
+singolo stato \texttt{(block, M)}.
+\item \texttt{exact\_sweep(b\_values,\ J,\ Jp)} — diagonalizza $H$ su una griglia di
+campo $b$, restituisce spettro completo e osservabili del fondamentale.
+\item \texttt{ground\_state\_projector(J,\ Jp,\ b,\ tol)} — il proiettore sul
+multipletto fondamentale, robusto a eventuale degenerazione.
+\item \texttt{dm\_term(i,\ j,\ D)} — il termine DM $D(X_iZ_j-Z_iX_j)$ su una coppia
+di siti (stessa forma già validata per il dimero).
+\item \texttt{trimer\_hamiltonian\_dm(J,\ Jp,\ b,\ mode,\ D)} — l'Hamiltoniana con
+il termine DM aggiunto, secondo l'opzione scelta (\texttt{mode}).
+\item \texttt{dm\_min\_gap(J,\ Jp,\ mode,\ D,\ \seqsplit{search\_half\_width})} — il
+gap vero fra i due autovalori più bassi, minimizzato su tutto $b$ (non calcolato a un
+valore di campo fissato — la stessa distinzione metodologica cruciale di
+\texttt{analisi\_dm\_trimero.pdf}).
+\item \texttt{exact\_sweep\_dm(b\_values,\ J,\ Jp,\ mode,\ D)} — come
+\texttt{exact\_sweep}, ma con l'Hamiltoniana DM.
+\item \texttt{ground\_state\_projector\_dm(J,\ Jp,\ b,\ mode,\ D,\ tol)} — come
+\texttt{ground\_state\_projector}, ma con l'Hamiltoniana DM.
+\item \texttt{\_self\_test()} — gli otto self-test base, eseguiti automaticamente se
+il file viene lanciato come script.
+\item \texttt{\_self\_test\_dm()} — i tre self-test dedicati al DM.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from trimer\_ring\_exact import
+trimer\_hamiltonian, exact\_sweep, \ldots} — è la dipendenza comune a tutti i moduli
+VQE dell'anello. Come script standalone: \texttt{python3 trimer\_ring\_exact.py}
+esegue entrambi i blocchi di self-test e rigenera la figura
+\texttt{trimer\_ring\_exact.png}.
+
+\section*{\texttt{trimer\_ring\_exact.png}}
+
+Figura generata dal modulo precedente: spettro completo e magnetizzazione del
+fondamentale, con annotazione esplicita che distingue il punto convenzionale $b=0$
+(fondamentale degenere, valore di $\langle M_z\rangle$ dipendente dalla convenzione di
+media) dall'incrocio fisico vero a $b_c$ (discontinuità reale). Rigenerata dopo la
+correzione sopra descritta.
+
+\section*{\texttt{teoria\_trimero\_isoscele.pdf}}
+
+Documento teorico: dimostrazione (non solo enunciato) delle identità
+$\sigma_1\cdot\sigma_2=2P_{12}-I$ e $S_{12}^2=I+P_{12}$, prova esplicita che
+$[H,S_{12}^2]=0 \Leftrightarrow J'_{23}=J'_{31}$, decomposizione di Kambe con conteggio
+dei multipletti, spettro chiuso, mappa dei segni completa nel piano $(J,J')$, campo
+critico nei diversi regimi, dimostrazione rigorosa (non solo numerica) che gli
+incroci sono veri, non anticrossing.
+
+\textbf{Conclusione.} È la sorgente teorica primaria da cui discende tutto il resto:
+\texttt{trimer\_ring\_exact.py} implementa esattamente quanto derivato qui.
+
+\section*{\texttt{derivazione\_stati\_kambe\_trimero.pdf}}
+
+Derivazione esplicita degli otto autostati nella base computazionale
+$|q_1q_2q_3\rangle$, via operatore di abbassamento $S_-$ per il blocco $A$ e
+ortogonalità per il blocco $B$. È il documento da cui \texttt{kambe\_states()} in
+\texttt{trimer\_ring\_exact.py} è stato trascritto in codice, e da cui deriva
+\seqsplit{\texttt{\_prepare\_initial\_state}} nei moduli VQE (i pesi
+$1/\sqrt6,1/\sqrt6,-\sqrt{2/3}$ del blocco $B$ vengono direttamente da qui).
+
+\textbf{Conclusione.} Stesso metodo poi riusato, con gli adattamenti necessari, per
+derivare gli otto stati della catena aperta (documento gemello per la catena).
+
+\section*{\texttt{animazione\_trimero\_isoscele.html}}
+
+Visualizzazione interattiva: geometria del triangolo, mappa di fase 2D nel piano
+$(J,J')$, spettro con il fondamentale colorato per blocco. Utile per l'intuizione
+qualitativa (dove si sposta il fondamentale cambiando $J,J'$), non per i numeri
+precisi (quelli vengono dal modulo esatto).
+
+\section*{Conclusione generale}
+
+Il modulo esatto dell'anello ha lo stesso livello di rigore già stabilito per il
+dimero: self-test a precisione macchina, verifica indipendente su griglia estesa,
+correzione tracciata quando trovata (media sul sottospazio degenere). È pronto a
+supportare tutto il lavoro VQE già costruito e le fasi ancora da affrontare (Trotter,
+correlazioni dinamiche).
+
+\end{document}

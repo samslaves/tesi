@@ -1,0 +1,210 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{VQE senza termine DM — trimero ad anello}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase VQE \textbf{senza} termine DM per il
+trimero ad anello — mirror diretto, per $N=3$, di quanto fatto per il dimero
+(\texttt{vqe\_dimer.py}). Un ansatz PMA con branching e blocco RBS (produzione
+principale), lo stesso con blocco $W$ (mirror dell'ansatz "originale" del dimero), un
+ansatz PMA senza branching, due notebook "spiegato" (guide interattive).
+
+\textbf{Scope.} Tutti i file qui descritti evitano deliberatamente il termine DM. Per
+l'anello esiste già del materiale di VQE con DM
+(\texttt{\seqsplit{analisi\_espressivita\_PMA\_anello.ipynb}}, e
+\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}}, che estende questi
+stessi ansatz aggiungendo lo sweep con DM Opzione B): non rientra in questo
+documento, e le scelte qui descritte non dipendono da esso. Per i moduli
+\texttt{.py}, oltre a descrizione/verifiche/conclusione, sono elencate anche le
+funzioni interne e come si usa il file.
+
+\section*{\texttt{vqe\_trimer\_ring.py} + \texttt{vqe\_trimer\_ring.png}}
+
+Modulo di produzione principale: ansatz HA (hardware-efficient, 9 parametri) e PMA con
+blocco RBS e branching esplicito (stato iniziale scelto fra i multipletti di Kambe a
+seconda che $b$ sia sopra o sotto $b_c(J,J')$), 6 parametri a $K=1$. Metodologia di
+ottimizzazione a due stadi (multistart $R=6$, COBYLA + polish L-BFGS-B) per mandato
+del relatore.
+
+\textbf{Verifiche.} Self-test (ansatz a parametri nulli riproduce lo stato di Kambe
+atteso, errore $1.1\times10^{-15}$) e script principale completo rieseguiti in questa
+sessione: fidelity $\mathcal F=1$ esatto su tutti i 10 punti della griglia standard, per
+entrambi gli ansatz. Figura rigenerata e confrontata byte per byte con quella già in
+possesso: identica.
+
+\textbf{Conclusione.} Modulo maturo. Il vantaggio del PMA (6 parametri) su HA (9
+parametri) a parità di fidelity esatta è la stessa lezione già vista nel dimero,
+confermata su un sistema frustrato a 3 corpi.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{make\_ha\_ansatz(reps)} — l'ansatz hardware-efficient generico
+($R_y$+CZ, $3(\text{reps}{+}1)$ parametri).
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — il blocco RBS (rotazione di Givens
+reale), stessa implementazione validata per $N=2$.
+\item \texttt{\_select\_target\_block(J,\ Jp,\ b)} — sceglie quale blocco di Kambe
+(e quale $M$) è il fondamentale a questo $(J,J',b)$: $B$ o $C$ sotto $b_c$ (a
+seconda del segno/rapporto di $J,J'$), $A$ sopra.
+\item \texttt{\_prepare\_initial\_state(qc,\ block,\ M)} — il circuito che prepara
+lo stato di Kambe scelto: banale (solo $X$) per $C$ e per $A$ estremo, generico
+(\texttt{prepare\_state}) per $B$ e $A$ intermedio.
+\item \texttt{make\_pma\_ansatz(J,\ Jp,\ b,\ K)} — l'ansatz PMA completo: stato
+iniziale + $K$ layer di RBS sui tre bond + $R_y$ indipendenti finali.
+\item \texttt{\_energy(params,\ ansatz,\ hamiltonian,\ estimator)} — la funzione
+obiettivo per \texttt{\seqsplit{scipy.optimize.minimize}} (valore atteso dell'energia).
+\item \texttt{run\_vqe(J,\ Jp,\ b,\ ansatz\_type,\ reps,\ K,\ n\_restarts,\ seed,\
+dm\_mode,\ D)} — VQE completo a un singolo punto: multistart, ottimizzazione a due
+stadi, calcolo di fidelity e osservabili contro il benchmark esatto. Gli argomenti
+\texttt{dm\_mode}/\texttt{D} esistono per compatibilità futura ma restano ai valori
+di default (nessun DM) in questo documento.
+\item \texttt{vqe\_sweep(b\_values,\ J,\ Jp,\ ansatz\_type,\ reps,\ K,\
+n\_restarts,\ seed,\ verbose)} — chiama \texttt{run\_vqe} su una griglia di campi
+$b$, restituisce la lista dei risultati.
+\item \texttt{\_self\_test()} — verifica che l'ansatz a parametri nulli riproduca
+esattamente lo stato di Kambe atteso.
+\item \texttt{\_plot\_row(axes,\ \ldots)}, \texttt{plot\_grid(all\_results,\ J,\
+base\_path)} — costruiscono la figura a 2 righe $\times$ 4 colonne (energia, errore,
+fidelity, magnetizzazione) e la salvano in \texttt{.png}/\texttt{.pdf}.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_trimer\_ring import
+run\_vqe, vqe\_sweep, \ldots}. Come script standalone: \texttt{python3
+vqe\_trimer\_ring.py} esegue il self-test, poi lo sweep completo per HA e PMA
+($n_b=10$, $R=6$) e salva \texttt{vqe\_trimer\_ring.png}/\texttt{.pdf}. Dipende da
+\texttt{trimer\_ring\_exact.py} nella stessa cartella.
+
+\section*{\texttt{vqe\_trimer\_ring\_W.py} + \texttt{vqe\_trimer\_ring\_W.png}}
+
+Variante con il gate $W_{ij}(\theta)=\text{CNOT}\cdot R_y(\theta)\cdot\text{CNOT}$ al
+posto di RBS — mirror diretto dell'ansatz "originale" del dimero
+(\texttt{vqe\_dimer.py}), stessa struttura a branching. 3 parametri a $K=1$ (contro i 6
+della versione RBS: nessun layer finale di $R_y$ indipendenti).
+
+\textbf{Verifiche.} Il file non aveva uno script principale eseguibile
+(\texttt{\_\_main\_\_}) né una figura associata: entrambi mancanti a inizio sessione.
+Costruito e rieseguito uno script equivalente a quello di \texttt{vqe\_trimer\_ring.py}
+(stesso punto di lavoro, stesso $R=6$): fidelity $\mathcal F=1$ esatto ovunque, in
+diversi punti con errore energetico esattamente nullo ($10^{-16}$ o $0.0$).
+
+\textbf{Conclusione.} Colma un buco reale nella produzione: prima di questa sessione,
+la figura di riferimento per il gate $W$ sull'anello semplicemente non esisteva.
+
+\textbf{Funzioni interne.} Stessa struttura di \texttt{vqe\_trimer\_ring.py}, con
+queste differenze:
+\begin{itemize}
+\item \texttt{w\_block(qc,\ theta,\ q0,\ q1)} — il blocco $W$ (CNOT-$R_y$-CNOT) al
+posto di \texttt{rbs\_block}.
+\item \texttt{make\_pma\_ansatz(J,\ Jp,\ b,\ K)} — qui non ha il layer finale di
+$R_y$ indipendenti: solo $K$ blocchi $W$ sui tre bond, $3K$ parametri totali.
+\item \texttt{make\_pma\_ansatz\_forced(branch,\ K)} — variante con il ramo
+iniziale (\texttt{"basso"} o \texttt{"alto"}) fissato indipendentemente da $b$, per
+l'esperimento "cosa succede se si forza un ramo ovunque" (usato nel notebook
+\texttt{\_spiegato}, non nello script principale).
+\item \texttt{run\_vqe\_forced(J,\ Jp,\ b,\ branch,\ K,\ n\_restarts,\ seed)} — il
+VQE con il ramo forzato, invece della selezione automatica.
+\item Tutte le altre funzioni (\texttt{make\_ha\_ansatz}, \texttt{\_select\_target\_block},
+\texttt{\_prepare\_initial\_state}, \texttt{\_energy}, \texttt{run\_vqe},
+\texttt{\_self\_test}, \texttt{vqe\_sweep}, \texttt{\_plot\_row}) hanno lo stesso
+ruolo della versione RBS.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_trimer\_ring\_W import
+run\_vqe, vqe\_sweep, \ldots}. A differenza di \texttt{vqe\_trimer\_ring.py}, questo
+file non ha un blocco \texttt{\_\_main\_\_}: per riprodurre la figura serve uno
+script esterno che chiami \texttt{\_self\_test()} seguito da \texttt{vqe\_sweep} per
+\texttt{"HA"} e \texttt{"PMA"} e da un plotting equivalente a \texttt{plot\_grid} (è
+esattamente ciò che è stato fatto in questa sessione per generare
+\texttt{vqe\_trimer\_ring\_W.png}). Dipende da \texttt{trimer\_ring\_exact.py}.
+
+\section*{\texttt{vqe\_trimer\_ring\_nobranch.py}}
+
+Ansatz PMA \textbf{senza} branching: stato iniziale fisso ($X$ su un solo qubit,
+indipendente da $J,J',b$), la scelta del settore emerge dall'ottimizzazione dei
+parametri anziché da una preparazione diversa per regime. Stesso conteggio di
+parametri della versione a branching a $K=1$ (6), ma verificato \textbf{più robusto}
+al termine DM (nota: questo confronto specifico è materiale della fase con DM, citato
+qui solo come motivazione storica del file).
+
+\textbf{Conclusione.} A $D=0$ (lo scope di questo documento) raggiunge $\mathcal F=1$
+esatto su tutto l'asse $b$, incluso $b_c$ degenere — verificato nella sessione in cui è
+stato prodotto.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — stesso blocco RBS già validato in
+\texttt{vqe\_trimer\_ring.py}.
+\item \texttt{make\_ha\_ansatz(reps)} — l'ansatz hardware-efficient, importato
+localmente da \texttt{\seqsplit{qiskit.circuit.library}} dentro la funzione stessa.
+\item \texttt{pma\_2q\_trimer\_nobranch(K)} — l'ansatz senza branching: $X$ fisso su
+un qubit, poi $K$ cicli di [RBS sui tre bond + $R_y$ indipendenti sui tre qubit],
+$6K$ parametri.
+\item \texttt{\_energy(params,\ ansatz,\ hamiltonian,\ estimator)} — stessa funzione
+obiettivo degli altri moduli.
+\item \texttt{run\_vqe(J,\ Jp,\ b,\ K,\ n\_restarts,\ seed,\ dm\_mode,\ D)} — VQE a
+un punto, interfaccia analoga agli altri moduli ma senza \texttt{ansatz\_type}/\texttt{reps}
+(qui c'è solo questo ansatz).
+\item \texttt{vqe\_sweep(b\_values,\ J,\ Jp,\ K,\ n\_restarts,\ seed,\ dm\_mode,\
+D,\ verbose)} — chiama \texttt{run\_vqe} su una griglia di $b$.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_trimer\_ring\_nobranch import
+run\_vqe, vqe\_sweep}. Nessun blocco \texttt{\_\_main\_\_}, nessuna funzione di
+self-test dedicata (a differenza degli altri due moduli) — la verifica più diretta è
+chiamare \texttt{run\_vqe} a $D=0$ su un punto qualsiasi e controllare che
+\texttt{fidelity} sia $1.0$. Dipende da \texttt{trimer\_ring\_exact.py}.
+
+\section*{\texttt{vqe\_trimer\_ring\_spiegato.ipynb}}
+
+Guida interattiva a \texttt{vqe\_trimer\_ring.py}: principio variazionale su matrice
+$8\times8$, blocco RBS, ansatz HA vs PMA, self-test, VQE end-to-end su singolo punto e
+su griglia ridotta.
+
+\textbf{Verifiche.} Eseguito per intero in questa sessione (33 celle, zero errori):
+tutti i self-test a precisione macchina.
+
+\textbf{Considerazioni.} Contiene anche una sezione di esplorazione del crollo del PMA
+sotto DM (§8.3) — fuori dallo scope di questo documento, ma non separata in un file a
+sé: il notebook è quindi, a rigore, a cavallo fra le due fasi.
+
+\section*{\texttt{vqe\_trimer\_ring\_W\_spiegato.ipynb}}
+
+Guida interattiva a \texttt{vqe\_trimer\_ring\_W.py}: mirror sezione per sezione di
+\texttt{vqe\_dimer\_spiegato.ipynb}, stessa struttura, gate $W$ invece di RBS.
+
+\textbf{Verifiche.} Eseguito per intero in questa sessione (29 celle, zero errori):
+stato iniziale verificato (overlap $=1.000000$), PMA a 3 parametri esatto a $D=0$.
+
+\textbf{Considerazioni.} Stessa osservazione del notebook precedente: contiene anche
+una sezione con DM (§7), fuori scope qui.
+
+\section*{Conclusione generale}
+
+L'anello ha una famiglia completa di file per la fase VQE senza DM (produzione RBS,
+produzione $W$, produzione senza branching, due guide interattive), con lo stesso
+livello di verifica (self-test più esecuzione end-to-end, non solo lettura del
+codice) già stabilito per il dimero.
+
+\textbf{Nota.} \texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}} e
+\texttt{\seqsplit{analisi\_espressivita\_PMA\_anello.ipynb}} non sono descritti in questo
+documento: il primo, pur costruito su questi stessi ansatz, include anche lo sweep
+con DM Opzione B ed è quindi materiale della fase VQE con DM; il secondo è
+interamente un'indagine sotto DM. Entrambi verranno documentati insieme al resto
+della Fase 5 (VQE con DM), non ancora affrontata in modo sistematico.
+
+\end{document}

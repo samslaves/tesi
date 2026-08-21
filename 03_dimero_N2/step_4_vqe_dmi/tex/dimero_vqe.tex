@@ -1,0 +1,171 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{VQE (con e senza termine DM) — dimero}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase VQE per il dimero di spin-1/2 ($N=2$).
+
+\textbf{Nota sullo scope, a differenza dei documenti gemelli di anello e catena.}
+Per i due trimeri il termine DM è stato aggiunto in una fase successiva e ben
+distinta (i moduli VQE senza DM hanno \texttt{dm\_mode}/\texttt{D} come parametri
+opzionali con default che li escludono, e gli script principali usano solo $D=0$).
+Per il dimero questa separazione \textbf{non esiste}: il DM è stato parte integrante
+del lavoro fin dall'inizio, e l'output standard di \texttt{vqe\_dimer.py} è già il
+confronto a quattro pannelli HA/PMA $\times$ $D{=}0$/$D{=}0.2$. Non c'è quindi un
+sottoinsieme "senza DM" da isolare senza snaturare il contenuto — questo documento
+copre perciò tutta la fase VQE del dimero in un unico file, non sdoppiato.
+
+Per ciascun file: cosa fa, con quali verifiche è stato controllato in questa sessione,
+e cosa se ne può concludere — per il modulo \texttt{.py}, anche le funzioni interne e
+come si usa il file.
+
+\section*{\texttt{vqe\_dimer.py} + \texttt{vqe\_dimer.png}}
+
+Modulo di produzione principale: ansatz HA (hardware-efficient, 6 parametri) e PMA
+(1 parametro), entrambi confrontati a $D=0$ e $D=0.2$ nello stesso sweep — quattro
+righe della griglia risultante (HA $D{=}0$, HA $D{=}0.2$, PMA $D{=}0$, PMA $D{=}0.2$).
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{make\_ha\_ansatz(reps)} — l'ansatz hardware-efficient, $2(\text{reps}{+}1)$
+parametri.
+\item \texttt{make\_pma\_ansatz(b,\ J,\ K)} — l'ansatz fisicamente motivato, blocco
+$W_{01}(\theta)$ (mirror dell'ansatz "originale" di Crippa et al.), $K$ parametri.
+\item \texttt{\_energy(params,\ ansatz,\ hamiltonian,\ estimator)} — la funzione
+obiettivo per \texttt{\seqsplit{scipy.optimize.minimize}}.
+\item \texttt{run\_vqe(b,\ J,\ D,\ ansatz\_type,\ reps,\ K,\ n\_restarts,\ method,\
+seed)} — VQE a un singolo punto, con $D$ come parametro pieno (non opzionale
+escluso): qui il DM è sempre potenzialmente attivo, non un'aggiunta successiva.
+\item \texttt{vqe\_sweep(b\_values,\ J,\ D,\ ansatz\_type,\ reps,\ K,\ n\_restarts,\
+method,\ seed,\ verbose)} — chiama \texttt{run\_vqe} su una griglia di campi $b$.
+\item \texttt{\_plot\_row(axes,\ results,\ J,\ row\_label,\ color)} — disegna una
+riga della griglia (energia, errore, fidelity, magnetizzazione).
+\item \texttt{plot\_grid(all\_results,\ J,\ base\_path)} — la griglia completa
+4 righe $\times$ 4 colonne, salvata in \texttt{.png}/\texttt{.pdf}.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from vqe\_dimer import run\_vqe,
+vqe\_sweep, \ldots} — è la dipendenza comune a \texttt{vqe\_dimer\_spiegato.ipynb} e
+a \texttt{vqe\_ground\_state\_test2.ipynb}. Come script standalone: \texttt{python3
+vqe\_dimer.py} esegue lo sweep completo per le quattro configurazioni e salva
+\texttt{vqe\_dimer.png}/\texttt{.pdf}. Dipende da \texttt{dimer\_exact.py} nella
+stessa cartella.
+
+\textbf{Verifiche.} Rieseguito per intero in questa sessione: fidelity $\mathcal
+F=1$ esatto per HA (entrambi $D$) e per PMA a $D=0$; per PMA a $D=0.2$ (1 solo
+parametro) fidelity minima $\approx0.82$ vicino a $B/J=2$ — coerente con il crollo
+già noto e documentato (conservazione di $M$ rotta solo parzialmente da un ansatz a
+un parametro). Figura rigenerata e confrontata pixel per pixel con quella allegata:
+identica.
+
+\textbf{Conclusione.} Modulo maturo, nucleo di tutta la fase VQE del dimero.
+
+\section*{\texttt{vqe\_dimer\_spiegato.ipynb}}
+
+Guida interattiva al modulo precedente: principio variazionale, come l'estimator
+calcola $\langle H\rangle_{\boldsymbol\theta}$, i due ansatz HA vs PMA (con
+derivazione esplicita del blocco $W_{01}(\theta)$), perché il PMA a 1 parametro
+funziona a $D=0$ ma non a $D=0.2$ (la stessa domanda che ha poi motivato
+\texttt{analisi\_rotazioni\_PMA.ipynb}).
+
+\textbf{Verifiche.} Eseguito per intero in questa sessione (31 celle, zero errori).
+Il file allegato differisce dalla versione già nota solo per una cella vuota in più
+in fondo — differenza non sostanziale.
+
+\textbf{Conclusione.} Guida completa, già alla base della struttura poi replicata
+per anello e catena (\texttt{vqe\_trimer\_ring\_spiegato.ipynb\ e affini}).
+
+\section*{\texttt{confronto\_ansatz\_entangler.ipynb}}
+
+Notebook di confronto sistematico: 12 ansatz (quattro generici A–D, famiglie
+PMA-1q e PMA-2q a diversi conteggi di parametri), fidelity a $D=0$ e al crescere di
+$D$. Stabilisce \texttt{PMA-2q.3} come ansatz canonico (minimo teorico di
+parametri, zero ridondanza) — la stessa scelta poi ereditata da tutti i moduli
+successivi del progetto, dimero incluso.
+
+\textbf{Verifiche.} Il tentativo di riesecuzione completa in questa sessione è
+stato interrotto (il processo di calcolo, pesante per il multistart su 12 ansatz,
+non ha completato prima di un reset dell'ambiente). Il file conserva però gli
+output di un'esecuzione precedente, completa e senza errori: controllati
+puntualmente più valori (tabella parametri/ansatz, raccomandazione
+\texttt{PMA-2q.3}, il caso limite dei layer RBS $M$-conservanti che restano bloccati
+a $\mathcal F=0.5082$ qualunque sia $K$) — tutti coerenti con quanto già
+documentato altrove nel progetto.
+
+\textbf{Considerazioni.} A differenza degli altri file di questa sessione, per
+questo non è stato possibile ottenere una riesecuzione fresca end-to-end — la
+verifica qui si basa sulla coerenza interna e incrociata degli output già presenti,
+non su un'esecuzione osservata direttamente in questa sessione.
+
+\textbf{Conclusione.} È il notebook da cui discende la scelta dell'ansatz canonico
+usata ovunque nel progetto — vale la pena, in futuro, una riesecuzione completa
+dedicata per avere anche qui una verifica diretta, non solo di coerenza.
+
+\section*{\texttt{analisi\_rotazioni\_PMA.ipynb}}
+
+Indagine mirata: dove mettere le rotazioni che rompono la conservazione di $M$ (un
+qubit o due? parametro condiviso o indipendente?), con derivazioni ed esperimenti
+che falliscono apposta per isolare la causa. Risolve la domanda rimasta aperta da
+\texttt{vqe\_dimer\_spiegato.ipynb} (perché il PMA a 1 parametro crolla sotto DM) e
+stabilisce la regola poi ereditata, senza bisogno di rideriverla, sia
+dall'anello sia dalla catena.
+
+\textbf{Verifiche.} Eseguito per intero in questa sessione, zero errori.
+
+\textbf{Conclusione.} È il notebook di indagine mirata originale del progetto — il
+modello diretto da cui sono stati poi costruiti
+\texttt{analisi\_espressivita\_PMA\_anello.ipynb} e l'analogo, non ancora prodotto,
+per la catena.
+
+\section*{\texttt{vqe\_ground\_state\_test2.ipynb} + \texttt{ground\_state\_test2.npz}}
+
+VQE al punto di lavoro "test 2" ($b/J=0.35$, $D/J=0.80$): calcola il ground state
+con il PMA e ne salva lo stato completo (non solo l'energia) in un file
+\texttt{.npz}, per essere riusato come stato iniziale in fasi successive (es.\ le
+correlazioni dinamiche).
+
+\textbf{Verifiche.} Eseguito per intero in questa sessione, zero errori. Il file
+\texttt{.npz} allegato contiene $E_\text{vqe}=-3.5732114465461704$ contro
+$E_\text{esatto}=-3.5732114466175835$ (fidelity $0.9999999999849056$); la
+riesecuzione in questa sessione ha rigenerato lo stesso file con
+$E_\text{vqe}=-3.5732114465400517$ (fidelity $0.9999999999835552$) — differenze
+nell'undicesima cifra, dovute a un run di ottimizzazione diverso ma dello stesso
+ordine di precisione.
+
+\textbf{Considerazioni.} \texttt{ground\_state\_test2.npz} non è un file
+indipendente: è l'output salvato da questo notebook (contiene \texttt{b}, \texttt{J},
+\texttt{D}, \texttt{E0\_exact}, \texttt{E\_vqe}, \texttt{fidelity},
+\texttt{psi0\_exact}, \texttt{psi0\_vqe}, \texttt{vqe\_params}) — i due vanno
+sempre tenuti insieme.
+
+\textbf{Conclusione.} Fornisce lo stato di riferimento già usato per le correlazioni
+dinamiche del dimero.
+
+\section*{Conclusione generale}
+
+La fase VQE del dimero è completa e verificata: sei file (due dei quali, il
+notebook di test2 e il suo \texttt{.npz}, sempre accoppiati), tutti coerenti fra
+loro e con la documentazione già esistente. Nessun file risulta ridondante o
+eliminabile — ciascuno copre un aspetto distinto (produzione, guida, confronto
+sistematico, indagine mirata, punto di lavoro specifico). L'unico punto lasciato
+aperto è la riesecuzione end-to-end di \texttt{confronto\_ansatz\_entangler.ipynb},
+non completata in questa sessione per un problema tecnico, non per un dubbio sul
+contenuto.
+
+\end{document}

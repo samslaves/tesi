@@ -1,0 +1,172 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Benchmark esatto (Fase 3) — trimero a catena aperta}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i moduli di benchmark esatto per il trimero di spin-1/2
+($N=3$) in topologia a catena aperta $1$–$2$–$3$ (legami fisici $(1,2)$ e $(2,3)$,
+nessun legame $(3,1)$). Sono i moduli su cui tutto il resto del lavoro (VQE, e in
+futuro Trotter e correlazioni) si appoggia senza mai modificarli — stesso ruolo di
+\texttt{dimer\_exact.py} per il dimero e di \texttt{trimer\_ring\_exact.py} per
+l'anello.
+
+Per ciascun file: cosa fa, con quali verifiche è stato controllato in questa sessione,
+e cosa se ne può concludere — per i moduli \texttt{.py}, anche le funzioni interne e
+come si usa il file.
+
+\textbf{Nota.} \texttt{verifica\_catena\_preliminare.py} (ora rinominato
+\texttt{verifica\_catena.py}) è stato spostato nel documento dedicato
+\texttt{trimero\_catena\_verifiche.pdf}, insieme al suo gemello
+\texttt{verifica\_stati\_catena.py} — non è più descritto qui.
+
+\section*{\texttt{trimer\_chain\_exact.py}}
+
+Analogo di \texttt{trimer\_ring\_exact.py} per la topologia a catena. Simmetria di
+riflessione $1\leftrightarrow3$ (sulla coppia \emph{non} legata) al posto della
+simmetria di scambio $1\leftrightarrow2$ dell'anello (sulla coppia legata) — stesso
+metodo di Kambe, applicato a una coppia di classificazione diversa. Per $J>0$ il
+fondamentale a basso campo è \textbf{sempre} il blocco $B$ (mai serve scegliere fra
+$B$ e $C$ come nell'anello, dato che $E_B=-4J<E_C=0$ indipendentemente da $J$): una
+semplificazione reale rispetto all'anello, non solo una topologia più povera.
+
+\textbf{Verifiche.} Otto self-test base più tre self-test DM, identici nello schema a
+quelli dell'anello. Rieseguiti in questa sessione (versione più recente, caricata con
+le funzioni DM già integrate): tutti superati a precisione macchina, incluso il
+self-test aggiuntivo di coerenza fra \texttt{exact\_sweep\_dm} e
+\texttt{ground\_state\_projector\_dm} (assente nella prima versione del file
+disponibile a inizio sessione, poi sostituita da quella più recente e corretta).
+
+\textbf{Conclusione.} Stesso livello di maturità e affidabilità del modulo
+dell'anello.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{trimer\_hamiltonian(J,\ b)} — l'Hamiltoniana completa come
+\texttt{SparsePauliOp} (un solo parametro $J$, nessun $J'$).
+\item \texttt{magnetization\_operator()} — $M_z=(Z_1+Z_2+Z_3)/2$.
+\item \texttt{S13\_squared\_operator()} — il Casimir della coppia di
+classificazione \emph{non legata} $(1,3)$ — l'analogo di
+\texttt{S12\_squared\_operator()} dell'anello, ma sulla coppia diversa.
+\item \texttt{S\_total\_squared\_operator()} — il Casimir totale $S^2$.
+\item \texttt{analytic\_eigenvalues(J,\ b)} — le otto energie esatte
+$E(S_{13},S,M)=E_\text{blocco}+2bM$, ordinate.
+\item \texttt{critical\_field(J)} — il campo critico $b_c=3J$ dell'incrocio del
+fondamentale (esiste solo per $J>0$).
+\item \texttt{kambe\_states()} — dizionario \texttt{\{(blocco, M): vettore a 8
+componenti\}} con gli otto stati espliciti.
+\item \texttt{kambe\_energy(J,\ b,\ block,\ M)} — l'energia analitica del singolo
+stato \texttt{(block, M)}.
+\item \texttt{exact\_sweep(b\_values,\ J)} — diagonalizza $H$ su una griglia di
+campo $b$.
+\item \texttt{ground\_state\_projector(J,\ b,\ tol)} — il proiettore sul
+multipletto fondamentale, robusto a eventuale degenerazione.
+\item \texttt{dm\_term(i,\ j,\ D)} — il termine DM $D(X_iZ_j-Z_iX_j)$, stessa
+forma già validata per dimero e anello.
+\item \texttt{trimer\_hamiltonian\_dm(J,\ b,\ D)} — l'Hamiltoniana con il termine
+DM simmetrico sotto $P_{13}$ ($D_{12}=-D_{23}=D$ — unica opzione simmetrica, per
+costruzione, a differenza dell'anello dove esistono due opzioni A/B da confrontare).
+\item \texttt{\_P13\_matrix()} — la matrice $8\times8$ dello scambio dei qubit 1 e
+3 (registro fisico, Famiglia 1).
+\item \texttt{\_self\_test()} — gli otto self-test base.
+\item \texttt{\_self\_test\_dm()} — verifica la simmetria $P_{13}$ del termine DM
+simmetrico e la sua rottura nel caso non simmetrico.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from trimer\_chain\_exact import
+trimer\_hamiltonian, exact\_sweep, \ldots} — dipendenza comune a tutti i moduli VQE
+della catena. Come script standalone: \texttt{python3 trimer\_chain\_exact.py}
+esegue entrambi i blocchi di self-test e rigenera la figura
+\texttt{trimer\_chain\_exact.png}.
+
+\section*{\texttt{trimer\_chain\_exact.png}}
+
+Figura generata dal modulo precedente, analoga a \texttt{trimer\_ring\_exact.png}
+per l'anello: a sinistra lo spettro completo con il fondamentale colorato per blocco
+(blu $=B$ sotto $b_c$, arancio $=A$ sopra); a destra la magnetizzazione del
+fondamentale, con la stessa annotazione già usata per l'anello che distingue il punto
+convenzionale $b=0$ (fondamentale degenere, $\langle M_z\rangle=0$ solo per
+convenzione di media sul sottospazio, non un limite fisico) dall'incrocio vero a
+$b_c=3J$ (salto discontinuo reale, da $-0.5$ a $-1.5$).
+
+\textbf{Considerazioni.} File mancante nella prima stesura di questo documento,
+segnalato dall'utente — colmato in questa revisione, come già fatto per
+\texttt{animazione\_trimero\_catena\_aperta.html}.
+
+\section*{\texttt{teoria\_trimero\_catena\_aperta.pdf}}
+
+Teoria esatta della catena uniforme: simmetria $P_{13}$, Casimir $S_{13}^2$, spettro
+chiuso a tre multipletti, campo critico $b_c=3J$, prova che gli incroci sono veri (non
+anticrossing) — stessa profondità dimostrativa del documento equivalente per l'anello,
+con la coppia di classificazione cambiata da $(1,2)$ a $(1,3)$.
+
+\section*{\texttt{derivazione\_stati\_kambe\_trimero\_catena.pdf}}
+
+Derivazione esplicita degli otto autostati, con una complicazione in più rispetto
+all'anello: la coppia di classificazione $(1,3)$ \textbf{non è adiacente} nel registro
+fisico $|q_1q_2q_3\rangle$, quindi la derivazione richiede una gestione esplicita del
+riordino che nell'anello (coppia $(1,2)$, adiacente) non serve. Stesso metodo di fondo,
+applicazione tecnicamente più delicata.
+
+\textbf{Conclusione.} Il blocco $B$ risultante non è banale (pesi
+$1/\sqrt6,1/\sqrt6,-\sqrt{2/3}$ su $|100\rangle,|001\rangle,|010\rangle$) — a
+differenza del blocco a basso campo scelto nel punto di lavoro standard dell'anello
+(blocco $C$, singoletto banale sulla coppia base). Conseguenza diretta per i moduli
+VQE: nella catena non esiste una derivazione a mano semplice ($X,H,\mathrm{CX},X$) per
+lo stato iniziale a basso campo, serve \texttt{prepare\_state} fin da subito.
+
+\section*{\texttt{animazione\_trimero\_catena\_aperta.html}}
+
+Visualizzazione interattiva, analoga a \texttt{animazione\_trimero\_isoscele.html}
+per l'anello: geometria della catena, spettro con il fondamentale colorato per
+blocco. \textbf{Nessuna mappa di fase 2D} (a differenza dell'anello): la catena ha un
+solo parametro di accoppiamento $J$, non una coppia $(J,J')$, quindi non c'è un piano
+su cui tracciare regioni — la sola dipendenza rilevante è da $J$ e $b$. Utile per
+l'intuizione qualitativa, non per i numeri precisi (quelli vengono dal modulo esatto).
+
+\textbf{Considerazioni.} File mancante nella prima stesura di questo documento —
+l'anello aveva già la sua voce equivalente, la catena no: colmato in questa
+revisione.
+
+\section*{Conclusione generale}
+
+Il modulo esatto della catena condivide con quello dell'anello metodo (decomposizione
+di Kambe), convenzione qubit (Famiglia 1, $\text{site}_i\to\text{qubit}(N-i)$) e
+livello di rigore (self-test a precisione macchina, verifica indipendente su griglia
+estesa). Le differenze reali, non cosmetiche, rispetto all'anello:
+
+\begin{itemize}
+\item \textbf{Simmetria di classificazione diversa}: la catena classifica sulla coppia
+\emph{non legata} $(1,3)$, l'anello sulla coppia \emph{legata} $(1,2)$ — stesso metodo
+algebrico, applicato a una coppia fisicamente diversa.
+\item \textbf{Un parametro in meno}: la catena ha una sola costante di accoppiamento
+($J$), l'anello due ($J,J'$) — la mappa dei segni 2D dell'anello collassa a una sola
+dimensione nella catena.
+\item \textbf{Scelta del fondamentale a basso campo più semplice}: per $J>0$ è sempre
+il blocco $B$, senza bisogno del confronto $E_B$ vs $E_C$ che serve invece
+nell'anello.
+\item \textbf{Blocco a basso campo più complesso}: il blocco $B$ della catena non è
+mai banale, a differenza del blocco a basso campo del punto di lavoro standard
+dell'anello — differenza che si propaga direttamente nei moduli VQE (documento
+gemello sul VQE).
+\end{itemize}
+
+Il modulo è pronto a supportare tutto il lavoro VQE già costruito e le fasi ancora da
+affrontare (Trotter, correlazioni dinamiche).
+
+\end{document}

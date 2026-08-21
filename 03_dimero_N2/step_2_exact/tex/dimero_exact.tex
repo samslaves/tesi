@@ -1,0 +1,120 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Benchmark esatto (Fase 2) — dimero}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie il modulo di benchmark esatto per il dimero di spin-1/2
+($N=2$). È il modulo su cui tutto il resto del lavoro sul dimero (VQE, Trotter,
+correlazioni dinamiche) si appoggia senza mai modificarlo — la diagonalizzazione
+numerica (\texttt{eigh}) è il metro di misura con cui ogni risultato variazionale
+viene giudicato.
+
+Per ciascun file: cosa fa, con quali verifiche è stato controllato in questa sessione,
+e cosa se ne può concludere — per il modulo \texttt{.py}, anche le funzioni interne e
+come si usa il file.
+
+\section*{\texttt{dimer\_exact.py}}
+
+Modulo di benchmark: Hamiltoniana come \texttt{SparsePauliOp}
+($H=J(X_1X_2+Y_1Y_2+Z_1Z_2)+b(Z_1+Z_2)+D(X_1Z_2-Z_1X_2)$), spettro analitico per il
+caso isotropo $D=0$ (singoletto + tripletto $M=+1,0,-1$), sweep su griglia di campo,
+self-test interno.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{dimer\_hamiltonian(b,\ J,\ D)} — l'Hamiltoniana completa come
+\texttt{SparsePauliOp}, sette termini di Pauli (\texttt{XX}, \texttt{YY},
+\texttt{ZZ}, \texttt{ZI}, \texttt{IZ}, \texttt{XZ}, \texttt{ZX}); sorgente unica
+riusata da tutti i moduli VQE del dimero.
+\item \texttt{magnetization\_operator()} — $M_z=(Z_1+Z_2)/2$, convenzione di spin
+($s=\sigma/2$).
+\item \texttt{analytic\_eigenvalues(b,\ J)} — le quattro energie esatte per $D=0$
+(singoletto $E=-3J$; tripletto $E=J+2bM$, $M=+1,0,-1$).
+\item \texttt{exact\_sweep(b\_values,\ J,\ D)} — diagonalizza $H$ su una griglia di
+campo $b$, restituisce spettro completo e osservabili del fondamentale.
+\item \texttt{\_self\_test(J)} — confronta spettro numerico e analitico ($D=0$) su
+tutto il range di $b$, a precisione macchina.
+\end{itemize}
+
+\textbf{Come si usa.} Come libreria: \texttt{from dimer\_exact import
+dimer\_hamiltonian, exact\_sweep, \ldots} — è la dipendenza comune a
+\texttt{vqe\_dimer.py} e a tutti gli altri moduli VQE del dimero. Come script
+standalone: \texttt{python3 dimer\_exact.py} esegue il self-test e rigenera la
+figura \texttt{dimer\_exact.png}.
+
+\textbf{Verifiche.} Rieseguito in questa sessione: self-test a precisione macchina
+($\max|E_\text{num}-E_\text{analitico}|=8.88\times10^{-16}$), figura rigenerata.
+
+\textbf{Conclusione.} Modulo maturo e stabile: nessuna decomposizione ulteriore
+necessaria, lo spettro si ottiene direttamente dalla composizione di due spin-1/2 in
+forma chiusa.
+
+\section*{\texttt{dimer\_exact.png}}
+
+Figura generata dal modulo precedente: a sinistra lo spettro completo (quattro
+livelli) con il fondamentale evidenziato sia per $D=0$ (incrocio vero a $B/J=2$) sia
+per $D=0.2$ (anticrossing, gap aperto); a destra la magnetizzazione del
+fondamentale, con lo stesso confronto — salto discontinuo per $D=0$, transizione
+liscia (crossover) per $D\neq0$.
+
+\textbf{Considerazioni.} Il confronto diretto fra $D=0$ (vero incrocio, senza
+degenerazione tranne che esattamente a $B/J=2$) e $D\neq0$ (anticrossing, gap sempre
+aperto, nessuna degenerazione mai) è la manifestazione più semplice possibile della
+regola di non-incrocio di von Neumann–Wigner: un solo parametro reale libero ($b$),
+quindi l'incrocio si apre non appena si accende un termine ($D$) che collega i due
+livelli.
+
+\section*{\texttt{dimer\_exact\_spiegato.ipynb}}
+
+Guida interattiva al modulo precedente: perché \texttt{SparsePauliOp} è la sorgente
+unica di $H$ (con verifica esplicita della convenzione delle label,
+\texttt{"ZI"}$=Z\otimes I$), perché si usa \texttt{eigh} e non \texttt{eig} (matrice
+hermitiana $\Rightarrow$ autovalori reali e autovettori ortonormali garantiti,
+verificato numericamente), la distinzione fra il $J$ del codice (coefficiente della
+somma di Pauli $X_1X_2+Y_1Y_2+Z_1Z_2$) e il $J=4t^2/U$ della derivazione da Hubbard
+(differiscono per un fattore 4), il resto del modulo (\texttt{exact\_sweep},
+\texttt{\_self\_test}, la figura), slider interattivi per esplorare $b$, $D$, e il
+crossover incrocio/anticrossing, un riepilogo finale in "tre risposte".
+
+\textbf{Verifiche.} Eseguito per intero in questa sessione (30 celle, zero errori):
+Hamiltoniana verificata hermitiana, convenzione delle label confermata
+(\texttt{"ZI"==kron(Z,I)}), self-test a precisione macchina
+($8.88\times10^{-16}$), tutti gli slider e le figure generate correttamente.
+
+\textbf{Considerazioni.} Il notebook si sofferma esplicitamente su due questioni
+facilmente date per scontate: la differenza fra \texttt{eig} e \texttt{eigh}
+(rilevante ogni volta che si diagonalizza una matrice hermitiana), e la distinzione
+fra le due convenzioni per $J$ (quella del codice, coefficiente della somma di Pauli,
+e quella della derivazione fisica da Hubbard) — un punto di ambiguità facile da
+introdurre involontariamente se non documentato esplicitamente.
+
+\textbf{Conclusione.} Guida completa e autosufficiente al modulo di benchmark,
+pensata per essere letta da chi non ha già familiarità con le scelte implementative
+(perché quella label, perché quella routine di diagonalizzazione, perché quella
+convenzione per $J$).
+
+\section*{Conclusione generale}
+
+Il benchmark esatto del dimero è un modulo maturo e stabile, verificato a precisione
+macchina, che funge da sorgente unica e non modificabile dell'Hamiltoniana per tutto
+il lavoro successivo (VQE, e in futuro Trotter e correlazioni dinamiche). Non
+richiede alcuna decomposizione oltre alla diagonalizzazione diretta: lo spettro del
+dimero si scrive in forma chiusa immediatamente dalla composizione di due spin-1/2.
+
+\end{document}

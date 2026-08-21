@@ -741,3 +741,116 @@ Trotter (convenzione di spin) e il blocco VQE/correlazioni (convenzione di
 Pauli), va applicata la conversione $b_\text{Pauli}=b_\text{spin}/2$,
 $J_\text{Pauli}=J_\text{spin}/4$, $D_\text{Pauli}=D_\text{spin}/4$ — sito e
 normalizzazione insieme, non separatamente.
+
+## Aggiornamento — N=3: teoria della catena aperta, VQE (senza e con DM) per anello e catena, ristrutturazione documentale
+
+### Teoria della catena aperta
+
+Stessa decomposizione di Kambe già usata per il triangolo isoscele, applicata
+alla catena 1–2–3 (legami fisici $(1,2)$ e $(2,3)$, nessun legame $(3,1)$).
+Simmetria di **riflessione** $1\leftrightarrow3$ (sulla coppia *non legata*,
+non quella legata come nell'anello) — Casimir $S_{13}^2$, tre multipletti
+$A$ ($S_{13}{=}1,S{=}3/2$), $B$ ($S_{13}{=}1,S{=}1/2$), $C$ ($S_{13}{=}0,S{=}1/2$),
+campo critico $b_c=3J$ (esiste solo per $J>0$). Per $J>0$ il fondamentale a
+basso campo è **sempre** il blocco $B$ — mai serve il confronto $E_B$ vs $E_C$
+che serve invece nell'anello, perché $E_B=-4J<E_C=0$ indipendentemente da
+$J$: una semplificazione reale, non solo una topologia più povera.
+
+**Complicazione trovata nella derivazione degli stati**: la coppia di
+classificazione $(1,3)$ non è adiacente nel registro fisico
+$|q_1q_2q_3\rangle$ — la derivazione richiede una gestione esplicita del
+riordino che nell'anello (coppia $(1,2)$, adiacente) non serve. Il blocco
+$B$ risultante **non è banale** (pesi $1/\sqrt6,1/\sqrt6,-\sqrt{2/3}$) — a
+differenza del blocco a basso campo del punto di lavoro standard
+dell'anello (blocco $C$, singoletto banale). Conseguenza diretta per il
+VQE: nella catena non esiste una derivazione a mano semplice
+($X,H,\mathrm{CX},X$) per lo stato iniziale a basso campo, serve
+`prepare_state` fin da subito.
+
+**File prodotti:** `trimer_chain_exact.py`, `teoria_trimero_catena_aperta.pdf`,
+`derivazione_stati_kambe_trimero_catena.pdf`, `verifica_catena.py` (ex
+`verifica_catena_preliminare.py`), `animazione_trimero_catena_aperta.html`.
+
+### VQE senza DM — anello e catena, struttura parallela completa
+
+Per entrambe le topologie: un ansatz PMA con branching e blocco RBS
+(produzione principale), lo stesso con blocco $W$ (mirror dell'ansatz
+"originale" del dimero), un ansatz PMA senza branching, due notebook
+"spiegato". Per l'anello: `vqe_trimer_ring.py`, `vqe_trimer_ring_W.py`,
+`vqe_trimer_ring_nobranch.py`, i due `_spiegato.ipynb`. Per la catena, lo
+stesso mirror: `vqe_trimer_chain.py`, `vqe_trimer_chain_W.py`,
+`vqe_trimer_chain_nobranch.py`, i due `_spiegato.ipynb`.
+
+> ✅ **Due problemi reali trovati e corretti durante la costruzione, non
+> solo teorici:**
+> 1. `vqe_trimer_chain_nobranch.py` — conteggio dei parametri per ciclo
+>    sbagliato ($4K$ invece di $5K$), causava un `IndexError` immediato.
+>    Dopo la correzione: a $b=1.0$ (sotto $b_c$), $K=1$ resta vicino al
+>    tetto strutturale $\approx5/6$ già noto per la famiglia "esatta", ma
+>    $K=2$ (RBS ripetuto due volte) lo supera, $\mathcal F=1$ esatto —
+>    stesso pattern già visto per l'anello sotto DM (PMA-2qC.K2 batte K1).
+> 2. `vqe_trimer_chain_spiegato.ipynb` — due celle mostravano
+>    $\mathcal F=0.826612$ invece di $1.000000$, non per un limite
+>    strutturale ma per un minimo locale specifico del seed di default
+>    (42): con $R=8$ o con qualunque altro seed, converge subito
+>    all'esatto. Esempio concreto della distinzione "limite di
+>    espressività" vs "artefatto di ottimizzazione" già tenuta ferma dal
+>    dimero — qui il rischio si è materializzato davvero, non solo in
+>    teoria.
+
+> ✅ **Correzione anche su `trimer_ring_exact.py`:** $\langle M_z\rangle$
+> a $b=0$ (fondamentale degenere) veniva calcolato su un singolo
+> autovettore restituito da `numpy.linalg.eigh`, scelto arbitrariamente
+> fra quelli del sottospazio degenere — un salto apparente osservato in una
+> vecchia figura era un artefatto numerico, non fisico. Corretto: media sul
+> sottospazio degenere. Il salto vero (fisico) resta solo a $b_c$.
+
+### VQE con DM — anello (Fase 5), catena non ancora affrontata
+
+Due notebook, stesso schema indagine-mirata → confronto-sistematico già
+usato per il dimero:
+- `analisi_espressivita_PMA_anello.ipynb` — quale famiglia PMA (RBS o $W$)
+  regge meglio sotto DM, testata al campo critico teorico $b_c=2.4$.
+- `confronto_ansatz_entangler_trimero_anello.ipynb` — 15 ansatz (10 RBS,
+  5 $W$), sweep completo su griglia in $b$, sia $D=0$ sia DM Opzione B.
+
+> ✅ **Scoperta centrale, verificata con 60 restart e ottimizzazione
+> diretta della fidelity (non dell'energia)**: la famiglia RBS-2q ha un
+> **tetto strutturale vero** sotto DM ($\mathcal F\approx0.9999$,
+> identico per tre varianti indipendenti indipendentemente dal numero di
+> parametri), mentre la famiglia $W$-2q raggiunge $\mathcal F=1$ esatto.
+> Candidato canonico per il seguito sotto DM: **`W-2q.6`** — meno
+> parametri e meno gate di RBS-2q, fidelity esatta dove RBS-2q resta
+> bloccata. Risultato controintuitivo rispetto al caso $D=0$, dove RBS-2q
+> è sempre la famiglia più efficiente.
+
+**File obsoleto trovato**: `plateau_dm_ring_cache.json` — formato di
+chiave incompatibile con la cache effettivamente usata dal notebook finale
+(`espressivita_anello_cache.json`), zero sovrapposizione di chiavi,
+verificato esplicitamente. Artefatto di una versione precedente del
+notebook. Candidato per l'eliminazione dalla cartella di lavoro.
+
+**Non ancora fatto**: Fase 5 (VQE con DM) per la catena aperta — il
+notebook di confronto attuale (`confronto_ansatz_entangler_trimero_catena.ipynb`)
+resta $D=0$-only, non ancora esteso agli ansatz $W$ né al DM.
+
+### Ristrutturazione documentale — dimero, anello, catena allineati
+
+Tutta la documentazione tex/pdf riorganizzata per fase e per topologia,
+mirror strutturale in tutte e tre: `trimero_anello_exact.pdf`,
+`trimero_catena_exact.pdf`, `dimero_exact.pdf` (Fase esatto);
+`trimero_anello_vqe.pdf`, `trimero_catena_vqe.pdf`, `dimero_vqe.pdf` (VQE
+senza DM — per il dimero, dove il DM non è mai stato separato in una fase
+a sé, il documento copre l'intera fase, dichiarato esplicitamente);
+`trimero_anello_vqe_dm.pdf` (VQE con DM, solo anello per ora);
+`trimero_anello_verifiche.pdf`, `trimero_catena_verifiche.pdf` (script di
+controllo indipendenti — spettro/campo critico da un lato, stati di Kambe
+espliciti dall'altro, per ciascuna topologia).
+
+Ogni documento include, per i moduli `.py`, l'elenco delle funzioni
+interne e come si usa il file — non solo descrizione/verifiche/conclusione.
+
+**Stato attuale in una riga:** teoria completa per entrambe le topologie
+N=3; VQE senza DM completo per entrambe; VQE con DM completo solo per
+l'anello. Trotter e correlazioni dinamiche per N=3 restano il prossimo
+fronte, per entrambe le topologie.

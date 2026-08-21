@@ -244,3 +244,45 @@ il dimero); trattazione quantitativa del DM sul triangolo.
 
 **Prossimo passo:** da decidere fra catena aperta (teoria) o VQE sul
 triangolo isoscele (ora che c'è il benchmark esatto).
+
+## Aggiornamento — N=3: catena aperta completata, VQE con DM per l'anello
+
+**Teoria catena aperta: completata.** Stessa decomposizione di Kambe
+dell'anello, coppia di classificazione $(1,3)$ non adiacente (complicazione
+tecnica in più rispetto all'anello). Per $J>0$ il fondamentale a basso
+campo è sempre il blocco $B$ (mai serve il confronto $E_B$ vs $E_C$),
+$b_c=3J$. File: `trimer_chain_exact.py`, `teoria_trimero_catena_aperta.pdf`,
+`derivazione_stati_kambe_trimero_catena.pdf`.
+
+**VQE senza DM: completato per entrambe le topologie**, struttura
+parallela (RBS con branching, $W$ con branching, senza branching, due
+guide interattive per ciascuna). Due bug reali trovati e corretti durante
+la costruzione (conteggio parametri in `vqe_trimer_chain_nobranch.py`;
+sensibilità al seed in `vqe_trimer_chain_spiegato.ipynb`) — vedi
+`log_decisioni.md` per il dettaglio.
+
+**VQE con DM: completato solo per l'anello (Fase 5).** Risultato centrale:
+la famiglia RBS-2q ha un tetto strutturale vero sotto DM
+($\mathcal F\approx0.9999$), la famiglia $W$-2q raggiunge l'esatto —
+candidato canonico `W-2q.6`. **Non ancora fatto per la catena.**
+
+**Correzione trovata nel modulo esatto dell'anello**: $\langle M_z\rangle$
+a $b=0$ (fondamentale degenere) va mediato sul sottospazio, non calcolato
+su un singolo autovettore arbitrario — corretto in `trimer_ring_exact.py`.
+
+**Documentazione**: riorganizzata per fase (esatto / VQE senza DM / VQE con
+DM) e per topologia (dimero, anello, catena), mirror strutturale in tutti
+e sei i documenti prodotti finora — vedi `log_decisioni.md` per l'elenco
+completo.
+
+**Non ancora fatto per N=3, in ordine di priorità presunta:**
+1. Fase 5 (VQE con DM) per la catena aperta.
+2. Trotter e correlazioni dinamiche, entrambe le topologie — stessa
+   complicazione già anticipata per l'anello (i tre bond condividono
+   qubit, serve una decomposizione di Trotter annidata) più, per la
+   catena, la scelta di un punto di lavoro adatto alla dinamica (non
+   necessariamente lo stesso ottimale per il VQE).
+
+**Prossimo passo:** da decidere fra completare la Fase 5 per la catena
+(chiudere il parallelismo con l'anello) o aprire il fronte Trotter/correlazioni
+per N=3.

@@ -192,3 +192,28 @@ isoscele (es. un rapporto $J'/J$ specifico, magari motivato da un composto
 reale), o si può scegliere liberamente un punto rappresentativo (es. uno dei
 casi già usati nella teoria: $J{=}1,J'{=}0.4$ nella regione C) come punto di
 partenza per il VQE?
+
+## Aggiornamento — domande 8 e 9 risolte nei fatti
+
+**Domanda 8 (priorità catena aperta vs VQE triangolo)**: risolta —
+entrambe completate. Teoria della catena aperta e VQE (senza DM) per
+entrambe le topologie sono stati fatti, non è stato necessario scegliere.
+
+**Domanda 9 (DM quantitativo sul triangolo)**: risolta — quantificato in
+`analisi_dm_trimero.pdf`. Solo l'Opzione B (DM su tutti e tre i legami,
+proporzionale a $J$) apre realmente il gap all'incrocio, per una ragione
+di simmetria esatta (regola di non-incrocio di von Neumann–Wigner
+applicata a $S_{12}^2$), non per una coincidenza numerica. L'Opzione A
+(simmetrica, coerente con la teoria in forma chiusa) non lo apre mai.
+
+## 11. Priorità: Fase 5 (VQE con DM) per la catena, o Trotter/correlazioni per N=3?
+
+Con VQE senza DM completo per entrambe le topologie e VQE con DM completo
+per l'anello, restano due filoni aperti: estendere la Fase 5 (VQE con DM)
+anche alla catena aperta, oppure aprire il fronte Trotter e correlazioni
+dinamiche per N=3 (anticipato come complicato dalla condivisione di qubit
+fra i tre bond nell'anello).
+
+**Domanda:** quale priorità, vista la scadenza di settembre — chiudere
+prima il parallelismo anello/catena sul VQE con DM, o passare subito a
+Trotter/correlazioni su N=3?

@@ -1,0 +1,151 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Verifiche indipendenti (spettro e stati) — trimero a catena aperta}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i due script di verifica indipendente per il trimero a
+catena aperta: \texttt{verifica\_catena.py} (spettro, campo critico, simmetrie —
+prima chiamato \texttt{\seqsplit{verifica\_catena\_preliminare.py}}, stesso principio di
+\texttt{verifica\_anello.py} per l'anello) e \texttt{verifica\_stati\_catena.py} (otto
+stati di Kambe espliciti, verificati come vettori — stesso principio di
+\texttt{\seqsplit{verifica\_stati\_anello.py}}). Entrambi sono script standalone, indipendenti
+dal modulo \texttt{trimer\_chain\_exact.py}: non lo importano, ricostruiscono
+l'Hamiltoniana e gli stati da zero con la propria implementazione.
+
+Come già osservato per la coppia gemella dell'anello, i due script hanno scopi
+diversi nonostante il nome simile: il primo lavora solo con lo spettro, il secondo
+solo con gli stati espliciti.
+
+\section*{\texttt{verifica\_catena.py}}
+
+Script di controllo indipendente dal modulo principale (fino a poco fa chiamato
+\texttt{\seqsplit{verifica\_catena\_preliminare.py}}): spettro numerico su 200 configurazioni
+casuali di $(J,b)$ contro la forma chiusa, controllo della traccia (deve essere
+nulla), verifica della simmetria $P_{13}$ (deve commutare con $H$ nel caso uniforme
+$J_{12}=J_{23}$, e \textbf{non} commutare se $J_{12}\neq J_{23}$ — controllato
+esplicitamente in entrambi i casi), campo critico $b_c=3J$ trovato numericamente via
+il punto di massima curvatura dello spettro, e verifica che per $J<0$ non ci sia
+alcun incrocio (curvatura sempre nulla).
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{op(site,\ P)} — colloca l'operatore di Pauli \texttt{P} sul sito
+indicato (1, 2 o 3) dei 3 qubit, identità sugli altri due.
+\item \texttt{dot(i,\ j)} — il prodotto scalare di spin
+$\sigma_i\cdot\sigma_j=X_iX_j+Y_iY_j+Z_iZ_j$.
+\item \texttt{H\_chain(J,\ b)} — l'Hamiltoniana della catena uniforme,
+$J(\sigma_1\cdot\sigma_2+\sigma_2\cdot\sigma_3)+b\sum_iZ_i$ (un solo parametro $J$,
+nessun $J'$).
+\item \texttt{perm\_13()} — la matrice di permutazione $8\times8$ che scambia i
+qubit 1 e 3, costruita esplicitamente bit a bit (non tramite libreria).
+\item \texttt{H\_chain\_nonuniform(J12,\ J23,\ b)} — variante della catena con le due
+costanti di accoppiamento indipendenti, usata solo per il test di rottura della
+simmetria (§ punto 4 sotto).
+\end{itemize}
+
+\textbf{Struttura dello script (6 blocchi di test, eseguiti in sequenza, non
+incapsulati in funzioni separate).}
+\begin{enumerate}
+\item Spettro numerico vs formula chiusa su 200 punti $(J,b)$ casuali.
+\item Traccia di $H$ (deve annullarsi: somma di matrici di Pauli).
+\item Commutatore $[P_{13},H]$ nel caso uniforme ($J_{12}=J_{23}$): deve essere
+esattamente zero.
+\item Commutatore $[P_{13},H]$ nel caso non uniforme ($J_{12}\neq J_{23}$): deve
+essere \textbf{diverso} da zero — verifica che la simmetria si rompa davvero quando
+ci si aspetta che si rompa, non solo che valga quando dovrebbe valere.
+\item Campo critico numerico (ricerca del punto di massima curvatura, cioè del
+"kink", nello spettro del fondamentale in funzione di $b$) confrontato con la
+formula $b_c=3J$.
+\item Caso $J<0$: verifica che la curvatura resti nulla ovunque (nessun incrocio),
+coerente con la teoria.
+\end{enumerate}
+
+\textbf{Come si usa.} Nessun argomento da riga di comando, nessun import locale:
+\texttt{python3 verifica\_catena.py}. Stampa a schermo i risultati numerici dei 6
+blocchi (non ci sono etichette \texttt{OK}/\texttt{FALLITO} esplicite come nello
+script dell'anello — i valori vanno confrontati a occhio con gli attesi, riportati
+nei commenti del codice).
+
+\textbf{Verifiche.} Rieseguito in questa sessione: errore massimo sullo spettro
+$5.3\times10^{-15}$, traccia $8.9\times10^{-16}\approx0$, $\|[P_{13},H]\|=0.0$ esatto
+nel caso uniforme, $\|[P_{13},H]\|=0.8$ (chiaramente non nullo) nel caso non
+uniforme, campo critico numerico $=3.0$ esatto contro $3J=3.0$ atteso, curvatura
+massima per $J<0$ pari a $7.1\times10^{-15}\approx0$.
+
+\textbf{Conclusione.} Stesso ruolo di \texttt{verifica\_anello.py} per l'anello:
+controllo complementare ai self-test interni di \texttt{trimer\_chain\_exact.py}, con
+un accento in più specifico della catena — la verifica esplicita che la simmetria
+$P_{13}$ si rompa nel caso non uniforme, non solo che valga in quello uniforme.
+
+\section*{\texttt{verifica\_stati\_catena.py}}
+
+Script di controllo indipendente che costruisce esplicitamente gli \textbf{otto
+stati di Kambe} in base computazionale e li verifica uno per uno: norma, energia
+(numerica contro teorica), residuo come autovettore esatto, e ortogonalità reciproca
+(matrice di Gram).
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{op(site,\ P)} — stessa funzione di \texttt{verifica\_catena.py}.
+\item \texttt{dot(i,\ j)} — stessa funzione di \texttt{verifica\_catena.py}.
+\item \texttt{H\_chain(J,\ b)} — stessa Hamiltoniana di \texttt{verifica\_catena.py},
+ridefinita indipendentemente in questo file.
+\item \texttt{ket(bits)} — lo stato della base computazionale corrispondente a una
+stringa di 3 bit, come vettore $\mathbb C^8$.
+\item \texttt{state(coeffs)} — costruisce una sovrapposizione pesata a partire da una
+lista di coppie \texttt{(ampiezza, stringa di bit)}; restituisce il vettore e la sua
+norma.
+\item Il modulo non definisce una funzione dedicata per l'energia teorica (a
+differenza di \texttt{\seqsplit{verifica\_stati\_anello.py}}): la calcola inline, dentro il
+ciclo principale, con la stessa formula
+$E(S_{13},S,M)=2J[S(S{+}1)-S_{13}(S_{13}{+}1)-\tfrac34]+2bM$.
+\end{itemize}
+
+\textbf{Dati interni (non funzioni).}
+\begin{itemize}
+\item \texttt{states} — dizionario che mappa \texttt{(blocco, M)} alla lista di
+coefficienti espliciti dell'autostato corrispondente, trascritti da
+\texttt{derivazione\_stati\_kambe\_trimero\_catena.pdf}.
+\item \texttt{QN} — dizionario che mappa ogni blocco alla coppia $(S_{13},S)$.
+\end{itemize}
+
+\textbf{Come si usa.} Nessun argomento, nessun import locale: \texttt{python3
+verifica\_stati\_catena.py}. Punto di lavoro fissato nello script ($J=1.3$,
+$b=-0.7$). Stampa, per ciascuno degli otto stati: norma al quadrato, energia numerica
+e teorica affiancate, poi il residuo $\|Hv-Ev\|$; infine il massimo elemento fuori
+diagonale e il massimo scarto dalla diagonale della matrice di Gram.
+
+\textbf{Verifiche.} Eseguito in questa sessione: tutti gli otto stati con norma
+$^2=1.000000000$, energia numerica identica a quella teorica, residuo fra $0$ e
+$9.9\times10^{-16}$, matrice di Gram diagonale a $6.7\times10^{-17}$.
+
+\textbf{Conclusione.} A differenza dell'anello (dove questa verifica era assente
+come script standalone, solo incorporata nei self-test del modulo principale), per la
+catena questo script esisteva già prima di questa sessione — è servito da modello
+diretto per costruire \texttt{\seqsplit{verifica\_stati\_anello.py}}.
+
+\section*{Conclusione generale}
+
+I due script coprono aspetti complementari e non sovrapposti: spettro/campo
+critico/simmetrie da un lato, stati espliciti come vettori dall'altro — stessa
+struttura logica della coppia gemella per l'anello (documento gemello), con
+l'aggiunta specifica della catena del test esplicito di rottura della simmetria
+$P_{13}$ nel caso non uniforme.
+
+\end{document}

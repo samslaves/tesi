@@ -854,3 +854,49 @@ interne e come si usa il file — non solo descrizione/verifiche/conclusione.
 N=3; VQE senza DM completo per entrambe; VQE con DM completo solo per
 l'anello. Trotter e correlazioni dinamiche per N=3 restano il prossimo
 fronte, per entrambe le topologie.
+
+## Aggiornamento — decisione metodologica: Trotter interno per H_ex (trimero)
+
+Per estendere Trotter dal dimero al trimero (anello), H0 = b·S_z^tot + H_ex
+fattorizza esattamente come nel dimero (S_z^tot commuta con H_ex). Ma H_ex
+= J σ1·σ2 + J'σ2·σ3 + J'σ3·σ1 non è un blocco singolo esponenziabile: i
+legami 12 e 23 condividono il qubit 2, [σ1·σ2, σ2·σ3] ≠ 0.
+
+Decisione: procedere con Trotter interno (strategia (a)) — spezzare H_ex
+nei tre legami, ciascuno esponenziabile come nel dimero via RXX+RYY+RZZ —
+invece della sintesi numerica dell'unitaria 8x8 (strategia (b), scartata
+per coerenza con l'approccio "gate sempre fisicamente etichettati" già
+seguito nel dimero). Introduce una SECONDA fonte di errore di Trotter,
+annidata e distinta da quella fra H0 e H_DM — da trattare esplicitamente
+in tesi come due livelli separati.
+
+Aperto: quale opzione DM (A o B) usare per la dimostrazione di Trotter
+(diverso dalla scelta già chiusa per il VQE, dove B è obbligata dalla
+fisica del gap); punto di lavoro/stato iniziale per la dinamica (J=1,
+J'=0.4 zona C è ottimizzato per il ground state statico, non garantisce
+oscillazioni non banali di ⟨S_z⟩(t)). In attesa di risposta del relatore
+(mail inviata).
+
+## Aggiornamento — risposta del relatore e assunzione operativa (DM per Trotter trimero)
+
+**Risposta del relatore alla mail sulle priorità:** conferma implicitamente
+la priorità Trotter+correlazioni su N=3 (risponde nel merito tecnico invece
+di indicare un'altra priorità) e concorda esplicitamente sulla seconda
+fonte di errore di Trotter dovuta alla divisione dei bond 1-2 e 2-3.
+Richiesta esplicita: testare quanti step $N$ sono necessari per una buona
+riproduzione della dinamica — analisi di convergenza (fidelity/osservabili
+vs $N$) da includere fin da subito nel task.
+
+**Nota importante:** la risposta del relatore riguarda SOLO la divisione
+dei bond in $H_{\rm ex}$, non specifica quale opzione DM usare per questo
+task — non va confusa con una conferma sull'opzione DM.
+
+**Assunzione operativa presa in autonomia (non confermata esplicitamente
+dal relatore, da segnalare nel prossimo report):** si procede con **DM
+Opzione B**, per coerenza con tutta la sezione VQE trimero già validata su
+B (apertura del gap, ansatz W-2q.6 testato proprio sotto B) — evita di
+introdurre una seconda variante di $H_{\rm DM}$ nel codice senza un motivo
+fisico per farlo. Punto di lavoro: si parte da $J=1$, $J'=0.4$ (zona C,
+punto VQE), poi si esplora la dinamica esatta per trovare un regime con
+oscillazioni non banali di $\langle S_z\rangle(t)$ — stesso pattern
+R0→R1 già usato nel dimero.

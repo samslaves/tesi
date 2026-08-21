@@ -1,0 +1,59 @@
+Lavoro alla tesi triennale in Fisica (UniPR, relatore Prof. Alessandro Chiesa),
+"Quantum simulation of molecular systems on quantum hardware". Convenzione
+Pauli diretta (non spin σ/2), tutte le interazioni in italiano.
+
+STATO DEL PROGETTO:
+- Dimero (N=2): teoria esatta, VQE (HA vs PMA), Trotter per l'evoluzione
+  temporale (H = H1+H2, H1 campo+scambio isotropo, H2 solo DM; per D=0
+  commutano ed evoluzione esatta, per D≠0 serve Suzuki-Trotter, errore
+  O((t/N)^2)/passo), correlazioni dinamiche via circuito con ancilla
+  (Hadamard test, 36 combinazioni). Punti di lavoro R0/R1 già scelti per
+  la dimostrazione Trotter (vedi log_decisioni.md).
+- Trimero (N=3, anello isoscele): teoria esatta completa (decomposizione
+  di Kambe, blocchi A/B/C, mappa dei segni a tre zone), VQE completato e
+  validato (fidelity 1 su tutta la griglia), termine DM analizzato (Opzione
+  B è quella fisicamente corretta: apre il gap; Opzione A no, per la regola
+  di non-incrocio di von Neumann-Wigner applicata a S12^2).
+- Confronto sistematico di ansatz per il trimero
+  (confronto_ansatz_entangler_trimero_anello.ipynb): l'ansatz raccomandato
+  è W-2q.6 (6 parametri, 6 gate a due qubit, 13 gate totali) — batte le
+  famiglie RBS-2q, che sotto DM hanno un tetto strutturale vero a
+  F≈0.9999, indipendente dal numero di parametri.
+- PRIORITÀ CONFERMATA dal relatore: Trotter e correlazioni dinamiche su
+  N=3 sono il prossimo passo, prima di catena aperta, rumore o GA.
+
+DECISIONE METODOLOGICA GIÀ PRESA (Trotter interno per H_ex, strategia (a)):
+per il trimero, H0 = b·S_z^tot + H_ex fattorizza esattamente (S_z^tot
+commuta con H_ex, come accadeva nel dimero fra campo e scambio). Ma H_ex =
+J σ1·σ2 + J'σ2·σ3 + J'σ3·σ1 NON è un blocco singolo esponenziabile: i
+legami 12 e 23 condividono il qubit 2 e [σ1·σ2, σ2·σ3] ≠ 0. Si è deciso
+di procedere con la strategia (a) — Trotter interno, spezzando H_ex nei
+tre legami (ciascuno esponenziabile come nel dimero via RXX+RYY+RZZ) —
+invece della sintesi numerica dell'unitaria 8x8 (strategia (b)). Questo
+introduce una SECONDA fonte di errore di Trotter, annidata e distinta da
+quella fra H0 e H_DM: va trattata esplicitamente in tesi come due livelli
+separati, non un solo Trotter.
+
+RISPOSTA DEL RELATORE (confermata): concorda sulla seconda fonte di
+errore Trotter dovuta alla divisione dei bond 1-2 e 2-3. Chiede di
+testare quanti step N sono necessari per una buona riproduzione della
+dinamica — analisi di convergenza esplicita (fidelity/osservabili vs N,
+separando se possibile i due contributi di errore) da includere fin da
+subito. NOTA: la risposta riguardava solo la divisione dei bond, NON
+l'opzione DM — vedi assunzione sotto.
+
+ASSUNZIONE OPERATIVA (non confermata esplicitamente dal relatore, da
+segnalare nel prossimo report): si procede con DM Opzione B, per
+coerenza con tutta la sezione VQE trimero già validata su B (gap,
+W-2q.6). Punto di lavoro: si parte da J=1, J'=0.4 (zona C, punto VQE),
+poi si esplora la dinamica esatta per trovare un regime con
+oscillazioni non banali di ⟨S_z⟩(t) — stesso pattern R0→R1 già usato
+nel dimero.
+
+OBIETTIVO DI QUESTA CHAT: estendere la simulazione quantistica (Trotter,
+evoluzione in tempo reale e^{-iHt}) dal dimero al trimero (N=3, anello
+isoscele), sul modello di quanto già fatto per il dimero
+(quantum_simulation_dimero_trotter_note.md,
+quantum_simulation_dimero_trotter_semplificato.ipynb), con DM Opzione B,
+partendo dal punto di lavoro VQE ed esplorando poi la dinamica, e
+includendo l'analisi di convergenza in N richiesta dal relatore.

@@ -975,3 +975,75 @@ evoluzione a un $t$ fissato".
 
 **File prodotto**: `trimero_anello_circuito_compatto.tex` (compilato e
 verificato, 3 pagine, nessun errore).
+
+## Aggiornamento — documentazione completa della fase Trotter trimero anello; prossimo passo: correlazioni dinamiche
+
+Completata la documentazione della fase di quantum simulation (Trotter) per il
+trimero anello, in parallelo a quanto già esiste per il dimero. File prodotti
+da allora:
+
+- **`quantum_simulation_trimero_anello_teoria.tex`** — derivazione teorica
+  completa. Contributo originale: l'operatore di **chiralità di spin
+  scalare** $\chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$
+  (Wen–Wilczek–Zee 1989, citazione verificata) identifica esattamente il
+  commutatore che rende necessario il Trotter interno di $H_{ex}$; identità
+  analoga (ma strutturalmente diversa, non collassa a un solo operatore) per
+  i legami DM. Formula chiusa per l'errore di livello 1:
+  $i\tau^2J'^2\chi+O(\tau^3)$ — il prodotto incrociato $JJ'$ si cancella
+  esattamente, dipende solo dai lati uguali $J'$.
+- **`quantum_simulation_trimero_anello_applicazione.tex`** — applica la
+  teoria all'implementazione: cronologia della scoperta del livello 2,
+  ricerca del punto di lavoro, risultati di convergenza e separazione errori,
+  riepilogo compattezza.
+- **`quantum_simulation_trimero_anello_trotter_spiegato.tex`** — il notebook
+  spiegato cella per cella. Include la dimostrazione (verificata,
+  $2.2\times10^{-16}$) che $\ket{000}$ è autostato esatto di $H_{ex}$ e di
+  $H_0$: per $D=0$, $\langle S_z^{tot}\rangle(t)$ è **costante** qualunque
+  siano $J,J',b$ — il DM non è un dettaglio, è l'unica sorgente di dinamica
+  osservabile da questo stato iniziale.
+- **`trimero_anello_frustrazione_e_chiralita.tex`** — nota di chiarimento:
+  la frustrazione energetica (ciclo dispari) non richiede l'equilatero; la
+  non-commutatività algebrica (operatore $\chi$) vale per qualunque $J,J'$;
+  le due cose si toccano solo nel limite $J'\to0$ (errore di livello 1 → 0,
+  coerente col ritorno al caso dimero). Il nostro punto di lavoro
+  ($J\neq J'$) non è nel regime degenere/chirale del paper citato.
+- **`trimero_anello_quantum_simulation.tex`** — documento di catalogazione
+  di tutta la fase (stile `trimero_anello_vqe_dm.pdf`), un riferimento unico
+  per ritrovare rapidamente cosa fa ciascun file.
+
+**Notebook (`quantum_simulation_trimero_anello_trotter.ipynb`) esteso**:
+convergenza in $N$ e separazione dei livelli di errore ripetute su tre punti
+robusti (non solo $R_0$) — risultato notevole: la scala di $N$ richiesta
+varia molto da punto a punto (da $N\simeq30$ a $N\simeq325$ per l'1\% di
+infedeltà), ma lo scaling $O(1/N^2)$ è confermato su tutti e tre; il peso
+del livello 2 varia da quasi trascurabile ($\times1.04$) a dominante
+($\times4.4$, a $R_0$) — non un fattore universale. Aggiunto anche lo
+spettro (ampiezza dei modi di Bohr vs $\Delta_{kl}$) accanto a ogni
+traiettoria, e una sezione di esplorazione a parametri liberi (funzione
+`esplora(J,Jp,b,D)`, 4 pannelli: segnale, spettro, convergenza, peso
+livello 2).
+
+**Nota su `ipywidgets`**: tre tentativi di controlli interattivi
+(`FloatSlider`+`interact`, `FloatSlider`+`interact_manual`,
+`Dropdown`+`interact` sullo schema di `circuito_correlazioni_tutte.ipynb`)
+non hanno dato un risultato affidabile nell'ambiente reale (blocco di
+minuti, poi errore di rendering specifico di VS Code —
+`jupyter-ipywidget-renderer`/`ipywidgetsKernel`, bug noto dell'estensione,
+non del codice). **Adottata la versione a chiamata diretta** (parametri
+modificati a mano nel codice): nessuna dipendenza fragile.
+
+**Punti aggiuntivi trovati con l'esplorazione libera — accantonati per
+ora, non promossi a punto di lavoro**: $J{=}1,J'{=}0.3,b{=}0.2,D{=}1.1$
+(dove il rapporto $V_2/V_1$ attraversa $1$ fra $N=640$ e $N=1280$ — i due
+errori di livello sono quasi della stessa taglia a questo punto, un
+comportamento qualitativamente diverso dagli altri) e una riconferma
+numerica di $R_0$. Decisione esplicita: **restare focalizzati su $R_0$**
+come punto di lavoro principale; questi punti aggiuntivi restano
+documentati ma non adottati, eventualmente da riprendere in futuro.
+
+**Prossimo passo (decisione presa, in chat separata)**: estendere il
+circuito con l'ancilla per le **correlazioni dinamiche** su $N=3$ — l'altra
+metà della richiesta originale del relatore ("Trotter e correlazioni
+dinamiche"), non ancora iniziata per il trimero. La derivazione
+principiata stile $R_1$ del punto di lavoro resta rimandata (priorità più
+bassa), non abbandonata.

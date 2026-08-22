@@ -1,0 +1,280 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+
+\title{Quantum simulation (Trotter) con termine DM — trimero ad anello}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase di \emph{quantum simulation} (evoluzione
+temporale reale $e^{-iHt}$ via Suzuki--Trotter) per il trimero ad anello — mirror
+diretto, per $N=3$, di quanto già completato per il dimero
+(\texttt{\seqsplit{trotter\_dimero.py}},
+\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}}/\texttt{\_applicazione.tex}).
+A differenza del dimero, dove l'unica approssimazione era il Trotter fra campo+scambio
+e termine DM, qui è emersa nel corso del lavoro una struttura a \textbf{tre livelli}:
+sia $H_{ex}$ sia $H_{DM}$ (Opzione B), essendo somme di tre legami che condividono i
+qubit a due a due, richiedono ciascuno un Trotter interno — non solo lo scambio, come
+previsto dal compito originale.
+
+\textbf{Nota sullo scope.} Il punto di lavoro adottato ($R_0$, trimero) è
+\textbf{provvisorio}: uno scan verificato robusto, non una derivazione fisica
+principiata come $R_1$ per il dimero (struttura a V, formula di Rabi). Quella
+derivazione, per il trimero, richiederebbe classificare le transizioni fra gli 8
+livelli di Kambe sotto la rottura di $S_{12}^2$ indotta dall'Opzione B — rimandata a
+un notebook successivo, priorità più bassa delle correlazioni dinamiche (prossimo
+passo concordato col relatore).
+
+Per ciascun file: cosa fa, le funzioni interne, come si usa, le verifiche effettuate
+nel corso della fase, e cosa se ne può concludere.
+
+\section*{\texttt{\seqsplit{trotter\_trimero\_anello.py}}}
+
+Modulo di produzione principale: costruisce il circuito Trotter (Qiskit 2.x) per il
+trimero anello, riusando \texttt{\seqsplit{trimer\_ring\_exact.py}} come sorgente unica
+dell'Hamiltoniana — nessuna ridefinizione indipendente, zero rischio di
+disallineamento di convenzione. Scritto in \textbf{convenzione Pauli diretta}
+(coerente col resto del progetto trimero), non nella convenzione a spin del dimero:
+angoli dei gate ri-derivati da zero, non copiati.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{Q}, \texttt{BONDS} — mappa sito$\to$qubit, identica a
+\texttt{\seqsplit{trimer\_ring\_exact.py}} (site1$\to$q2, site2$\to$q1,
+site3$\to$q0), e ordine dei tre legami $(1,2)$, $(2,3)$, $(3,1)$.
+\item \texttt{step\_field(qc,\ b,\ tau)} — rotazione esatta del campo, $R_z(2b\tau)$
+su ciascun qubit (nessuna approssimazione).
+\item \texttt{step\_Hex(qc,\ J,\ Jp,\ tau)} — Trotter interno di $H_{ex}$ (livello 1):
+tre blocchi
+\begin{center}
+$R_{XX}(2J_{ij}\tau)\,R_{YY}(2J_{ij}\tau)\,R_{ZZ}(2J_{ij}\tau)$,
+\end{center}
+singola passata sui bond.
+\item \texttt{step\_HDM(qc,\ J,\ Jp,\ D,\ tau)} — Trotter interno di $H_{DM}$
+(livello 2, Opzione B): tre blocchi a sandwich di Hadamard, stessa identità del
+dimero estesa ai tre legami.
+\item \texttt{trotter\_circuit(J,\ Jp,\ b,\ D,\ t,\ N,\ measure)} — il circuito
+completo, $N$ passi nell'ordine $H_{ex}\to$campo$\to H_{DM}$.
+\item \texttt{H\_parts(J,\ Jp,\ b,\ D)}, \texttt{U\_exact(...)}, \texttt{sz\_tot(...)}
+— riferimenti a matrice (H\_0, H\_DM separati; evoluzione esatta; osservabile) per la
+validazione.
+\item \texttt{\_bond\_exchange\_matrix}, \texttt{\_bond\_dm\_matrix} — costruzione
+esplicita a matrice di un singolo legame, usate sia nei self-test sia nelle analisi
+del notebook.
+\item \texttt{\_self\_test()} — le quattro verifiche indipendenti (sotto).
+\end{itemize}
+
+\textbf{Come si usa.} Libreria, non notebook: si importano le funzioni necessarie.
+Richiede \texttt{\seqsplit{trimer\_ring\_exact.py}} nella stessa cartella.
+
+\textbf{Verifiche.} Quattro self-test, tutti superati a precisione macchina:
+(1) coerenza di $S_z^{tot}$ con il benchmark esatto, errore $0$; (2) il
+\textbf{circuito Qiskit reale} (\texttt{Operator(qc).data}, non solo la costruzione a
+matrice) riproduce il prodotto atteso su 5 set di parametri casuali, errore
+$\sim10^{-15}$; (3) convergenza $N\to\infty$ verso l'evoluzione esatta, rapporto
+dell'infedeltà $\to4$ raddoppiando $N$ (Trotter di 1° ordine confermato); (4)
+fattorizzazione esatta di $H_0$ (campo+scambio), errore $\sim10^{-16}$ indipendente
+da $\tau$.
+
+\textbf{Conclusione.} Modulo maturo, validato end-to-end (non solo a livello di
+matrice teorica, anche sul circuito effettivamente eseguibile).
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}}}
+
+Derivazione teorica completa, parallela a
+\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} ma con le differenze
+strutturali del trimero derivate per esteso, non solo verificate a numeri:
+fattorizzazione esatta di $H_0$ (argomento alla Casimir, dimostrato via algebra di
+Pauli diretta); non-commutatività dei tre legami di scambio, identificata
+esplicitamente con l'operatore di \textbf{chiralità di spin scalare}
+$\chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$ (Wen--Wilczek--Zee 1989,
+citazione verificata via ricerca); identità analoga, ma strutturalmente diversa (non
+collassa a un solo operatore), per i tre legami DM; derivazione completa
+dell'errore di Trotter a tre livelli, con formula chiusa per il livello 1
+($i\tau^2J'^2\chi$, il prodotto incrociato $JJ'$ si cancella esattamente) e per il
+livello 2.
+
+\textbf{Verifiche.} Ogni identità algebrica non banale (operatore di chiralità,
+identità del commutatore DM, cancellazione del termine $JJ'$) verificata
+numericamente (confronto diretto di matrici $8\times8$, non solo su stati campione)
+prima di essere scritta come derivazione. Compilato con \texttt{pdflatex} (due
+passate): zero errori; overfull residuo $<2$mm, invisibile — corretto rispetto a una
+prima stesura con overflow fino a 126pt (equazioni con doppio \texttt{\seqsplit{underbrace}}
+e nomi di file senza \texttt{\seqsplit{seqsplit}}).
+
+\textbf{Conclusione.} Documento autosufficiente per la parte formale: ogni
+affermazione della fase applicativa (sotto) vi si può ricondurre con un riferimento
+di sezione/equazione preciso.
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_applicazione.tex}}}
+
+Applica la teoria all'implementazione: decisione metodologica (Trotter interno,
+strategia (a), invece della sintesi numerica dell'unitaria $8\times8$), tabella di
+conversione fra convenzione a spin (dimero) e Pauli diretta (qui), cronologia della
+scoperta del livello 2, ricerca del punto di lavoro (criterio a due indicatori:
+escursione picco-picco e rapporto $a_2/a_1$ fra i due modi spettrali dominanti),
+risultati di convergenza in $N$ e separazione dei contributi di errore, riepilogo
+dello studio di compattezza del circuito.
+
+\textbf{Verifiche.} Stesso trattamento del documento di teoria: compilato,
+verificato pagina per pagina, margini corretti (nomi di file lunghi sistematicamente
+avvolti in \texttt{\seqsplit{seqsplit}} con uno script, non a mano, per non ometterne
+nessuno).
+
+\textbf{Conclusione.} Contiene la nota procedurale esplicita sulla lezione già
+imparata dal dimero (non adottare il primo posto di uno scan cieco senza verifica di
+robustezza) — applicata qui prima di adottare $R_0$, non dopo un errore.
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_trotter\_spiegato.tex}}}
+
+Documento di accompagnamento al notebook (sotto), cella per cella: cosa calcola
+ciascuna sezione, perché (fisica e matematica), cosa significano i numeri prodotti.
+Include una dimostrazione autonoma — verificata a precisione macchina
+($2.2\times10^{-16}$) — che $\ket{000}$ è autostato esatto di $H_{ex}$ e di $H_0$,
+quindi che $\langle S_z^{tot}\rangle(t)$ è costante per $D=0$: il termine DM non è
+un dettaglio opzionale, è l'unica sorgente di dinamica osservabile da questo stato
+iniziale.
+
+\textbf{Verifiche.} Compilato, margini corretti con lo stesso metodo sistematico
+dei due documenti precedenti.
+
+\textbf{Conclusione.} Pensato per essere portato al colloquio col relatore come
+traccia puntuale, indipendente dagli altri documenti di teoria.
+
+\section*{\texttt{\seqsplit{trimero\_anello\_frustrazione\_e\_chiralita.tex}}}
+
+Nota di chiarimento: separa due concetti inizialmente accostati in modo troppo
+stretto nella teoria. La \textbf{frustrazione energetica} (nessuna configurazione
+soddisfa tutti e tre i legami antiferromagnetici) è un fatto combinatorio sul
+triangolo come ciclo dispari — vale per l'equilatero come per l'isoscele, non
+richiede $J=J'$. La \textbf{non-commutatività algebrica} dei legami di scambio
+(l'operatore $\chi$) è un fatto puramente algebrico sugli operatori di Pauli, vale
+per qualunque $J,J'$ — l'equilatero cambia solo il \emph{grado di simmetria} della
+frustrazione (degenerazione $4\times$ del fondamentale), non la sua presenza. Il
+punto di lavoro di questo progetto ($J\neq J'$) non è nel regime degenere: la
+fisica "chirale" del paper citato è un'osservazione di contesto, non un risultato
+usato altrove.
+
+\textbf{Verifiche.} Compilato pulito fin dalla prima stesura (zero overfull),
+avendo applicato da subito le correzioni di margine imparate sui documenti
+precedenti.
+
+\textbf{Conclusione.} Chiude un possibile fraintendimento prima che si propaghi
+in altri documenti o nella discussione col relatore.
+
+\section*{\texttt{\seqsplit{trimero\_anello\_circuito\_compatto.tex}} + \texttt{.pdf}}
+
+Ripete per il trimero lo studio già fatto per il dimero: comprimere il circuito
+Trotter via sintesi numerica (transpiler) invece dei gate fisicamente etichettati.
+Per 3 qubit non esiste un teorema di compressione universale altrettanto chiuso di
+quello a 2 qubit (Cartan/Weyl) del dimero — la verifica qui è empirica, non un
+minimo dimostrato. Risultato: un singolo passo si comprime da 15 gate nativi a 18
+CNOT; l'intero prodotto a $N$ passi si comprime a $\sim19$ CNOT
+\textbf{indipendentemente da $N$} (verificato fino a $N=100$) — stesso fenomeno del
+dimero (lì 3 CNOT fissi), più marcato in valore assoluto dato che agli
+$N\simeq300$--$3000$ che servono qui il circuito esplicito arriva a decine di
+migliaia di gate.
+
+\textbf{Verifiche.} Compilato (due passate, zero errori, un solo underfull
+cosmetico) e verificato pagina per pagina in questa fase.
+
+\textbf{Conclusione.} Stessa conclusione del dimero, riconfermata e rafforzata: non
+usare il circuito compresso per lo studio Trotter-vs-rumore della Parte 2.
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_trotter.ipynb}}}
+
+Il notebook di lavoro: dal self-test del modulo alla ricerca del punto di lavoro,
+alla convergenza in $N$ e separazione dei contributi di errore ripetute su tre punti
+robusti (non solo $R_0$), al disegno del circuito, a una sezione finale di
+esplorazione a parametri liberi.
+
+\textbf{Funzioni interne rilevanti.}
+\begin{itemize}
+\item \texttt{mode\_amplitudes(b,\ D)} — decomposizione spettrale di Bohr:
+ampiezza $a_{kl}=2|c_k^*c_l(S_z^{tot})_{kl}|$ e gap $\Delta_{kl}=E_l-E_k$ per ogni
+coppia di autostati, ordinata per ampiezza decrescente.
+\item \texttt{sz\_trace(b,\ D,\ t\_max)} — traiettoria esatta $\langle
+S_z^{tot}\rangle(t)$ via diagonalizzazione (non Trotter), usata per lo scan del
+punto di lavoro.
+\item \texttt{exact\_traj}, \texttt{trotter\_traj} — confronto dinamica esatta vs
+circuito Trotter reale, per il grafico a tre punti.
+\item \texttt{U\_step\_matrix} — costruzione a matrice di un passo Trotter (validata
+identica al circuito), usata per la scansione veloce su molti $N$ senza il costo di
+\texttt{Operator(qc)} per circuiti a migliaia di gate.
+\item \texttt{esplora(J,\ Jp,\ b,\ D)} — funzione a 4 pannelli (segnale, spettro,
+convergenza in $N$, peso del livello 2) per un punto di lavoro qualunque, a chiamata
+diretta (parametri modificati a mano nel codice, non tramite widget — tre tentativi
+con \texttt{ipywidgets} non hanno dato un risultato affidabile nell'ambiente reale,
+vedi nota sotto).
+\end{itemize}
+
+\textbf{Come si usa.} Notebook, si esegue per intero. Richiede
+\texttt{\seqsplit{trotter\_trimero\_anello.py}} e \texttt{\seqsplit{trimer\_ring\_exact.py}}
+nella stessa cartella.
+
+\textbf{Verifiche.} Rieseguito per intero più volte nel corso della fase (ultima
+esecuzione pulita, zero errori). Punto adottato $R_0$ (trimero):
+$J{=}1,J'{=}0.4,b{=}0.05,D{=}1.93$. Convergenza: infedeltà $<1\%$ a $N\simeq325$,
+$<0.1\%$ a $N\simeq1025$, $<0.01\%$ a $N\simeq3250$; sui tre punti testati la scala
+di $N$ varia molto (da $N\simeq30$ a $N\simeq325$ per la soglia dell'1\%), ma lo
+scaling $O(1/N^2)$ è confermato su tutti e tre. Peso del livello 2 (rapporto
+$V_2/V_1$): $\simeq4.4$ a $R_0$, $\simeq2.0$ e $\simeq1.04$ sugli altri due punti —
+non un fattore universale, dipende fortemente da $D$. Due punti aggiuntivi esplorati
+a parametri liberi (non ancora aggiunti al confronto sistematico a tre punti):
+$J{=}1,J'{=}0.3,b{=}0.2,D{=}1.1$ (dove il rapporto $V_2/V_1$ attraversa $1$ fra
+$N=640$ e $N=1280$, un comportamento qualitativamente diverso dagli altri, coerente
+con i due errori quasi della stessa taglia a questo punto) e una riconferma di $R_0$.
+
+\textbf{Nota su \texttt{ipywidgets}.} Tre tentativi (\texttt{FloatSlider}+
+\texttt{interact}, \texttt{FloatSlider}+\texttt{interact\_manual},
+\texttt{Dropdown}+\texttt{interact} sullo schema di
+\texttt{\seqsplit{circuito\_correlazioni\_tutte.ipynb}}) non hanno prodotto un
+risultato affidabile nell'ambiente reale (blocco di minuti, poi errore di rendering
+specifico di VS Code — \texttt{\seqsplit{jupyter-ipywidget-renderer}} /
+\texttt{\seqsplit{ipywidgetsKernel}}, un bug noto dell'architettura di
+quell'estensione, non del codice). Adottata la versione a chiamata diretta con
+parametri modificati a mano: nessuna dipendenza fragile, stessa funzione a 4
+pannelli.
+
+\textbf{Conclusione.} Il notebook è lo strumento primario per continuare
+l'esplorazione: aggiungere un nuovo punto di lavoro richiede solo modificare quattro
+numeri e rieseguire una cella.
+
+\section*{\texttt{\seqsplit{trimero\_trotter\_R0\_convergenza.png}} e \texttt{\seqsplit{trimero\_trotter\_circuito.png}}}
+
+Rendering standalone prodotti prima che il notebook includesse le stesse analisi al
+proprio interno (traiettoria/convergenza a $R_0$; disegno del circuito a 2 passi).
+Contenuto ora superato dalle figure equivalenti, più complete, generate direttamente
+nel notebook — mantenuti come riferimento rapido, non richiedono di aprire e
+rieseguire il notebook per una singola occhiata.
+
+\section*{Conclusione generale}
+
+La fase di quantum simulation per il trimero anello è arrivata a un punto di
+maturità analogo a quello del dimero, con una differenza strutturale in più
+scoperta e trattata per esteso (il livello 2, bond-splitting di $H_{DM}$) invece che
+solo verificata a numeri. Il punto di lavoro $R_0$ resta \textbf{provvisorio} — la
+derivazione principiata (stile $R_1$) è rimandata, non abbandonata. Il prossimo
+passo concordato col relatore è l'estensione del circuito con l'ancilla per le
+correlazioni dinamiche su $N=3$: i due punti di lavoro più ricchi trovati finora
+($R_0$ e $J{=}1,J'{=}0.3,b{=}0.2,D{=}1.1$) sono candidati diretti, da confermare
+specificamente sui correlatori $C_{ij}^{\alpha\beta}(t)$ di interesse (non garantito
+che la ricchezza spettrale di $S_z^{tot}$ si trasferisca automaticamente a quei
+correlatori) prima di adottarli definitivamente per quello scopo.
+
+\end{document}

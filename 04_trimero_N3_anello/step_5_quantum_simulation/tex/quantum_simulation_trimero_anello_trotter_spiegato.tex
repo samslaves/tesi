@@ -1,0 +1,546 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{seqsplit}
+\usepackage{graphicx}
+
+\geometry{margin=2.7cm}
+
+\title{Il notebook \texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_trotter.ipynb}} spiegato\\
+\large Fisica, matematica e numeri, passo per passo, senza salti logici}
+\author{Note per la discussione col relatore --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\bigskip
+\noindent Questo documento accompagna, cella per cella, il notebook
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_trotter.ipynb}}:
+per ogni sezione del notebook, spiega \emph{cosa} viene calcolato,
+\emph{perché} (la fisica e la matematica dietro), e \emph{cosa
+significano} i numeri che escono. È pensato per essere portato al
+colloquio col relatore come traccia puntuale, indipendente dagli altri
+documenti di teoria (che vengono comunque citati per chi vuole la
+derivazione completa di ogni singolo passaggio algebrico).
+
+\section{Il problema e l'Hamiltoniana (cella di setup)}
+
+Il notebook implementa la simulazione dell'evoluzione temporale reale
+$e^{-iHt}$ per il trimero anello isoscele ($N=3$ spin-$1/2$), con
+\begin{align}
+H &= b\sum_{i=1}^3 Z_i \;+\; H_{ex} \;+\; H_{DM}, \label{eq:H-full}\\[3pt]
+H_{ex} &= J\,\vec\sigma_1\!\cdot\!\vec\sigma_2 \;+\; J'\big(\vec\sigma_2\!\cdot\!\vec\sigma_3+\vec\sigma_3\!\cdot\!\vec\sigma_1\big), \notag\\[3pt]
+H_{DM} &= D_{12}(X_1Z_2{-}Z_1X_2) \;+\; D_{23}(X_2Z_3{-}Z_2X_3) \;+\; D_{31}(X_3Z_1{-}Z_3X_1), \notag
+\end{align}
+in \textbf{convenzione di Pauli diretta} (nessun fattore $1/2$ o $1/4$:
+gli operatori sono direttamente $X,Y,Z$, non $\sigma/2$), con base $J$ sui
+siti $(1,2)$ e lati $J'$ su $(2,3),(3,1)$ (topologia isoscele), e Opzione
+B del termine DM: $D_{12}=rJ$, $D_{23}=D_{31}=rJ'$ (nel codice il
+parametro $r$ è chiamato \texttt{D}). Questa è \emph{l'estensione a
+$N=3$} di un compito già completato per il dimero ($N=2$): l'obiettivo
+del notebook è mostrare che, sebbene $H$ non si possa esponenziare in
+blocco senza diagonalizzare una matrice $8\times8$, l'evoluzione si può
+comunque implementare con un circuito quantistico, tramite decomposizione
+di Suzuki--Trotter, e quantificare l'errore che questa approssimazione
+introduce.
+
+Il notebook importa due moduli:
+\begin{itemize}
+\item \texttt{\seqsplit{trimer\_ring\_exact.py}} -- il benchmark esatto già
+usato per tutta la teoria e il VQE del trimero: costruisce $H$ come
+\texttt{SparsePauliOp} e la diagonalizza esattamente (\texttt{eigh}),
+serve qui come "verità di riferimento" contro cui misurare l'errore di
+Trotter;
+\item \texttt{\seqsplit{trotter\_trimero\_anello.py}} -- il modulo scritto per
+questo compito, che costruisce il circuito Trotter e lo confronta con la
+matrice esatta.
+\end{itemize}
+Il fatto che entrambi condividano la stessa costruzione
+dell'Hamiltoniana (il secondo modulo importa letteralmente le funzioni
+del primo, non ne ridefinisce una copia) è una scelta metodologica
+precisa: elimina la possibilità che una discrepanza numerica sia dovuta a
+una convenzione di segno o di indicizzazione diversa tra i due pezzi di
+codice, invece che a un vero errore di approssimazione fisica.
+
+\section{Self-test del modulo (Sezione 1 del notebook)}
+\label{sec:self-test}
+
+Prima di produrre qualunque risultato fisico, il notebook esegue quattro
+verifiche indipendenti. Questo ordine non è casuale: se uno di questi
+test fallisse, qualunque numero prodotto dopo sarebbe privo di senso, non
+un errore di Trotter genuino ma un bug di implementazione (convenzione di
+segno, fattore mancante, qubit scambiati).
+
+\subsection{Self-test 1: coerenza dell'operatore $S_z^{tot}$}
+
+Il notebook verifica che l'operatore $S_z^{tot}=\sum_i Z_i$, costruito
+direttamente in \texttt{\seqsplit{trotter\_trimero\_anello.py}}, coincida con
+quello ottenibile a partire dal benchmark esatto. Il trucco usato è
+semplice ma rigoroso: l'Hamiltoniana a scambio nullo, $H(J{=}0,J'{=}0,b)$,
+è per costruzione $b\sum_iZ_i=b\,S_z^{tot}$ (Eq.~\eqref{eq:H-full} con
+$J=J'=0$); quindi la differenza $H(0,0,b_2)-H(0,0,b_1)$, divisa per
+$b_2-b_1$, deve restituire esattamente $S_z^{tot}$, indipendentemente da
+quale dei due moduli l'abbia costruito. Il risultato del notebook,
+$\|S_z^{tot}(\text{qui})-S_z^{tot}(\text{da trimer\_hamiltonian})\|=0$,
+conferma che non c'è disallineamento fra le due costruzioni.
+
+\subsection{Self-test 2: il circuito Qiskit reale contro la matrice indipendente}
+\label{subsec:selftest2}
+
+Questo è il test più importante dei quattro, perché confronta
+\textbf{il circuito che verrà davvero eseguito} (non solo una sua
+rappresentazione a matrice teorica) con una costruzione a matrice
+indipendente. Per cinque set di parametri casuali $(J,J',b,D,t)$, il
+notebook:
+\begin{enumerate}
+\item costruisce il circuito Qiskit per un singolo passo di Trotter
+(\texttt{trotter\_circuit(...,\,N{=}1)}) ed estrae la sua unitaria
+$8\times8$ esatta tramite \texttt{Operator(qc).data} (Qiskit calcola
+letteralmente il prodotto di tutte le matrici dei gate, nell'ordine in
+cui compaiono nel circuito);
+\item costruisce, \emph{separatamente e senza passare dal circuito}, la
+stessa unitaria a partire dalla definizione matematica: esponenziale di
+matrice (\texttt{scipy.linalg.expm}) di ciascun blocco di legame,
+moltiplicati fra loro nell'ordine previsto dalla teoria;
+\item confronta le due matrici con la norma dell'operatore.
+\end{enumerate}
+L'errore trovato è dell'ordine di $10^{-15}$ per tutti e cinque i casi --
+precisione macchina, non un residuo di approssimazione fisica. Questo
+significa che il circuito Qiskit implementa \emph{esattamente} la
+costruzione matematica descritta nella Sezione~\ref{sec:trotter-error},
+gate per gate: se ci fosse un errore di segno, di fattore (es.\ $\theta$
+invece di $2\theta$ in un gate di rotazione), o di indicizzazione dei
+qubit, l'errore qui misurato sarebbe dell'ordine dell'unità, non
+$10^{-15}$.
+
+\subsection{Self-test 3: convergenza $N\to\infty$ verso l'evoluzione esatta}
+\label{subsec:selftest3}
+
+Fissato un punto $(J,J',b,D,t)$, il notebook calcola l'infedeltà
+$1-|\langle\psi_{\rm esatto}(t)|\psi_{\rm Trotter}(t)\rangle|^2$ per
+$N=5,10,20,40,80$ passi, partendo da $\ket{000}$. I numeri prodotti:
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$N$ & infedeltà & rapporto rispetto al precedente \\
+\midrule
+5 & $6.091\times10^{-3}$ & --- \\
+10 & $1.129\times10^{-3}$ & $5.39$ \\
+20 & $2.614\times10^{-4}$ & $4.32$ \\
+40 & $6.387\times10^{-5}$ & $4.09$ \\
+80 & $1.585\times10^{-5}$ & $4.03$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Il rapporto tende a $4$ (non a $2$) al crescere di $N$: questo è
+\emph{atteso} per un metodo del prim'ordine, e la ragione è spiegata per
+esteso nella Sezione~\ref{sec:trotter-error}. In breve: l'errore
+sull'\emph{ampiezza} (la differenza fra i due stati come vettori) scala
+come $1/N$; l'infedeltà è il \emph{modulo quadro} di quella differenza,
+quindi scala come $(1/N)^2=1/N^2$ -- raddoppiando $N$, l'infedeltà si
+riduce di un fattore $2^2=4$, non $2$. Il fatto che il rapporto misurato
+converga proprio a $4$ (non a $3$, non a $5$) è la prima conferma
+numerica, indipendente dalla teoria, che l'implementazione è
+effettivamente un metodo di Trotter del prim'ordine.
+
+\subsection{Self-test 4: fattorizzazione esatta di $H_0$}
+
+L'ultimo test verifica che $H_0=b\sum_iZ_i+H_{ex}$ si fattorizzi
+\emph{esattamente} come campo $\times$ scambio, indipendentemente da
+$\tau$: per tre set di parametri casuali, $\|e^{-iH_0\tau} -
+e^{-ib\tau S_z^{tot}}e^{-iH_{ex}\tau}\|\sim10^{-16}$. La ragione teorica
+(perché questo blocco non ha \emph{nessun} errore di approssimazione, a
+differenza di tutto il resto) è derivata per esteso nella
+Sezione~\ref{sec:trotter-error}.
+
+\section{Ricerca del punto di lavoro (Sezione 2 del notebook)}
+\label{sec:ricerca-punto}
+
+\subsection{Perché serve il termine DM: verifica diretta}
+
+Prima ancora di cercare un buon punto, va stabilito che il termine DM è
+\emph{necessario} per avere una qualunque dinamica osservabile. Si
+verifica esplicitamente che $\ket{000}$ è autostato esatto di $H_{ex}$:
+\begin{equation}
+H_{ex}\ket{000} = (J+2J')\,\ket{000},
+\label{eq:000-eigenstate}
+\end{equation}
+un fatto che si dimostra così: il termine di scambio $X_iX_j+Y_iY_j$ fra
+due spin entrambi "su" (come sono tutti e tre in $\ket{000}$) si annulla
+identicamente. Questo perché $X_iX_j+Y_iY_j = 2(\sigma_i^+\sigma_j^- +
+\sigma_i^-\sigma_j^+)$ (operatori di innalzamento/abbassamento), e
+applicato a $\ket{\uparrow\uparrow}$: il termine $\sigma_i^+\sigma_j^-$
+abbassa il sito $j$ (già su, quindi produce $\ket{\uparrow\downarrow}$)
+ma poi il fattore $\sigma_i^+$ tenta di alzare il sito $i$ che è già su
+-- risultato nullo (non si può alzare oltre $\ket\uparrow$); simmetricamente
+per l'altro termine. Resta solo $Z_iZ_j\ket{\uparrow\uparrow}=+1\cdot\ket{\uparrow\uparrow}$
+per ciascuna coppia, da cui l'Eq.~\eqref{eq:000-eigenstate} (verificato
+numericamente nel documento di supporto, errore $2.2\times10^{-16}$).
+Questo identifica $\ket{000}$ come il membro di punta ($M=3/2$) del
+multipletto $A$ della decomposizione di Kambe (\texttt{\seqsplit{trimer\_ring\_exact.py}}),
+con $E_A=J+2J'$.
+
+Aggiungendo il campo, $\ket{000}$ resta autostato anche di
+$H_0=b\sum_iZ_i+H_{ex}$ (perché $S_z^{tot}\ket{000}=3\ket{000}$ commuta
+banalmente con l'essere già autostato di $H_{ex}$), con autovalore
+$3b+J+2J'$ -- verificato, errore $4.4\times10^{-16}$. \textbf{Conseguenza
+diretta}: se $D=0$, allora $H=H_0$ e $\ket{000}$ è autostato esatto
+dell'Hamiltoniana completa, quindi $\ket{\psi(t)}=e^{-iEt}\ket{000}$
+(solo una fase globale) e $\langle S_z^{tot}\rangle(t)$ è \textbf{costante
+nel tempo}, per qualunque $b,J,J'$ -- verificato numericamente su una
+griglia di tempi, scarto $0$ a precisione macchina. Senza il termine DM
+non c'è alcuna dinamica da osservare: è $D\neq0$, e solo quello, a rendere
+possibile un'oscillazione. Lo stesso fenomeno, con la stessa dimostrazione
+concettuale, era già stato stabilito per il dimero
+($\ket{00}=\ket{t_+}$ autostato di $H_1$).
+
+\subsection{Il criterio a due indicatori}
+
+Fissati $J=1,J'=0.4$ (punto di lavoro del VQE), bisogna scegliere $(b,D)$
+in modo che $\langle S_z^{tot}\rangle(t)$ mostri oscillazioni
+\textbf{non banali}: non un singolo coseno pulito (che metterebbe alla
+prova a malapena il codice, essendo equivalente a un sistema a due
+livelli), ma la sovrapposizione di più frequenze indipendenti.
+
+\subsubsection{Decomposizione spettrale (formula usata da \texttt{mode\_amplitudes})}
+
+Sia $H\ket{k}=E_k\ket{k}$ la base di autostati esatti (ottenuta nel
+notebook via \texttt{numpy.linalg.eigh}), e $c_k=\langle k\ket{000}$ le
+proiezioni dello stato iniziale su questa base. Lo stato evoluto è
+$\ket{\psi(t)}=\sum_k c_k e^{-iE_kt}\ket k$, e il valore di aspettazione
+di un qualunque operatore hermitiano $\hat O$ (qui $\hat O=S_z^{tot}$) è
+\begin{align}
+\langle\hat O\rangle(t) &= \sum_{k,l} c_k^*c_l\,e^{i(E_k-E_l)t}\,O_{kl}
+= \sum_k |c_k|^2 O_{kk} + \sum_{k\neq l} c_k^*c_l\,e^{-i(E_l-E_k)t}\,O_{kl}\\
+&= \underbrace{\sum_k|c_k|^2O_{kk}}_{\text{parte costante}} + \sum_{k<l} 2\,\mathrm{Re}\!\left[c_k^*c_l\,O_{kl}\,e^{-i\Delta_{kl}t}\right], \qquad \Delta_{kl}\equiv E_l-E_k,
+\label{eq:mode-decomp}
+\end{align}
+dove nell'ultimo passaggio si sono accoppiati i termini $(k,l)$ e
+$(l,k)$ usando $O_{lk}=O_{kl}^*$ ($\hat O$ hermitiano) e
+$c_l^*c_k\,e^{i\Delta_{kl}t}=(c_k^*c_l\,e^{-i\Delta_{kl}t})^*$. L'Eq.~\eqref{eq:mode-decomp}
+è esattamente la funzione \texttt{\seqsplit{mode\_amplitudes}} del notebook: per
+ogni coppia $k<l$ calcola l'\textbf{ampiezza del modo}
+$a_{kl}=2|c_k^*c_l\,O_{kl}|$ e il suo \textbf{gap} $\Delta_{kl}$, ordinando
+per ampiezza decrescente. I due modi con ampiezza più alta, $a_1\ge a_2$,
+sono quelli che dominano la forma di $\langle S_z^{tot}\rangle(t)$.
+
+\subsubsection{I due indicatori e il loro significato fisico}
+
+\begin{enumerate}
+\item \textbf{Escursione picco-picco} di $\langle S_z^{tot}\rangle(t)$ su
+una finestra temporale lunga (il notebook usa $t_{\max}=30$): il segnale
+deve essere abbastanza grande da restare leggibile sopra il rumore
+statistico di un campionamento a shot finiti, che scala come
+$1/\sqrt{N_{\rm shots}}$ (per $N_{\rm shots}=8192$, soglia
+$\approx0.011$).
+\item \textbf{Rapporto $a_2/a_1$}: se $a_2/a_1\to0$, un solo modo domina
+e il segnale è un coseno quasi puro (\emph{monocromatico}, nel senso
+ottico del termine: una sola frequenza); se $a_2/a_1\to1$, due modi con
+ampiezza comparabile producono \textbf{battimenti} -- massimi e minimi
+irregolari, senza periodicità semplice, la firma di una dinamica
+autenticamente multi-livello.
+\end{enumerate}
+Servono \textbf{entrambi}: un segnale grande ma monocromatico (es.\ vicino
+a una risonanza a due livelli) non soddisferebbe il secondo criterio; un
+segnale spettralmente ricco ma minuscolo sarebbe inutilizzabile
+sperimentalmente. Lo stesso criterio, con la stessa motivazione, è stato
+usato per derivare i punti R0/R1 del dimero.
+
+\subsection{Lo scan e i candidati trovati}
+
+Il notebook scandisce una griglia $60\times40$ in $(b,D)$, con
+$b\in[0.05,5]$, $D\in[0.05,2.5]$ (2400 punti), calcolando per ciascuno
+picco-picco e $a_2/a_1$ dalla dinamica \textbf{esatta} (diagonalizzazione,
+non Trotter -- a questo stadio si sta solo scegliendo il punto di lavoro,
+non validando l'algoritmo di Trotter). I primi candidati, filtrati per
+picco-picco $>0.5$ e ordinati per $a_2/a_1$ decrescente:
+
+\begin{center}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+$b$ & $D$ & $D/J$ & picco-picco & $a_2/a_1$ \\
+\midrule
+0.05 & 1.93 & 1.93 & 3.80 & 0.9998 \\
+0.72 & 1.24 & 1.24 & 0.51 & 0.9992 \\
+0.30 & 1.31 & 1.31 & 1.38 & 0.9982 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Verifica di robustezza: perché non basta il primo posto in classifica}
+
+Un candidato preso senza altre verifiche potrebbe essere un punto
+\emph{fine-tuned} (un picco stretto e isolato nel piano $(b,D)$,
+privo di significato fisico robusto) piuttosto che un vero
+\emph{plateau} fisico. Il notebook perturba ciascun candidato di
+$\pm5$--$10\%$ in $b$ e $D$ e ricalcola i due indicatori:
+
+\begin{center}
+\begin{tabular}{@{}cc@{}}
+\toprule
+punto & comportamento sotto perturbazione \\
+\midrule
+$(0.05,1.93)$ & picco-picco resta $3.7$--$3.8$; $a_2/a_1$ scende a $0.74$--$0.91$ \\
+$(0.30,1.31)$ & picco-picco $1.1$--$1.8$; $a_2/a_1$ $0.75$--$0.99$ \\
+$(0.72,1.24)$ & picco-picco $0.4$--$0.65$; $a_2/a_1$ $0.6$--$0.98$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Tutti e tre restano qualitativamente validi (nessun collasso improvviso
+del segnale): sono plateau, non punte isolate. Questo giustifica
+l'adozione del primo, che ha anche il segnale assoluto più grande.
+
+\section{Il punto adottato: $R_0$ (trimero)}
+
+$$J=1, \qquad J'=0.4, \qquad b=0.05, \qquad D=1.93.$$
+\textbf{Da dichiarare esplicitamente al relatore come provvisorio.} Per
+il dimero, il punto analogo ($R_1$) era stato derivato dalla struttura a
+V dei quattro livelli (formula di Rabi, due detuning indipendenti), non
+da uno scan. Per il trimero la stessa derivazione richiederebbe
+classificare le transizioni fra gli 8 livelli di Kambe sotto la rottura
+di $S_{12}^2$ indotta dall'Opzione B del DM -- un lavoro più lungo,
+pianificato ma non ancora fatto. Il punto $R_0$ (trimero) qui adottato è
+uno scan \emph{verificato robusto}, non un semplice primo posto in una
+classifica cieca (si veda la nota procedurale nel documento di
+applicazione sulla stessa lezione, già imparata una volta con un errore
+simile nel dimero e qui non ripetuta).
+
+\section{Convergenza in $N$ (Sezione 4 del notebook)}
+\label{sec:trotter-error}
+
+Questa è la parte concettualmente più densa del notebook: va spiegato
+\emph{da dove viene} l'errore di Trotter, non solo mostrarne i numeri.
+
+\subsection{Perché il passo di Trotter ha tre livelli, non uno}
+
+Il passo implementato è
+\begin{align}
+U_{\rm step}(\tau) &= V_{DM}(\tau)\;e^{-ib\tau S_z^{tot}}\;V_{ex}(\tau), \label{eq:Ustep}\\
+V_{ex}(\tau)&=U_{31}(\tau)\,U_{23}(\tau)\,U_{12}(\tau), \qquad V_{DM}(\tau)=U_{31}^{DM}(\tau)\,U_{23}^{DM}(\tau)\,U_{12}^{DM}(\tau), \notag
+\end{align}
+dove $U_{ij}(\tau)=e^{-iJ_{ij}\tau\vec\sigma_i\cdot\vec\sigma_j}$ e
+$U_{ij}^{DM}(\tau)$ sono i blocchi di \emph{singolo} legame, esatti (Sezione~2
+di \texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}}: la
+dimostrazione usa che $X_iX_j,Y_iY_j,Z_iZ_j$ commutano a due a due per una
+coppia di qubit fissata, quindi il loro esponenziale fattorizza senza
+errore). L'evoluzione esatta è invece $U_{\rm esatto}(\tau)=e^{-i(H_0+H_{DM})\tau}$.
+
+Perché $U_{\rm step}\neq U_{\rm esatto}$? Perché la costruzione
+dell'Eq.~\eqref{eq:Ustep} introduce \textbf{tre} approssimazioni
+indipendenti, non una sola:
+\begin{enumerate}
+\item[\textbf{Livello 0}] (esterno): si tratta $H_0$ e $H_{DM}$ come due
+blocchi separati in sequenza, $e^{-i(H_0+H_{DM})\tau}\approx
+e^{-iH_{DM}\tau}e^{-iH_0\tau}$, il che è esatto solo se $[H_0,H_{DM}]=0$
+-- non è il caso (il campo non commuta con il DM, che rompe la
+conservazione di $S_z^{tot}$).
+\item[\textbf{Livello 1}] (interno, scambio): $H_{ex}$ è la somma di
+\emph{tre} legami che condividono i qubit a due a due (il qubit 2 sta sia
+nel legame $(1,2)$ sia nel legame $(2,3)$); si dimostra
+(\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} \S4)
+che $[\vec\sigma_1\!\cdot\!\vec\sigma_2,\vec\sigma_2\!\cdot\!\vec\sigma_3]\neq0$,
+quindi $V_{ex}(\tau)\neq e^{-iH_{ex}\tau}$ esattamente.
+\item[\textbf{Livello 2}] (interno, DM): per lo stesso motivo (qubit
+condivisi), anche i tre legami DM non commutano fra loro
+(\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} \S6), quindi
+$V_{DM}(\tau)\neq e^{-iH_{DM}\tau}$ esattamente.
+\end{enumerate}
+Il livello 2 è la scoperta di questo lavoro rispetto al compito
+originale (che prevedeva solo il livello 1): non era affatto scontato che
+anche $H_{DM}$ avesse lo stesso problema strutturale dello scambio, ed è
+stato verificato esplicitamente prima di essere assunto.
+
+\subsection{Da dove viene l'errore: la formula di Baker--Campbell--Hausdorff}
+
+Per due operatori $A,B$ generici, non necessariamente commutanti,
+\begin{equation}
+e^Ae^B = \exp\!\Big(A+B+\tfrac12[A,B]+\tfrac1{12}[A,[A,B]]+\tfrac1{12}[B,[B,A]]+\cdots\Big).
+\label{eq:BCH}
+\end{equation}
+Se $[A,B]=0$, ogni termine della serie oltre il primo si annulla (per
+induzione: ogni commutatore annidato successivo è costruito a partire da
+$[A,B]$ o da altri commutatori già nulli), e $e^Ae^B=e^{A+B}$
+\emph{esattamente}. È questo il motivo per cui i blocchi di singolo
+legame (Sezione~\ref{subsec:selftest2}) e la fattorizzazione di $H_0$
+(self-test 4) sono esatti: in entrambi i casi il commutatore rilevante è
+identicamente nullo. Se invece $[A,B]\neq0$, approssimare
+$e^{A+B}\approx e^Ae^B$ significa scartare il termine $\tfrac12[A,B]$ e
+tutti i successivi.
+
+\subsection{L'errore per singolo passo, in formula}
+
+Espandendo entrambi i membri dell'Eq.~\eqref{eq:BCH} in serie di Taylor
+fino a $O(\tau^2)$ (per $A\to A\tau$, $B\to B\tau$, $\tau$ piccolo):
+\begin{equation}
+e^{-i(A+B)\tau} - e^{-iA\tau}e^{-iB\tau} = -\frac{\tau^2}2[A,B] + O(\tau^3)
+\label{eq:2term-error}
+\end{equation}
+(derivazione per esteso: si espandono $e^{-iA\tau}$, $e^{-iB\tau}$ e
+$e^{-i(A+B)\tau}$ ciascuno fino al second'ordine in $\tau$, si moltiplicano
+i primi due, e si confronta termine a termine col terzo -- fatto per
+esteso in \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S6.1 per il
+caso a due fattori, e generalizzato a tre fattori nella teoria del
+trimero). L'errore per passo è quindi $O(\tau^2)$, \emph{proporzionale al
+commutatore}: se $[A,B]=0$ l'errore si annulla identicamente, qualunque
+sia $\tau$ -- coerente con quanto osservato nei self-test.
+
+Per il caso del trimero, applicando questa formula ai tre livelli
+sopra descritti e sommando i contributi per disuguaglianza triangolare
+(la derivazione completa, incluso il calcolo esplicito dei commutatori
+tramite l'operatore di chiralità di spin
+$\chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$, è in
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} \S8), si ottiene
+che l'errore per passo resta $O(\tau^2)$ nonostante i tre contributi
+indipendenti:
+\begin{equation}
+\big\|U_{\rm esatto}(\tau)-U_{\rm step}(\tau)\big\| \le \|\varepsilon_0(\tau)\|+\|\varepsilon_1(\tau)\|+\|\varepsilon_2(\tau)\| = O(\tau^2).
+\label{eq:total-step-error}
+\end{equation}
+
+\subsection{Dall'errore per passo all'errore totale: perché il rapporto tende a 4}
+
+Per $N$ passi di durata $\tau=t/N$, usando la disuguaglianza triangolare
+$N$ volte sull'Eq.~\eqref{eq:total-step-error}:
+\begin{equation}
+\big\|U_{\rm esatto}(t)-U_{\rm step}(\tau)^N\big\| \lesssim N\cdot O(\tau^2) = N\cdot O\!\left(\frac{t^2}{N^2}\right) = O\!\left(\frac{t^2}{N}\right).
+\label{eq:total-N-error}
+\end{equation}
+L'errore sull'\emph{operatore} (e quindi, a meno di dettagli, sull'ampiezza
+dello stato) scala come $1/N$. L'\textbf{infedeltà} misurata nel notebook,
+$1-|\langle\psi_{\rm esatto}|\psi_{\rm Trotter}\rangle|^2$, è legata al
+\emph{quadrato} della differenza fra i due stati (uno sviluppo di Taylor
+di $|\langle\psi_1|\psi_2\rangle|^2$ attorno a $\psi_1=\psi_2$ dà
+$1-|\langle\psi_1|\psi_2\rangle|^2\approx\|\psi_1-\psi_2\|^2$ al
+prim'ordine), quindi scala come $(1/N)^2=1/N^2$: raddoppiando $N$,
+l'infedeltà scende di un fattore $4$. È esattamente il rapporto misurato
+nel self-test 3 e nella tabella di convergenza principale.
+
+\subsection{I numeri del notebook, con questa lettura}
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$N$ & infedeltà finale (a $T\simeq7.85$, 2 periodi) & rapporto raddoppiando $N$ \\
+\midrule
+80 & $1.665\times10^{-1}$ & \\
+160 & $4.011\times10^{-2}$ & $4.15$ \\
+320 & $1.007\times10^{-2}$ & $3.98$ \\
+640 & $2.545\times10^{-3}$ & $3.96$ \\
+1280 & $6.409\times10^{-4}$ & $3.97$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Il grafico log--log del notebook mostra questi punti allineati con la
+retta di riferimento $\propto1/N^2$, la firma grafica diretta
+dell'Eq.~\eqref{eq:total-N-error} elevata al quadrato. Il notebook
+riporta anche gli $N$ minimi per soglie di infedeltà standard: $<1\%$ a
+$N\simeq325$, $<0.1\%$ a $N\simeq1025$, $<0.01\%$ a $N\simeq3250$ --
+sensibilmente più alti di quanto bastasse per il dimero ($N=80$ dava già
+$\sim10^{-5}$), coerentemente con la presenza di due livelli di errore in
+più (1 e 2) rispetto al solo livello 0 del dimero, e con $D/J\simeq1.9$
+non piccolo (l'errore di livello 1 scala con $J'^2$, quello di livello 2
+con $D^2\propto r^2$: entrambi crescono con l'intensità delle interazioni
+coinvolte).
+
+\section{Separazione dei contributi di errore (Sezione 5 del notebook)}
+
+Il relatore ha chiesto esplicitamente, oltre alla convergenza in $N$, di
+separare -- se possibile -- i contributi di errore. Poiché il livello 0 e
+il livello 1 erano già presenti nel disegno originale del compito (Trotter
+esterno fra campo/scambio e DM, Trotter interno per lo scambio), mentre il
+livello 2 (Trotter interno per il DM) è una scoperta di questo lavoro, il
+confronto più informativo è isolare \emph{quanto pesa} il livello 2 da
+solo.
+
+\subsection{Il confronto $V_1$ vs $V_2$}
+
+Si costruiscono due varianti del passo:
+\begin{itemize}
+\item $V_2$ (\textbf{reale}, quella effettivamente implementata nel
+circuito): $H_{DM}$ spezzato nei tre legami, come in Eq.~\eqref{eq:Ustep};
+\item $V_1$ (\textbf{idealizzata}, non realizzabile con soli gate
+fisicamente etichettati): $H_{DM}$ trattato come un singolo blocco esatto,
+$e^{-iH_{DM}\tau}$, calcolato con \texttt{scipy.linalg.expm} sull'intera
+matrice $8\times8$ -- possibile solo perché il sistema è ancora piccolo
+abbastanza da diagonalizzare classicamente, non un'opzione per sistemi
+grandi (si veda \texttt{\seqsplit{trimero\_anello\_circuito\_compatto.tex}} per
+la discussione completa di perché questa scorciatoia non generalizza).
+\end{itemize}
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$N$ & infedeltà $V_2$ (reale) & infedeltà $V_1$ (idealizzata) & rapporto \\
+\midrule
+320 & $1.007\times10^{-2}$ & $2.306\times10^{-3}$ & $4.370$ \\
+640 & $2.545\times10^{-3}$ & $5.788\times10^{-4}$ & $4.397$ \\
+1280 & $6.409\times10^{-4}$ & $1.452\times10^{-4}$ & $4.413$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il rapporto si stabilizza a $\simeq4.4$: il livello 2, se rimosso
+(idealmente), ridurrebbe l'infedeltà totale di un fattore $\sim4.4$ a
+questo punto di lavoro. Non è un contributo trascurabile.
+
+\subsection{Un avvertimento onesto sul segno}
+
+La teoria (Sezione~\ref{sec:trotter-error}) garantisce solo che ciascun
+livello sia $O(\tau^2)$ in \emph{modulo} (disuguaglianza triangolare, un
+limite superiore); non garantisce che i tre contributi si sommino sempre
+costruttivamente. Verificato esplicitamente (non assunto) in un'analisi
+collaterale: cambiando punto di lavoro e ordine dei fattori nel prodotto
+di Trotter, il rapporto $V_2/V_1$ misurato varia da $0.62$ a $1.57$ --
+talvolta il livello 2 riduce lievemente l'errore totale (cancellazione
+parziale fra i termini di commutatore), talvolta lo aumenta. A $R_0$
+(trimero) il rapporto è $\simeq4.4$, ma questo valore specifico non va
+generalizzato ad altri punti di lavoro senza rifare il confronto.
+
+\section{Il circuito (Sezione 6 del notebook)}
+
+Il notebook disegna il circuito per 2 passi completi (separati da un
+barrier), nell'ordine $H_{ex}$ (3 legami) $\to$ campo (esatto, 3 rotazioni
+$R_z$) $\to$ $H_{DM}$ (3 legami). Conteggio per un singolo passo: 12
+Hadamard, 9 $R_{ZZ}$, 3 $R_{XX}$, 3 $R_{YY}$, 3 $R_z$ -- 15 gate a due
+qubit nativi. Ai valori di $N$ trovati per la convergenza ($\sim300$ a
+$3000$), il circuito totale avrebbe da $4500$ a $45000$ gate a due qubit:
+irrilevante per la simulazione statevector di adesso (puro calcolo
+classico), ma il numero da tenere a mente quando si affronterà la Parte 2
+(rumore) -- è lo stesso tipo di conteggio che rende rilevante, in quella
+sede, il vantaggio di gate di RBS su $W$ già documentato per il VQE.
+
+\section{Conclusioni}
+
+\begin{enumerate}
+\item Il modulo è validato a precisione macchina su quattro test
+indipendenti, incluso il confronto diretto fra il circuito Qiskit reale e
+la costruzione a matrice.
+\item La struttura dell'errore di Trotter ha \textbf{tre} livelli
+indipendenti (non due, come inizialmente previsto dal compito): il campo
+non commuta col DM (livello 0), i tre legami di scambio non commutano fra
+loro (livello 1, noto), e i tre legami DM neppure (livello 2, scoperta di
+questo lavoro) -- tutti e tre derivati in forma chiusa, non solo verificati
+a numeri.
+\item Il punto di lavoro $R_0$ (trimero) usato per la dimostrazione è
+\textbf{provvisorio}: un plateau verificato robusto, non (ancora) una
+derivazione fisica principiata come quella fatta per il dimero.
+\item La convergenza misurata ($N\sim300$--$3000$ per soglie di infedeltà
+dall'1\% allo 0.01\%) e il peso non trascurabile del livello 2
+($\sim4.4\times$) sono i due numeri principali da portare al relatore in
+risposta diretta alla sua richiesta di "testare quanti passi $N$ servono"
+e di "separare, se possibile, i contributi di errore".
+\end{enumerate}
+
+\end{document}

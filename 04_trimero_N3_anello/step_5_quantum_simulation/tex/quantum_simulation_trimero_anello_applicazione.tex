@@ -1,0 +1,376 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.7cm}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{caption}
+\usepackage{seqsplit}
+\usepackage[colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue]{hyperref}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Quantum simulation del trimero anello: applicazione della teoria\\
+all'implementazione Qiskit\\[6pt]
+\large Dalla teoria a tre livelli al modulo \texttt{\seqsplit{trotter\_trimero\_anello.py}} --- procedura commentata}
+\author{Samuele \\ Relatore: Prof. Alessandro Chiesa}
+\date{22 agosto 2026}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Questo documento ricostruisce, passo per passo, come la teoria
+raccolta in \texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} sia
+stata applicata nella costruzione del modulo
+\texttt{\seqsplit{trotter\_trimero\_anello.py}} e nell'analisi che ne è seguita:
+ricerca del punto di lavoro, convergenza in $N$, separazione dei
+contributi di errore, studio di compattezza del circuito. Segue lo stesso
+schema di \texttt{\seqsplit{quantum\_simulation\_dimero\_applicazione.tex}}, con una
+differenza di partenza importante da tenere presente in tutto il
+documento: qui la ricerca del punto di lavoro non ha (ancora) una
+derivazione fisica principiata come $R_1$ per il dimero -- resta uno scan
+numerico verificato robusto, esplicitamente provvisorio.
+\end{abstract}
+
+\tableofcontents
+
+\section{Mappa dei riferimenti}
+
+\begin{center}
+\begin{tabular}{@{}p{4.6cm}p{9.6cm}@{}}
+\toprule
+Documento & Stato e uso \\
+\midrule
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} & Derivazione completa dei blocchi esatti e dell'errore a tre livelli. Riferimento primario di questo documento. \\
+\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} / \texttt{\seqsplit{\_applicazione.tex}} & Template metodologico: stessa struttura di derivazione (BCH, Trotter, blocchi esatti), qui estesa da un legame a tre legami condivisi. \\
+\texttt{\seqsplit{log\_decisioni.md}} & Cronologia delle decisioni: strategia (a) per il Trotter interno di $H_{ex}$, scoperta del livello 2 per $H_{DM}$, punto $R_0$ (trimero) adottato, risposte del relatore su priorità e convergenza. \\
+\texttt{\seqsplit{trimer\_ring\_exact.py}} & Sorgente unica dell'Hamiltoniana (\texttt{\seqsplit{trimer\_hamiltonian}}, \texttt{\seqsplit{trimer\_hamiltonian\_dm}}), riusata direttamente da \texttt{\seqsplit{trotter\_trimero\_anello.py}} per zero ambiguità di convenzione. \\
+\texttt{\seqsplit{analisi\_dm\_trimero\_anello.tex}} & Derivazione e verifica dell'Opzione B del DM (unica quantitativamente aperta), usata qui senza modifiche. \\
+\texttt{\seqsplit{trimero\_anello\_circuito\_compatto.tex}} & Studio di compattezza del circuito (\S9 di questo documento ne riporta solo il riepilogo). \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Punto di partenza: la richiesta del relatore e la decisione metodologica}
+
+\subsection{La richiesta}
+
+Con Trotter e VQE (senza e con DM) completi per il dimero, e VQE completo
+per entrambe le topologie $N=3$, il relatore ha confermato (implicitamente,
+rispondendo nel merito tecnico) la priorità di estendere Trotter e
+correlazioni dinamiche a $N=3$, prima della catena aperta o del rumore
+(\texttt{\seqsplit{log\_decisioni.md}}, aggiornamento "risposta del relatore e
+assunzione operativa"). Il compito: generalizzare
+\texttt{\seqsplit{trotter\_dimero.py}} al trimero anello, con l'Opzione B del DM (per
+coerenza con tutto il VQE trimero già validato su B) e il punto di lavoro
+di partenza $J=1,J'=0.4$ (zona C, punto VQE), esplorando poi $b,r$ per
+trovare oscillazioni non banali di $\langle S_z^{tot}\rangle(t)$ -- stesso
+schema R0$\to$R1 del dimero.
+
+\subsection{Perché $H_{ex}$ non è un blocco singolo esponenziabile}
+
+A differenza del dimero (un solo legame), $H_{ex}=J\vec\sigma_1\!\cdot\!\vec\sigma_2+J'\vec\sigma_2\!\cdot\!\vec\sigma_3+J'\vec\sigma_3\!\cdot\!\vec\sigma_1$
+condivide i qubit 1--2--3 a due a due. Due strategie erano sul tavolo
+(\texttt{\seqsplit{log\_decisioni.md}}, "decisione metodologica: Trotter interno per
+$H_{ex}$"):
+\begin{itemize}
+\item[(a)] \textbf{Trotter interno}: spezzare $H_{ex}$ nei tre legami,
+ciascuno esponenziabile esattamente (Sezione~2 della teoria) via gate
+fisicamente etichettati;
+\item[(b)] \textbf{sintesi numerica}: diagonalizzare/esponenziare
+direttamente l'operatore $8\times8$ e sintetizzarlo in gate via
+transpiler.
+\end{itemize}
+\textbf{Scelta: strategia (a)}, per coerenza con l'approccio "gate sempre
+fisicamente etichettati" già seguito nel dimero, e perché (b) non
+generalizza a sistemi grandi (Sezione~9, studio di compattezza). Questa
+scelta introduce il livello 1 di Trotter interno (Sezione~4 della teoria),
+una seconda fonte di errore assente nel dimero -- confermata dal relatore
+via mail, che ha chiesto esplicitamente di testare la convergenza in $N$ e
+di separare, se possibile, i contributi di errore.
+
+\section{Convenzione: perché Pauli diretta e non a spin}
+
+\begin{center}
+\begin{tabular}{@{}p{3.6cm}p{4.4cm}p{4.4cm}@{}}
+\toprule
+& \texttt{\seqsplit{trotter\_dimero.py}} \newline (dimero) & \texttt{\seqsplit{trotter\_trimero\_anello.py}} \newline (qui) \\
+\midrule
+Convenzione & spin, $s_i^\alpha=\sigma_i^\alpha/2$ & Pauli diretta \\
+Coefficiente scambio & $J/4$ & $J$ \\
+Coefficiente campo & $b/2$ & $b$ \\
+Coefficiente DM & $D/4$ & $D_{ij}$ (Opzione B: $rJ,rJ',rJ'$) \\
+Angolo $R_{XX}/R_{YY}/R_{ZZ}$ & $Jt/2$ & $2Jt$ \\
+Angolo $R_z$ & $bt$ & $2bt$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La scelta della convenzione diretta (non ereditata meccanicamente dal
+dimero) è dettata dalla necessità di riusare
+\texttt{\seqsplit{trimer\_ring\_exact.py}} come sorgente unica dell'Hamiltoniana
+(stesso principio "single source" già seguito per VQE ed exact benchmark):
+scrivere la teoria in convenzione a spin avrebbe richiesto una seconda
+Hamiltoniana ridefinita in proprio, con rischio di disallineamento --
+esattamente il tipo di rischio già documentato (ma risolto, nessun bug
+attivo) fra \texttt{\seqsplit{trotter\_dimero.py}} e il circuito delle correlazioni
+del dimero (\texttt{\seqsplit{log\_decisioni.md}}, "verificato sul codice, non solo
+sull'intestazione"). Gli angoli dei gate sono stati ri-derivati da zero
+(non copiati dal dimero) e verificati numericamente
+(\texttt{\seqsplit{deriva\_angoli.py}}, errore $\sim10^{-16}$ per ciascun blocco).
+
+\section{La scoperta del livello 2: cronologia}
+
+Il compito originale (log, "decisione metodologica: Trotter interno per
+$H_{ex}$") identificava una sola fonte aggiuntiva di errore, nello
+scambio. Prima di scrivere il circuito per $H_{DM}$, è stato verificato
+esplicitamente (non assunto) se lo stesso problema si presentasse anche
+lì: i tre termini DM dell'Opzione B condividono gli stessi qubit dei
+legami di scambio, quindi la domanda era legittima a priori.
+
+\textbf{Risposta: sì.} Verificato numericamente (commutatori non nulli
+fra $\text{DM}_{12},\text{DM}_{23},\text{DM}_{31}$) prima, e derivato in
+forma chiusa poi (\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}}
+\S6, Eq.~24): $[\text{DM}_{12},\text{DM}_{23}]=-2iD_{12}D_{23}\,Y_2\text{DM}_{31}\neq0$.
+Conseguenza pratica: anche $H_{DM}$ va spezzato in Trotter interno, non
+solo $H_{ex}$ -- una struttura a \textbf{tre} livelli, non due, come
+segnalato nell'aggiornamento dedicato di \texttt{\seqsplit{log\_decisioni.md}} e ora
+derivato algebricamente (teoria \S8.2) invece di solo verificato
+numericamente.
+
+Quantitativamente (\S8 di questo documento): al punto di lavoro adottato,
+il livello 2 pesa un fattore $\sim4.4$ sull'infedeltà totale rispetto a
+un'ipotetica versione con $H_{DM}$ trattato come blocco esatto -- non un
+dettaglio trascurabile.
+
+\section{Costruzione del circuito: applicazione diretta della teoria}
+
+\subsection{Blocchi di legame}
+
+Applicazione letterale delle Eq.~9 e~19 della teoria: \texttt{\seqsplit{step\_Hex}}
+implementa $U_{31}(\tau)U_{23}(\tau)U_{12}(\tau)$ (Eq.~9, angoli
+$2J_{ij}\tau$), \texttt{\seqsplit{step\_HDM}} implementa il prodotto analogo per i
+tre legami DM (Eq.~19, angoli $\pm2D_{ij}\tau$ nel sandwich di Hadamard),
+\texttt{\seqsplit{step\_field}} implementa la rotazione esatta $R_z(2b\tau)$ su
+ciascun qubit (Eq.~13). Un passo completo (\texttt{\seqsplit{trotter\_circuit}}) è
+$V_{DM}(\tau)\cdot e^{-ib\tau S_z^{tot}}\cdot V_{ex}(\tau)$ (teoria,
+Eq.~26), ripetuto $N$ volte.
+
+\subsection{Self-test: dal circuito Qiskit alla matrice, non solo alla teoria}
+
+A differenza del dimero (dove il confronto era solo teoria-vs-matrice),
+qui il self-test principale confronta \textbf{il circuito Qiskit reale}
+(\texttt{Operator(qc).data}) con la costruzione a matrice indipendente,
+su 5 set di parametri casuali: errore $\sim10^{-15}$. Verificato inoltre
+(Sezione~7): convergenza pulita $N\to\infty$ verso $U_{\rm esatto}$, e
+fattorizzazione esatta di $H_0$ indipendente da $\tau$ ($\sim10^{-16}$) --
+i quattro self-test di \texttt{\seqsplit{trotter\_trimero\_anello.py}}, tutti
+superati.
+
+\section{Ricerca del punto di lavoro: $R_0$ (trimero), provvisorio}
+
+\subsection{Perché non un R1-style fin da subito}
+
+Per il dimero, $R_1$ è stato derivato dalla struttura a V
+dell'Hamiltoniana (basi di spin totale, formula di Rabi, due detuning
+indipendenti) -- niente scan automatico. Per il trimero, la stessa
+derivazione richiederebbe classificare le transizioni fra gli 8 livelli
+di Kambe (invece dei soli 4 del dimero) sotto l'Opzione B del DM, che rompe
+$S_{12}^2$ e quindi non conserva più la struttura a blocchi $A,B,C$ usata
+per l'intera teoria esatta del VQE -- un lavoro sostanzialmente più lungo,
+rimandato esplicitamente a un notebook successivo (\S10).
+
+\subsection{Metodo adottato per ora}
+
+Stesso criterio a due indicatori del dimero (escursione picco-picco di
+$\langle S_z^{tot}\rangle(t)$, rapporto $a_2/a_1$ fra i due modi
+spettrali dominanti), calcolati dalla dinamica esatta (diagonalizzazione,
+non Trotter) a $J=1,J'=0.4$ fissi, scandendo una griglia $(b,r)$ ampia
+($b\in[0.05,5]$, $r\in[0.05,2.5]$).
+
+\subsection{Candidati e verifica di robustezza}
+
+\begin{center}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+$b$ & $r=D/J$ & picco-picco & $a_2/a_1$ & robustezza (perturbando 5--10\%) \\
+\midrule
+0.05 & 1.93 & 3.80 & 0.99 & ptp $3.7$--$3.8$; $a_2/a_1$ $0.74$--$0.91$ \\
+0.30 & 1.31 & 1.36 & 0.99 & ptp $1.1$--$1.8$; $a_2/a_1$ $0.75$--$0.99$ \\
+0.72 & 1.24 & 0.51 & 0.98 & ptp $0.4$--$0.65$; $a_2/a_1$ $0.6$--$0.98$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Vicino al campo critico teorico $b_c=2.4$ (dove per il dimero l'incrocio
+era interessante), $a_2/a_1$ resta basso ($\sim0.16$): zona non adatta
+qui.
+
+\subsection{Punto adottato}
+
+\begin{equation*}
+\boxed{R_0\ (\text{trimero}) = \big(J{=}1,\ J'{=}0.4,\ b{=}0.05,\ D{=}1.93\big)}
+\end{equation*}
+
+Il candidato con segnale maggiore e rapporto più vicino a 1 fra quelli
+verificati robusti. \textbf{Dichiarato esplicitamente provvisorio}: non
+discende da una derivazione fisica come $R_1$, ma da uno scan verificato
+(non uno scan cieco: vedi nota procedurale sotto).
+
+\subsection{Nota procedurale: lezione dal dimero applicata qui}
+
+Il dimero ha scartato due tentativi di scan automatico privi di
+giustificazione fisica prima di arrivare a $R_1$ derivato
+(\texttt{\seqsplit{quantum\_simulation\_dimero\_applicazione.tex}} \S2.6). Per non
+ripetere lo stesso errore, il candidato qui non è stato preso dal primo
+posto di un ranking cieco: è stato esplicitamente verificato robusto
+(perturbazioni del 5--10\% non lo fanno collassare) prima di adottarlo, e
+la sua natura provvisoria è dichiarata in ogni documento che lo cita
+(\texttt{\seqsplit{log\_decisioni.md}}, questo documento). La derivazione principiata
+resta un passo successivo esplicitamente pianificato, non abbandonato.
+
+\section{Convergenza in $N$: risultati}
+
+Traiettoria $\langle S_z^{tot}\rangle(t)$ su $T=2$ periodi del modo
+dominante ($T\simeq7.85$), stato iniziale $\ket{000}$:
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$N$ & infedeltà finale & rapporto raddoppiando $N$ \\
+\midrule
+80 & $1.67\times10^{-1}$ & \\
+160 & $4.01\times10^{-2}$ & 4.15 \\
+320 & $1.01\times10^{-2}$ & 3.98 \\
+640 & $2.55\times10^{-3}$ & 3.96 \\
+1280 & $6.41\times10^{-4}$ & 3.97 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Scaling $O(1/N^2)$ pulito da $N\gtrsim80$ (rapporto $\to4$), coerente con
+la teoria (\S8.5: infedeltà $\propto\|\Delta U\|^2\propto(1/N)^2$).
+$N$ necessari per soglie standard: infedeltà $<1\%\to N\simeq325$;
+$<0.1\%\to N\simeq1025$; $<0.01\%\to N\simeq3250$ -- sensibilmente più alti
+del dimero ($N=80$ bastava per $\sim10^{-5}$ a $R_1$), coerente con la
+presenza di due livelli di bond-splitting invece di zero e con $D/J\simeq1.9$
+non piccolo (Eq.~33,~35 della teoria: l'errore di livello 1 e 2 scala con
+$J'^2$ e con $r^2$ rispettivamente).
+
+\section{Separazione dei contributi di errore}
+
+Confronto fra il circuito reale (livelli 1 \emph{e} 2 spezzati nei bond,
+$V_2$) e una versione idealizzata -- irrealizzabile a gate fisici -- con
+$H_{DM}$ trattato come blocco esatto (solo livello 1, $V_1$):
+
+\begin{center}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$N$ & infedeltà $V_2$ (reale) & infedeltà $V_1$ (idealizzata) & rapporto \\
+\midrule
+320 & $1.01\times10^{-2}$ & $2.31\times10^{-3}$ & 4.37 \\
+640 & $2.55\times10^{-3}$ & $5.79\times10^{-4}$ & 4.40 \\
+1280 & $6.41\times10^{-4}$ & $1.45\times10^{-4}$ & 4.41 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il rapporto si stabilizza a $\simeq4.4$: il livello 2 non è trascurabile
+a questo punto di lavoro. \textbf{Nota di raccordo con la teoria} (\S8.6):
+la teoria garantisce solo che ciascun livello sia $O(\tau^2)$, non il
+segno relativo dei tre contributi. Verificato sperimentalmente (non nella
+teoria): il rapporto $V_2/V_1$ varia da $0.62$ a $1.57$ a seconda di
+$(b,D)$ e dell'ordine dei fattori nel prodotto di Trotter -- talvolta il
+livello 2 riduce lievemente l'errore totale (cancellazione parziale nei
+termini di commutatore), talvolta lo aumenta. Esattamente la
+manifestazione empirica della nota di cautela della teoria \S8.6: la
+disuguaglianza triangolare limita l'errore dall'alto, non ne fissa il
+segno.
+
+\section{Studio di compattezza del circuito: riepilogo}
+
+Ripetuto per il trimero l'esperimento già fatto per il dimero
+(compattazione del circuito Trotter via sintesi numerica/transpiler).
+Riportato per esteso in \texttt{\seqsplit{trimero\_anello\_circuito\_compatto.tex}};
+qui solo il riepilogo:
+
+\begin{itemize}
+\item per 3 qubit non esiste un teorema di compressione universale
+altrettanto chiuso di quello a 2 qubit (Cartan/Weyl) del dimero: la
+verifica è empirica (transpiler), non un minimo dimostrato;
+\item un singolo passo si comprime da 15 gate nativi a 18 CNOT, fedeltà
+$1.0$;
+\item l'intero prodotto a $N$ passi si comprime a $\sim19$ CNOT
+indipendentemente da $N$ (verificato fino a $N=100$) -- stesso fenomeno
+del dimero (lì 3 CNOT fissi), più marcato in valore assoluto dato che agli
+$N\simeq300$--$1000$ che servono qui il circuito esplicito avrebbe
+$4500$--$15000$ gate;
+\item conclusione invariata: non usare il compresso per lo studio
+Trotter-vs-rumore della Parte 2, per la stessa ragione già documentata
+per il dimero (farebbe sparire la scalata in $N$ del costo in gate).
+\end{itemize}
+
+\section{Aperture per il seguito}
+
+\begin{enumerate}
+\item \textbf{Derivazione R1-style}: sostituire $R_0$ (trimero) con un
+punto derivato dalla struttura degli 8 livelli sotto Opzione B (rottura di
+$S_{12}^2$), analogamente a quanto fatto per il dimero con la struttura a
+V -- prossimo notebook dedicato.
+\item \textbf{Parte 2 (rumore)}: il costo in gate per passo (15 nativi,
+30 dopo scomposizione in CNOT-equivalenti) e la scala $N\simeq300$--$1000$
+per una buona fedeltà sono il punto di aggancio diretto con il compromesso
+Trotter-vs-rumore, e con il vantaggio di gate già documentato per RBS su
+$W$ nel VQE.
+\item \textbf{Correlazioni dinamiche su $N=3$}: rimane da estendere il
+circuito con l'ancilla (Hadamard test) già validato per il dimero,
+riusando come stato di preparazione il ground state VQE del trimero.
+\end{enumerate}
+
+\section{Riepilogo dei riferimenti per sezione}
+
+\begin{center}
+\begin{tabular}{@{}p{2.2cm}p{5.8cm}p{6.2cm}@{}}
+\toprule
+Sezione di questo doc. & Riferimento di teoria (progetto) & Riferimento esterno (dove serve) \\
+\midrule
+\S2 & \texttt{\seqsplit{log\_decisioni.md}}, decisione strategia (a) & --- \\
+\S3 & \texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} \S1 & --- \\
+\S4 & teoria \S6, Eq.~24 (identità DM) & --- \\
+\S5 & teoria \S2--3, Eq.~9,13,19,26 & --- \\
+\S6 & --- (esplorazione originale, stesso schema R0/R1 del dimero) & --- \\
+\S7--8 & teoria \S8, Eq.~28--36 & --- \\
+\S9 & \texttt{\seqsplit{trimero\_anello\_circuito\_compatto.tex}} (per intero) & Vatan--Williams 2004, Vidal--Dawson 2004 (via doc. dimero) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section*{Riferimenti bibliografici completi}
+\addcontentsline{toc}{section}{Riferimenti bibliografici completi}
+
+\begin{itemize}
+\item H.\,F.\ Trotter, \emph{On the product of semi-groups of operators}, Proc.\ Am.\ Math.\ Soc.\ \textbf{10}, 545--551 (1959).
+\item M.\ Suzuki, \emph{Generalized Trotter's formula...}, Commun.\ Math.\ Phys.\ \textbf{51}, 183--190 (1976).
+\item S.\ Lloyd, \emph{Universal quantum simulators}, Science \textbf{273}, 1073--1078 (1996).
+\item X.\,G.\ Wen, F.\ Wilczek, A.\ Zee, \emph{Chiral spin states and superconductivity}, Phys.\ Rev.\ B \textbf{39}, 11413 (1989).
+\item M.\ Crippa et al., \emph{Simulating Static and Dynamic Properties of Magnetic Molecules with Prototype Quantum Computers}, Magnetochemistry \textbf{7}, 117 (2021).
+\end{itemize}
+
+\appendix
+\section{File prodotti in questa fase del lavoro}
+
+\begin{itemize}
+\item \texttt{\seqsplit{trotter\_trimero\_anello.py}} -- modulo Trotter, quattro self-test superati a precisione macchina.
+\item \texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}} -- derivazione teorica completa a tre livelli (questo documento ne applica i risultati).
+\item \texttt{\seqsplit{trimero\_anello\_circuito\_compatto.tex}} -- studio di compattezza del circuito.
+\item \texttt{\seqsplit{trimero\_trotter\_R0\_convergenza.png}} -- traiettoria $\langle S_z^{tot}\rangle(t)$ e convergenza in $N$.
+\item \texttt{\seqsplit{trimero\_trotter\_circuito.png}} -- disegno del circuito (2 passi).
+\item \texttt{\seqsplit{log\_decisioni.md}} -- aggiornato con la scoperta del livello 2, il punto $R_0$ (trimero) e lo studio di compattezza.
+\end{itemize}
+
+\end{document}

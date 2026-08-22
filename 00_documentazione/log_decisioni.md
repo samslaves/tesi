@@ -900,3 +900,78 @@ fisico per farlo. Punto di lavoro: si parte da $J=1$, $J'=0.4$ (zona C,
 punto VQE), poi si esplora la dinamica esatta per trovare un regime con
 oscillazioni non banali di $\langle S_z\rangle(t)$ — stesso pattern
 R0→R1 già usato nel dimero.
+
+## Aggiornamento — Trotter trimero anello: modulo validato, punto provvisorio, due note aperte per il seguito
+
+**Modulo `trotter_trimero_anello.py`** completato e validato: self-test a
+precisione macchina sul circuito Qiskit reale (non solo a matrice numpy).
+Struttura a **tre livelli** confermata numericamente (non due, come
+inizialmente ipotizzato): $H_0=bS_z^{tot}+H_{ex}$ fattorizza esattamente;
+$H_{ex}$ e **anche** $H_{DM}$ (Opzione B) richiedono ciascuno un Trotter
+interno sui 3 bond, condividendo qubit. Il livello nuovo ($H_{DM}$
+bond-split) non è trascurabile: al punto di lavoro adottato pesa un
+fattore $\sim4.4$ sull'infedeltà totale rispetto a un'ipotetica (irrealizzabile)
+versione con $H_{DM}$ trattato come blocco esatto.
+
+**Convenzione**: modulo scritto in convenzione Pauli diretta (coerente con
+`trimer_ring_exact.py`, VQE trimero), NON in convenzione a spin come
+`trotter_dimero.py` — angoli dei gate ri-derivati da zero, non copiati.
+Convenzione sito↔qubit identica a `trimer_ring_exact.py` (site1→qubit2,
+site2→qubit1, site3→qubit0).
+
+**Punto di lavoro adottato: $R_0$ (trimero)** — $J{=}1,J'{=}0.4$ (VQE),
+$b{=}0.05,D{=}1.93$. Scelto da uno scan $(b,D)$ con lo stesso criterio
+picco-picco + $a_2/a_1$ di R0/R1 del dimero, poi verificato robusto a
+piccole perturbazioni. **Provvisorio**, non da una derivazione principiata.
+Convergenza in $N$ misurata: infedeltà $<1\%$ a $N\simeq325$, $<0.1\%$ a
+$N\simeq1025$, $<0.01\%$ a $N\simeq3250$ — sensibilmente più alto del
+dimero (dove $N=80$ bastava per $\sim10^{-5}$), atteso per via dei due
+livelli di bond-splitting e di $D/J\simeq1.9$ non piccolo.
+
+- [ ] **APERTO**: derivazione analoga a quella di R1 (struttura degli 8
+      livelli del trimero, condizioni indipendenti su ampiezza/detuning)
+      per sostituire $R_0$ con un punto derivato, non solo scansionato.
+      Prossimo notebook dedicato.
+- [ ] **APERTO (per la Parte 2, rumore)**: costo in gate del circuito
+      Trotter — 30 gate a 1-2 qubit per passo esterno (12 H, 9 RZZ, 3 RXX,
+      3 RYY, 3 RZ), $N\simeq300$–$1000$ per soglie di infedeltà 1%–0.01% al
+      punto $R_0$. Aggancio diretto con il vantaggio di gate già
+      documentato per RBS vs $W$ nel VQE (`scelta_ansatz_RBS_vs_W.pdf`):
+      meno gate per bond = meno canali di rumore da modellare quando si
+      introduce Kraus/Lindblad. Da riprendere esplicitamente quando si
+      apre quel blocco della tesi.
+
+## Aggiornamento — circuito compatto per il trimero anello: verifica empirica, stessa conclusione del dimero (rafforzata)
+
+Ripetuto per il trimero l'esperimento già fatto per il dimero
+(`circuito_compatto_teoria_e_limiti.pdf`): comprimere il circuito Trotter
+via sintesi numerica (`transpile`, `optimization_level=3`) invece di usare
+i gate fisicamente etichettati.
+
+**Differenza di partenza rispetto al dimero**: per 2 qubit esiste un
+teorema chiuso (Cartan/camera di Weyl, $SU(4)$): ogni unitaria si
+realizza con al più 3 CNOT. Per 3 qubit ($SU(8)$) non esiste un
+risultato altrettanto chiuso — non reperita né verificata alcuna formula
+analoga. La verifica qui è quindi **empirica** (quello che il transpiler
+trova), non un minimo dimostrato — differenza dichiarata esplicitamente
+nel documento.
+
+**Risultati**: un singolo passo (15 gate a due qubit nativi) si comprime
+a 18 CNOT, fedeltà $1.0$. Il fenomeno interessante è sull'**intero
+prodotto a $N$ passi**: si stabilizza a $\sim19$ CNOT
+**indipendentemente da $N$** già da $N=2$ (verificato fino a $N=100$) —
+stesso fenomeno del dimero (lì 3 CNOT fissi), qui più marcato in valore
+assoluto: con gli $N\simeq300$–$1000$ che servono per la convergenza al
+punto $R_0$, il circuito esplicito avrebbe $4500$–$15000$ gate a due
+qubit contro i $\sim19$ del compresso.
+
+**Conclusione**: invariata rispetto al dimero, riconfermata e rafforzata
+— non usare il circuito compresso per lo studio Trotter-vs-rumore della
+Parte 2 (farebbe sparire la scalata in $N$ del costo in gate, il
+fenomeno stesso da studiare, e lo farebbe in modo ancora più ingannevole
+data la maggiore distanza fra $N$ reale e conteggio compresso fisso);
+legittimo solo per la domanda separata "costo minimo per *questa*
+evoluzione a un $t$ fissato".
+
+**File prodotto**: `trimero_anello_circuito_compatto.tex` (compilato e
+verificato, 3 pagine, nessun errore).

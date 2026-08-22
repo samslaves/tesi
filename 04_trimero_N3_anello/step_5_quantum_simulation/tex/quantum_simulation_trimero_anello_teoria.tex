@@ -1,0 +1,353 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{seqsplit}
+
+\geometry{margin=2.7cm}
+
+\title{Quantum simulation del trimero anello: derivazione teorica completa\\
+\large Decomposizione di Suzuki--Trotter a tre livelli per l'Hamiltoniana con termine DM}
+\author{}
+\date{}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\begin{document}
+
+\maketitle
+\tableofcontents
+
+\bigskip
+\noindent Questo documento raccoglie in forma sistematica le derivazioni relative all'estensione del task di \emph{quantum simulation} (evoluzione temporale reale $e^{-iHt}$) dal dimero al trimero anello isoscele ($N=3$), Opzione B del termine DM. Segue lo stesso schema di \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}}, ma con una differenza strutturale importante, dimostrata nelle Sezioni~\ref{sec:H0-fact}--\ref{sec:U2-bond}: mentre nel dimero l'unica approssimazione dell'intera costruzione era il Trotter fra campo+scambio e termine DM, nel trimero \textbf{entrambi} i blocchi di scambio e DM richiedono un ulteriore livello di Trotter interno, perché i tre legami condividono i qubit a due a due. Ogni passaggio è riportato per esteso, senza salti logici, e ogni identità algebrica non banale è verificata numericamente (non solo asserita).
+
+\section{Hamiltoniana e convenzione}
+\label{sec:hamiltoniana}
+
+A differenza di \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} (convenzione a spin $s_i^\alpha=\sigma_i^\alpha/2$, quella usata dal relatore nei suoi appunti per il dimero), questo documento adotta la \textbf{convenzione di Pauli diretta}, la stessa già in uso in tutto il resto del progetto trimero (\texttt{\seqsplit{trimer\_ring\_exact.py}}, VQE anello/catena). La ragione è di coerenza interna: il modulo \texttt{\seqsplit{trotter\_trimero\_anello.py}} costruisce l'Hamiltoniana riusando direttamente \texttt{\seqsplit{trimer\_ring\_exact.py}} come sorgente unica (nessuna Hamiltoniana ridefinita in proprio), quindi la teoria va scritta nella stessa convenzione del codice che implementa.
+
+\begin{align}
+H &= b\sum_{i=1}^3 Z_i \;+\; H_{ex} \;+\; H_{DM}, \label{eq:H-full}\\[4pt]
+H_{ex} &= J\,\vec\sigma_1\!\cdot\!\vec\sigma_2 \;+\; J'\big(\vec\sigma_2\!\cdot\!\vec\sigma_3+\vec\sigma_3\!\cdot\!\vec\sigma_1\big), \label{eq:Hex-def}\\[4pt]
+H_{DM} &= D_{12}(X_1Z_2{-}Z_1X_2) \;+\; D_{23}(X_2Z_3{-}Z_2X_3) \;+\; D_{31}(X_3Z_1{-}Z_3X_1). \label{eq:HDM-def}
+\end{align}
+
+con base $J$ fra i siti $(1,2)$ e lati $J'$ fra $(2,3),(3,1)$ (topologia isoscele, coerente con \texttt{\seqsplit{trimer\_ring\_exact.py}} e \texttt{\seqsplit{teoria\_trimero\_isoscele.pdf}}), e l'Opzione B del termine DM (l'unica quantitativamente aperta, \texttt{\seqsplit{analisi\_dm\_trimero\_anello.pdf}}):
+\begin{equation}
+D_{12}=rJ, \qquad D_{23}=D_{31}=rJ',
+\label{eq:optionB}
+\end{equation}
+dove $r$ è il parametro di intensità del DM (chiamato $D$ nel codice \texttt{\seqsplit{trotter\_trimero\_anello.py}}; qui si usa $r$ per non confonderlo con l'indice generico di sito o con l'operatore di Pauli).
+
+\paragraph{Relazione con la convenzione a spin.} Per confrontare valori numerici fra il blocco Trotter del dimero (convenzione a spin) e questo documento (convenzione di Pauli diretta), vale la stessa conversione già tracciata in \texttt{\seqsplit{log\_decisioni.md}}: $b_{\rm spin}=2b_{\rm Pauli}$, $J_{\rm spin}=4J_{\rm Pauli}$, $D_{\rm spin}=4D_{\rm Pauli}$ (sito e normalizzazione vanno convertiti insieme, mai separatamente).
+
+Si raggruppano i termini in due blocchi, sul modello del dimero: $H_0=b\sum_i Z_i+H_{ex}$ (campo + scambio isotropo, \emph{fisso}, indipendente da $r$) e $H_{DM}$ (solo termine DM, si annulla per $r=0$).
+
+Lo scopo delle Sezioni~\ref{sec:bond-exact}--\ref{sec:U2-bond} è duplice, e qui sta la differenza col dimero: (i) mostrare che \emph{un singolo} legame di scambio o di DM si decompone sempre esattamente in gate nativi Qiskit (come nel dimero); (ii) mostrare che, a differenza del dimero, la somma dei \emph{tre} legami di scambio (o di DM) \textbf{non} fattorizza esattamente, perché i legami condividono i qubit a due a due -- da cui la necessità di un Trotter \emph{interno}, assente nel caso a due soli spin.
+
+\section{Decomposizione esatta di un singolo legame di scambio}
+\label{sec:bond-exact}
+
+\subsection{Riscrittura e commutatività di $XX,YY,ZZ$}
+
+Per una coppia generica di siti $(i,j)$, lo scambio isotropo è $J_{ij}\,\vec\sigma_i\cdot\vec\sigma_j = J_{ij}(X_iX_j+Y_iY_j+Z_iZ_j)$ (convenzione diretta, nessun fattore $1/4$: cfr.\ Sezione~\ref{sec:hamiltoniana}). La dimostrazione che $X_iX_j,Y_iY_j,Z_iZ_j$ commutano a due a due è identica, termine per termine, a quella di \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S2.2 (la presenza di un terzo qubit spettatore, sul quale tutti e tre gli operatori agiscono come identità, non altera in alcun modo l'algebra fra i due qubit del legame). Si riporta solo il risultato:
+\begin{equation}
+[X_iX_j,Y_iY_j]=[Y_iY_j,Z_iZ_j]=[Z_iZ_j,X_iX_j]=0 \qquad \forall\, i\neq j.
+\label{eq:XYZ-comm-bond}
+\end{equation}
+Per l'argomento generale di Sezione~\ref{sec:BCH}, l'esponenziale del singolo legame fattorizza quindi \textbf{esattamente}:
+\begin{equation}
+U_{ij}(t) \equiv e^{-iJ_{ij}t\,\vec\sigma_i\cdot\vec\sigma_j} = e^{-iJ_{ij}t\,X_iX_j}\,e^{-iJ_{ij}t\,Y_iY_j}\,e^{-iJ_{ij}t\,Z_iZ_j}.
+\label{eq:Uij-factor}
+\end{equation}
+
+\subsection{Mappatura sui gate nativi Qiskit (convenzione diretta)}
+\label{subsec:gate-mapping-ex}
+
+Qiskit definisce $R_{XX}(\theta)=e^{-i\frac\theta2 XX}$ (idem $R_{YY},R_{ZZ}$), verificato numericamente su Qiskit 2.5.2 in questa stessa sessione di lavoro (\texttt{\seqsplit{deriva\_angoli.py}}: errore $\sim10^{-16}$ rispetto all'esponenziale di matrice diretto, per diversi $J_{ij},t$). A differenza della convenzione a spin del dimero (dove l'esponente del singolo fattore era $J_{ij}t/4$, da cui $\theta=J_{ij}t/2$), qui l'esponente è $J_{ij}t$ direttamente (nessun fattore $1/4$), quindi confrontando $\theta/2=J_{ij}t$:
+\begin{equation}
+\boxed{U_{ij}(t) = R_{XX}(2J_{ij}t)\,R_{YY}(2J_{ij}t)\,R_{ZZ}(2J_{ij}t)}
+\label{eq:Uij-gates}
+\end{equation}
+angolo doppio rispetto al dimero, a parità di $J_{ij}t$ -- conseguenza diretta e verificata della differenza di convenzione, non un refuso.
+
+\section{Fattorizzazione esatta di $H_0$ = campo + scambio totale}
+\label{sec:H0-fact}
+
+\subsection{Il campo commuta con ciascun singolo legame}
+
+Si introduce $S_z^{tot}=\sum_i Z_i$ (proporzionale allo spin totale lungo $z$, a meno del fattore $1/2$ della convenzione a spin). Si dimostra $[S_z^{tot},\vec\sigma_i\cdot\vec\sigma_j]=0$ per \emph{ogni} coppia $(i,j)$, non solo per il campo totale sommato: la dimostrazione generalizza l'argomento del Casimir $[S^2,S_z]=0$ del dimero (\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S3.1), ma qui è più diretto derivarla per calcolo esplicito con le relazioni di Pauli a singolo qubit $ZX=iY$, $XZ=-iY$, $ZY=-iX$, $YZ=iX$ (le stesse della Sezione~4 del documento del dimero).
+
+Per una coppia $(i,j)$, scrivendo $S_z^{tot}=Z_i+Z_j+Z_k$ ($k$ il terzo sito, che commuta banalmente con $\vec\sigma_i\cdot\vec\sigma_j$ agendo su un fattore tensoriale diverso):
+\begin{align}
+[Z_i,X_iX_j] &= [Z_i,X_i]X_j = (ZX-XZ)_i X_j = 2iY_iX_j,\\
+[Z_i,Y_iY_j] &= (ZY-YZ)_i Y_j = -2iX_iY_j,\\
+[Z_i,Z_iZ_j] &= 0,
+\end{align}
+da cui $[Z_i,\vec\sigma_i\cdot\vec\sigma_j] = 2i(Y_iX_j-X_iY_j)$. Per simmetria dello scambio $i\leftrightarrow j$ (o per calcolo diretto identico):
+\begin{equation}
+[Z_j,\vec\sigma_i\cdot\vec\sigma_j] = 2i(X_iY_j-Y_iX_j) = -2i(Y_iX_j-X_iY_j).
+\end{equation}
+Sommando i due contributi (quello di $Z_k$ è nullo):
+\begin{equation}
+[S_z^{tot},\,\vec\sigma_i\cdot\vec\sigma_j] = [Z_i,\vec\sigma_i\cdot\vec\sigma_j]+[Z_j,\vec\sigma_i\cdot\vec\sigma_j] = 2i(Y_iX_j-X_iY_j) - 2i(Y_iX_j-X_iY_j) = 0.
+\label{eq:Sztot-comm-bond}
+\end{equation}
+\textbf{Identità verificata numericamente} (confronto diretto delle matrici $8\times8$, non solo su stati campione) in questa sessione di lavoro, per ogni coppia $(i,j)$ e indipendentemente dal terzo sito spettatore.
+
+Poiché l'Eq.~\eqref{eq:Sztot-comm-bond} vale per \emph{ogni} legame, vale anche per la somma:
+\begin{equation}
+[S_z^{tot}, H_{ex}] = J\,[S_z^{tot},\vec\sigma_1\!\cdot\!\vec\sigma_2] + J'\,[S_z^{tot},\vec\sigma_2\!\cdot\!\vec\sigma_3] + J'\,[S_z^{tot},\vec\sigma_3\!\cdot\!\vec\sigma_1] = 0.
+\label{eq:Sztot-Hex-comm}
+\end{equation}
+
+\subsection{Fattorizzazione esatta di $e^{-iH_0t}$}
+
+Per l'Eq.~\eqref{eq:Sztot-Hex-comm} e l'argomento generale di Sezione~\ref{sec:BCH}:
+\begin{equation}
+\boxed{e^{-iH_0t} = e^{-ibt\,S_z^{tot}}\; e^{-iH_{ex}t}}
+\label{eq:H0-factor}
+\end{equation}
+espresso nei gate nativi Qiskit,
+\begin{equation}
+e^{-iH_0t} = R_z^{(1)}(2bt)\,R_z^{(2)}(2bt)\,R_z^{(3)}(2bt)\;e^{-iH_{ex}t},
+\label{eq:H0-factor-gates}
+\end{equation}
+dove $R_z(2bt)$ (anziché $R_z(bt)$ del dimero) discende dalla stessa differenza di convenzione della Sezione~\ref{subsec:gate-mapping-ex}: $e^{-ibtZ_i}$ confrontato con $R_z(\phi)=e^{-i\frac\phi2 Z}$ dà $\phi=2bt$.
+
+\textbf{Questo blocco è esatto, senza alcuna approssimazione, indipendentemente da $J,J',b$.} Esattamente come nel dimero. La differenza rispetto al dimero comincia ora: mentre nel dimero c'era un solo legame e $U_J(t)$ della Sezione~\ref{sec:bond-exact} era già la fine della storia per lo scambio, qui $H_{ex}$ è una somma di \emph{tre} legami, e la Sezione seguente mostra che $e^{-iH_{ex}t}$ non fattorizza ulteriormente in modo esatto nei tre singoli $U_{ij}(t)$.
+
+\section{I tre legami di scambio non commutano: l'operatore di chiralità di spin}
+\label{sec:chirality}
+
+\subsection{Perché serve un Trotter interno}
+
+$H_{ex}=J\,\vec\sigma_1\!\cdot\!\vec\sigma_2+J'\vec\sigma_2\!\cdot\!\vec\sigma_3+J'\vec\sigma_3\!\cdot\!\vec\sigma_1$ è somma di tre operatori a due qubit che agiscono su coppie di qubit \emph{sovrapposte} (il qubit 2 compare sia nel legame $(1,2)$ sia nel legame $(2,3)$; il qubit 1 sia in $(1,2)$ sia in $(3,1)$; il qubit 3 sia in $(2,3)$ sia in $(3,1)$). A differenza del caso a un solo legame (Sezione~\ref{sec:bond-exact}), dove i tre termini di Pauli $XX,YY,ZZ$ agiscono sulla \emph{stessa} coppia di qubit e quindi commutano, qui i tre legami agiscono su coppie \emph{diverse} ma sovrapposte, e in generale non commutano.
+
+\subsection{Derivazione del commutatore: l'operatore di chiralità}
+
+Si calcola esplicitamente $[\vec\sigma_1\!\cdot\!\vec\sigma_2,\,\vec\sigma_2\!\cdot\!\vec\sigma_3]$. Usando $[A\otimes B, C\otimes D]$ per operatori che condividono un fattore, e le relazioni di commutazione di Pauli a singolo qubit $[\sigma^a,\sigma^b]=2i\epsilon_{abc}\sigma^c$:
+\begin{equation}
+[\vec\sigma_1\!\cdot\!\vec\sigma_2,\,\vec\sigma_2\!\cdot\!\vec\sigma_3] = \sum_{a,b\in\{x,y,z\}}\sigma_1^a\,[\sigma_2^a,\sigma_2^b]\,\sigma_3^b = 2i\sum_{a,b,c}\epsilon_{abc}\,\sigma_1^a\sigma_2^c\sigma_3^b.
+\end{equation}
+Riconoscendo l'identità vettoriale standard del prodotto misto, $\sum_{a,b,c}\epsilon_{abc}A^aB^bC^c = \vec A\cdot(\vec B\times\vec C)$, applicata con l'indice $c$ sul sito 2 e $b$ sul sito 3 (quindi $\vec\sigma_1\cdot(\vec\sigma_3\times\vec\sigma_2)=-\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$):
+\begin{equation}
+\boxed{[\vec\sigma_1\!\cdot\!\vec\sigma_2,\,\vec\sigma_2\!\cdot\!\vec\sigma_3] = -2i\,\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)}
+\label{eq:chirality-comm}
+\end{equation}
+\textbf{Verificato numericamente} (confronto diretto delle matrici $8\times8$, non su stati campione): $\|\text{LHS}-\text{RHS}\|=0$ a precisione macchina. Per simmetria ciclica dei siti, verificata allo stesso modo:
+\begin{equation}
+[\vec\sigma_2\!\cdot\!\vec\sigma_3,\,\vec\sigma_3\!\cdot\!\vec\sigma_1] = -2i\,\vec\sigma_2\cdot(\vec\sigma_3\times\vec\sigma_1), \qquad [\vec\sigma_3\!\cdot\!\vec\sigma_1,\,\vec\sigma_1\!\cdot\!\vec\sigma_2] = -2i\,\vec\sigma_3\cdot(\vec\sigma_1\times\vec\sigma_2).
+\label{eq:chirality-comm-cyclic}
+\end{equation}
+
+\subsection{Identificazione fisica: la chiralità di spin scalare}
+
+L'operatore $\chi \equiv \vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$ è, a meno di normalizzazione, l'operatore di \textbf{chiralità di spin scalare}, ben noto in letteratura sul magnetismo frustrato come parametro d'ordine che caratterizza stati di spin chirali (rottura di parità e inversione temporale): X.\,G.\ Wen, F.\ Wilczek, A.\ Zee, \emph{Chiral spin states and superconductivity}, Phys.\ Rev.\ B \textbf{39}, 11413 (1989) -- verificato che il paper definisce esplicitamente il parametro d'ordine come $\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$ per un triangolo di tre spin, stessa notazione e stessa geometria di questo lavoro.
+
+\textbf{Identità ciclica del prodotto misto} (verificata numericamente in questa sessione): $\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3) = \vec\sigma_2\cdot(\vec\sigma_3\times\vec\sigma_1) = \vec\sigma_3\cdot(\vec\sigma_1\times\vec\sigma_2) \equiv \chi$, conseguenza della stessa identità per vettori ordinari (invarianza ciclica del prodotto misto), qui valida perché le componenti su siti diversi commutano liberamente.
+
+\subsection{Conseguenza: $H_{ex}$ non fattorizza esattamente nei tre legami}
+
+Poiché $[\vec\sigma_1\!\cdot\!\vec\sigma_2,\vec\sigma_2\!\cdot\!\vec\sigma_3]\neq0$ (Eq.~\eqref{eq:chirality-comm}, $\chi\neq0$ operatore non banale), l'argomento di Sezione~\ref{sec:BCH} non si applica: $e^{-iH_{ex}t}$ non è uguale al prodotto $U_{31}(t)U_{23}(t)U_{12}(t)$ dei tre blocchi di legame esatti, ma solo \emph{approssimativamente} uguale, con un errore quantificato nella Sezione~\ref{sec:trotter-error}. Questo è il \textbf{primo livello} di Trotter interno, assente nel dimero (dove c'è un solo legame).
+
+\section{Decomposizione esatta di un singolo legame DM}
+\label{sec:U2-bond}
+
+\subsection{Riscrittura e commutatività di $P_1,P_2$ per un singolo legame}
+
+Per una coppia $(i,j)$ con coefficiente $D_{ij}$, il termine DM è $D_{ij}(X_iZ_j-Z_iX_j)$. Ponendo $P_1=X_iZ_j$, $P_2=Z_iX_j$, la dimostrazione $[P_1,P_2]=0$ è identica, qubit per qubit, a \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S4.2 ($P_1P_2=P_2P_1=Y_iY_j$, verificato con $XZ=-iY$, $ZX=iY$). Per l'argomento generale di Sezione~\ref{sec:BCH}, con $\theta\equiv D_{ij}t$ (convenzione diretta, non $D_{ij}t/4$ come nel dimero):
+\begin{equation}
+e^{-i\theta(P_1-P_2)} = e^{-i\theta P_1}\,e^{+i\theta P_2}.
+\end{equation}
+
+\subsection{Circuito, identità di Hadamard}
+
+Identica a \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S4.3--4.4 ($HZH=X$), applicata al qubit $i$ per $P_1=X_iZ_j$ e al qubit $j$ per $P_2=Z_iX_j$. Con la convenzione diretta ($\theta=D_{ij}t$, non $D_{ij}t/4$), l'angolo del gate $R_{ZZ}$ è $2\theta=2D_{ij}t$ (anziché $Dt/2$ del dimero):
+\begin{equation}
+\boxed{U_{ij}^{DM}(t) = \big[(I\otimes H)_j\,R_{ZZ}(-2D_{ij}t)\,(I\otimes H)_j\big]\cdot\big[(H\otimes I)_i\,R_{ZZ}(2D_{ij}t)\,(H\otimes I)_i\big]}
+\label{eq:UDM-bond}
+\end{equation}
+(notazione: $(H\otimes I)_i$ indica Hadamard sul qubit $i$, identità sugli altri due). \textbf{Verificato numericamente} (\texttt{\seqsplit{deriva\_angoli.py}}, questa sessione): errore $\sim10^{-16}$ rispetto all'esponenziale di matrice diretto, per diversi $D_{ij},t$.
+
+\section{I tre legami DM non commutano: una struttura diversa dallo scambio}
+\label{sec:DM-noncomm}
+
+\subsection{Derivazione del commutatore}
+
+Si calcola esplicitamente il commutatore
+\begin{equation*}
+\big[\,D_{12}(X_1Z_2{-}Z_1X_2),\;D_{23}(X_2Z_3{-}Z_2X_3)\,\big]
+\end{equation*}
+(coefficienti unitari, poi ripristinati). Espandendo il prodotto termine a termine (qubit 2 condiviso, gli altri fattorizzano liberamente) e usando $X_2Z_2=-iY_2$, $Z_2X_2=iY_2$, $X_2X_2=Z_2Z_2=I_2$:
+\begin{align}
+(X_1Z_2{-}Z_1X_2)(X_2Z_3{-}Z_2X_3) &= i\,X_1Y_2Z_3 - X_1X_3 - Z_1Z_3 - i\,Z_1Y_2X_3,\\
+(X_2Z_3{-}Z_2X_3)(X_1Z_2{-}Z_1X_2) &= -i\,X_1Y_2Z_3 - Z_1Z_3 - X_1X_3 + i\,Z_1Y_2X_3.
+\end{align}
+Sottraendo:
+\begin{equation}
+[X_1Z_2{-}Z_1X_2,\,X_2Z_3{-}Z_2X_3] = 2i\,X_1Y_2Z_3 - 2i\,Z_1Y_2X_3 = 2i\,Y_2\,(X_1Z_3-Z_1X_3).
+\end{equation}
+Riconoscendo $X_1Z_3-Z_1X_3 = -(X_3Z_1-Z_3X_1)$ (il legame DM $(3,1)$ con segno cambiato, per antisimmetria della definizione del legame rispetto allo scambio degli indici):
+\begin{equation}
+\boxed{[D_{12}(X_1Z_2{-}Z_1X_2),\,D_{23}(X_2Z_3{-}Z_2X_3)] = -2i\,D_{12}D_{23}\;Y_2\,(X_3Z_1-Z_3X_1)}
+\label{eq:DM-comm}
+\end{equation}
+\textbf{Verificato numericamente} a precisione macchina, coefficienti unitari e poi generali. Per simmetria ciclica dei siti (verificata allo stesso modo):
+\begin{align}
+[\,\text{DM}_{23},\text{DM}_{31}\,] &= -2i\,D_{23}D_{31}\;Y_3\,(X_1Z_2-Z_1X_2),\\
+[\,\text{DM}_{31},\text{DM}_{12}\,] &= -2i\,D_{31}D_{12}\;Y_1\,(X_2Z_3-Z_2X_3).
+\label{eq:DM-comm-cyclic}
+\end{align}
+
+\subsection{Perché questo caso NON si semplifica come lo scambio}
+
+Nel caso dello scambio (Sezione~\ref{sec:chirality}), i tre commutatori ciclici sono tutti proporzionali allo \emph{stesso} operatore $\chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$ (identità ciclica del prodotto misto), e la somma pesata con i coefficienti $J,J',J'$ collassa a un multiplo di $J'^2$ soltanto (Sezione~\ref{sec:trotter-error-Hex}). Qui, invece, i tre commutatori dell'Eq.~\eqref{eq:DM-comm}--\eqref{eq:DM-comm-cyclic} sono proporzionali a \emph{tre operatori strutturalmente diversi} ($Y_2\cdot\text{DM}_{31}$, $Y_3\cdot\text{DM}_{12}$, $Y_1\cdot\text{DM}_{23}$: ciascuno coinvolge il legame DM \emph{opposto} rispetto al qubit condiviso, non un unico operatore invariante), e non esiste una simmetria ciclica analoga a quella del prodotto misto che li faccia collassare a un solo termine. Questa è una differenza strutturale genuina fra scambio e DM, non solo un dettaglio di coefficienti, ed è la ragione algebrica per cui il livello 2 (Trotter interno di $H_{DM}$) non ammette una formula chiusa altrettanto semplice del livello 1.
+
+\subsection{Conseguenza: anche $H_{DM}$ non fattorizza esattamente nei tre legami}
+
+Con l'Opzione B ($D_{12}=rJ$, $D_{23}=D_{31}=rJ'$), nessuno dei tre commutatori dell'Eq.~\eqref{eq:DM-comm}--\eqref{eq:DM-comm-cyclic} si annulla per $J,J'\neq0$: $e^{-iH_{DM}t}$ non è uguale al prodotto dei tre blocchi $U_{ij}^{DM}(t)$ esatti, ma solo approssimativamente uguale. Questo è il \textbf{secondo livello} di Trotter interno -- la scoperta discussa in \texttt{\seqsplit{log\_decisioni.md}} (aggiornamento "Trotter trimero anello"), qui derivata in forma chiusa anziché solo verificata numericamente.
+
+\section{Perché $[A,B]=0$ implica fattorizzazione esatta}
+\label{sec:BCH}
+
+Identico, parola per parola, a \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S5: per la formula di Baker--Campbell--Hausdorff,
+\begin{equation}
+e^{A}e^{B} = \exp\!\left(A+B+\tfrac12[A,B]+\tfrac1{12}[A,[A,B]]+\tfrac1{12}[B,[B,A]]+\cdots\right),
+\end{equation}
+se $[A,B]=0$ ogni termine della torre di commutatori annidati si annulla per induzione, e $e^Ae^B=e^{A+B}$ esattamente. Si applica a: la fattorizzazione di $U_{ij}(t)$ e $U_{ij}^{DM}(t)$ nei tre gate di Pauli (Sezioni~\ref{sec:bond-exact} e~\ref{sec:U2-bond}); la fattorizzazione di $H_0$ in campo$\times$scambio (Sezione~\ref{sec:H0-fact}). \textbf{Non} si applica a: la somma dei tre legami di scambio (Sezione~\ref{sec:chirality}), la somma dei tre legami DM (Sezione~\ref{sec:DM-noncomm}), né alla coppia $H_0,H_{DM}$ (il campo non commuta con $H_{DM}$, essendo $[S_z^{tot},H_{DM}]\neq0$ per lo stesso meccanismo di rottura di $M$ già noto dal dimero -- verificato numericamente, non riderivato qui in forma chiusa per brevità).
+
+\section{Struttura a tre livelli dell'errore di Trotter}
+\label{sec:trotter-error}
+
+Il circuito implementato (\texttt{\seqsplit{trotter\_trimero\_anello.py}}) approssima un passo di durata $\tau=t/N$ come
+\begin{align}
+U_{\rm step}(\tau) &= V_{DM}(\tau)\;e^{-ib\tau S_z^{tot}}\;V_{ex}(\tau), \label{eq:Ustep-def}\\
+V_{ex}(\tau)&=U_{31}(\tau)\,U_{23}(\tau)\,U_{12}(\tau), \qquad V_{DM}(\tau)=U_{31}^{DM}(\tau)\,U_{23}^{DM}(\tau)\,U_{12}^{DM}(\tau),
+\end{align}
+mentre l'evoluzione esatta è $U_{\rm esatto}(\tau)=e^{-i(H_0+H_{DM})\tau}$. Si decompone l'errore in tre contributi indipendenti (approccio originale di questo lavoro, non presente nella teoria del dimero, dove un solo livello era presente).
+
+\subsection{Livello 1: errore di legame per $H_{ex}$}
+\label{sec:trotter-error-Hex}
+
+Per tre operatori generici $A,B,C$ non tutti commutanti, espandendo in serie di Taylor fino a $O(\tau^2)$ (stesso metodo di \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S6.1, esteso da due a tre fattori):
+\begin{equation}
+e^{-i(A+B+C)\tau} - e^{-iC\tau}e^{-iB\tau}e^{-iA\tau} = -\frac{\tau^2}{2}\Big([A,B]+[A,C]+[B,C]\Big) + O(\tau^3).
+\label{eq:3term-BCH-error}
+\end{equation}
+(derivazione per esteso: espandendo entrambi i membri a $O(\tau^2)$ e confrontando termine a termine, del tutto analoga al caso a due fattori ma con tre termini incrociati anziché uno).
+
+Con $A=J\,\vec\sigma_1\!\cdot\!\vec\sigma_2$, $B=J'\vec\sigma_2\!\cdot\!\vec\sigma_3$, $C=J'\vec\sigma_3\!\cdot\!\vec\sigma_1$ (ordine di applicazione del circuito, Eq.~\eqref{eq:Ustep-def}), usando le Eq.~\eqref{eq:chirality-comm}--\eqref{eq:chirality-comm-cyclic} e l'identità ciclica $\chi$:
+\begin{align}
+[A,B] &= JJ'\,[\vec\sigma_1\!\cdot\!\vec\sigma_2,\vec\sigma_2\!\cdot\!\vec\sigma_3] = -2iJJ'\,\chi,\\
+[A,C] &= -J J'\,[\vec\sigma_3\!\cdot\!\vec\sigma_1,\vec\sigma_1\!\cdot\!\vec\sigma_2] = +2iJJ'\,\chi,\\
+[B,C] &= J'^2\,[\vec\sigma_2\!\cdot\!\vec\sigma_3,\vec\sigma_3\!\cdot\!\vec\sigma_1] = -2iJ'^2\,\chi.
+\end{align}
+Sommando, i due termini proporzionali a $JJ'$ si \textbf{cancellano esattamente}:
+\begin{equation}
+[A,B]+[A,C]+[B,C] = -2iJ'^2\,\chi.
+\label{eq:sum-comm-Hex}
+\end{equation}
+\textbf{Verificato numericamente} (coefficienti generici $J\neq J'$, non solo il punto di lavoro adottato): $\|[A,B]+[A,C]+[B,C]-(-2iJ'^2\chi)\|=0$ a precisione macchina. Sostituendo nell'Eq.~\eqref{eq:3term-BCH-error}:
+\begin{equation}
+\boxed{e^{-iH_{ex}\tau} - V_{ex}(\tau) = i\,\tau^2\,J'^2\,\chi + O(\tau^3)}
+\label{eq:error-Hex-final}
+\end{equation}
+Risultato notevole: l'errore di legame per lo scambio dipende \emph{solo} da $J'$ (i lati uguali), non dalla base $J$ -- la cancellazione dei termini incrociati $JJ'$ è un fatto strutturale della topologia isoscele, non un caso numerico del punto di lavoro scelto.
+
+\subsection{Livello 2: errore di legame per $H_{DM}$}
+
+Con lo stesso metodo, e ponendo
+\begin{equation*}
+A'=D_{12}(X_1Z_2{-}Z_1X_2), \qquad B'=D_{23}(X_2Z_3{-}Z_2X_3), \qquad C'=D_{31}(X_3Z_1{-}Z_3X_1),
+\end{equation*}
+usando le Eq.~\eqref{eq:DM-comm}--\eqref{eq:DM-comm-cyclic}:
+\begin{equation}
+[A',B']+[A',C']+[B',C'] = -2i\Big[D_{12}D_{23}\,Y_2\text{DM}_{31} - D_{12}D_{31}\,Y_1\text{DM}_{23} + D_{23}D_{31}\,Y_3\text{DM}_{12}\Big]
+\label{eq:sum-comm-HDM}
+\end{equation}
+(qui $\text{DM}_{ij}$ indica l'operatore a coefficiente unitario $X_iZ_j-Z_iX_j$). A differenza dell'Eq.~\eqref{eq:sum-comm-Hex}, \textbf{questa somma non collassa a un solo operatore}: restano tre termini strutturalmente distinti (Sezione~\ref{sec:DM-noncomm}, discussione del perché). Con l'Opzione B ($D_{12}=rJ$, $D_{23}=D_{31}=rJ'$):
+\begin{equation}
+\boxed{e^{-iH_{DM}\tau} - V_{DM}(\tau) = i\,\tau^2\,r^2\Big[JJ'\big(Y_2\text{DM}_{31}-Y_1\text{DM}_{23}\big) + J'^2\,Y_3\text{DM}_{12}\Big] + O(\tau^3)}
+\label{eq:error-HDM-final}
+\end{equation}
+A differenza del livello 1, qui l'errore dipende anche dal prodotto incrociato $JJ'$, non solo da $J'^2$: un'ulteriore conferma algebrica che il livello 2 non è una semplice ripetizione del livello 1 con le DM al posto dello scambio.
+
+\subsection{Livello 0 (esterno): errore fra $H_0$ e $H_{DM}$}
+
+Stesso argomento a due termini del dimero (\texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S6.1--6.2, qui non riderivato per esteso):
+\begin{equation}
+e^{-i(H_0+H_{DM})\tau} - e^{-iH_{DM}\tau}e^{-iH_0\tau} = -\frac{\tau^2}{2}[H_0,H_{DM}] + O(\tau^3).
+\label{eq:error-outer}
+\end{equation}
+Il commutatore $[H_0,H_{DM}]$ è diverso da zero (verificato numericamente), per lo stesso motivo del dimero: il campo non commuta con il termine DM.
+
+\subsection{Composizione dei tre livelli: perché l'errore totale resta $O(\tau^2)$}
+
+Si definisce $\tilde U_0(\tau)=e^{-ib\tau S_z^{tot}}V_{ex}(\tau)$ (approssimazione di $U_0(\tau)=e^{-iH_0\tau}$, esatto tranne il livello 1). Per disuguaglianza triangolare (norma operatoriale, unitarietà di tutti i fattori), l'errore totale del passo si decompone come
+\begin{align}
+\big\|U_{\rm esatto}(\tau)-U_{\rm step}(\tau)\big\| &= \big\|e^{-i(H_0+H_{DM})\tau} - V_{DM}(\tau)\,e^{-ib\tau S_z^{tot}}\,V_{ex}(\tau)\big\| \notag\\
+&\le\; \|\varepsilon_0(\tau)\| + \|\varepsilon_1(\tau)\| + \|\varepsilon_2(\tau)\|,
+\label{eq:triangle-step}
+\end{align}
+dove i tre termini a destra sono, nell'ordine:
+\begin{align}
+\varepsilon_0(\tau) &= e^{-i(H_0+H_{DM})\tau}-e^{-iH_{DM}\tau}U_0(\tau) &&\text{(livello 0, Eq.~\eqref{eq:error-outer})},\\
+\varepsilon_1(\tau) &= e^{-iH_{DM}\tau}\big[U_0(\tau)-\tilde U_0(\tau)\big], \quad \|\varepsilon_1(\tau)\|=\|U_0(\tau)-\tilde U_0(\tau)\| &&\text{(livello 1)},\\
+\varepsilon_2(\tau) &= \big[e^{-iH_{DM}\tau}-V_{DM}(\tau)\big]\tilde U_0(\tau), \quad \|\varepsilon_2(\tau)\|=\|e^{-iH_{DM}\tau}-V_{DM}(\tau)\| &&\text{(livello 2)}.
+\end{align}
+Nella seconda riga di $\varepsilon_1$ e nella seconda di $\varepsilon_2$ si è usato che $e^{-iH_{DM}\tau}$ e $\tilde U_0(\tau)$ sono unitari, quindi non alterano la norma dell'operatore che moltiplicano: la disuguaglianza~\eqref{eq:triangle-step} passa così direttamente ai tre errori di legame/passo già quantificati. Ciascuno dei tre addendi è $O(\tau^2)$ (Eq.~\eqref{eq:error-Hex-final},~\eqref{eq:error-HDM-final},~\eqref{eq:error-outer}), quindi la somma è ancora $O(\tau^2)$:
+\begin{equation}
+\boxed{\big\|U_{\rm esatto}(\tau)-U_{\rm step}(\tau)\big\| \le \big\|\varepsilon_0(\tau)\big\|+\big\|\varepsilon_1(\tau)\big\|+\big\|\varepsilon_2(\tau)\big\| = O(\tau^2)}
+\label{eq:total-error-bound}
+\end{equation}
+\textbf{Nota importante}: la disuguaglianza triangolare fornisce solo un \emph{limite superiore}. I tre errori $\varepsilon_0,\varepsilon_1,\varepsilon_2$ sono operatori con struttura diversa (Eq.~\eqref{eq:error-Hex-final},~\eqref{eq:error-HDM-final} e l'analogo per il livello 0), non necessariamente con lo stesso segno relativo: possono parzialmente cancellarsi (osservato numericamente: il rapporto fra infedeltà "3 livelli reali" e "2 livelli idealizzati" varia da $0.6$ a $1.6$ a seconda del punto di lavoro e dell'ordine dei fattori, si veda \texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_applicazione.tex}} \S8) oppure sommarsi quasi completamente. La teoria qui sviluppata garantisce l'ordine $O(\tau^2)$ del limite superiore, non il segno né il valore esatto della costante, che dipendono dai dettagli fini della composizione degli operatori.
+
+\subsection{Errore totale su $N$ passi e scaling}
+
+Identico, per struttura, a \texttt{\seqsplit{quantum\_simulation\_dimero\_teoria.tex}} \S6.3--6.4: per disuguaglianza triangolare su $N$ passi,
+\begin{equation}
+\big\|U_{\rm esatto}(t)-U_{\rm step}(\tau)^N\big\| \lesssim N\cdot O(\tau^2) = O\!\left(\frac{t^2}{N}\right), \qquad \tau=t/N,
+\end{equation}
+metodo del prim'ordine: l'errore totale scala come $1/N$ a $t$ fisso, e come $t^2$ a $N$ fisso -- stesse conseguenze pratiche già discusse per il dimero (per tenere l'errore costante al crescere di $t$, $N\propto t^2$).
+
+\section{Riepilogo dei risultati}
+
+\begin{table}[h]
+\centering
+\footnotesize
+\begin{tabular}{@{}p{3.0cm}p{7.6cm}p{3.4cm}@{}}
+\toprule
+\textbf{Blocco} & \textbf{Espressione} & \textbf{Natura} \\
+\midrule
+$U_{ij}(t)$ \newline (un legame di scambio) & $R_{XX}(2J_{ij}t)\,R_{YY}(2J_{ij}t)\,R_{ZZ}(2J_{ij}t)$ & Esatta \\[6pt]
+$U_{ij}^{DM}(t)$ \newline (un legame DM) & sandwich di Hadamard, $R_{ZZ}(\pm2D_{ij}t)$ \newline (Eq.~\ref{eq:UDM-bond}) & Esatta \\[6pt]
+$e^{-iH_0t}$ \newline (campo+scambio totale) & $R_z^{(1)}(2bt)\,R_z^{(2)}(2bt)\,R_z^{(3)}(2bt)$ \newline $\cdot\; e^{-iH_{ex}t}$ & Esatta \\[6pt]
+$e^{-iH_{ex}t}$ \newline (3 legami di scambio) & $U_{31}(t)\,U_{23}(t)\,U_{12}(t)$ & Approssimata, \newline errore $i\tau^2J'^2\chi$ \newline $+\,O(\tau^3)$ per passo \\[10pt]
+$e^{-iH_{DM}t}$ \newline (3 legami DM) & $U_{31}^{DM}(t)\,U_{23}^{DM}(t)\,U_{12}^{DM}(t)$ & Approssimata, \newline Eq.~\ref{eq:error-HDM-final} \newline per passo \\[6pt]
+$e^{-i(H_0+H_{DM})t}$, \newline completo & $\big(V_{DM}(\tau)\,e^{-ib\tau S_z^{tot}}\,V_{ex}(\tau)\big)^N$ & Approssimata, \newline errore totale $O(t^2/N)$ \\
+\bottomrule
+\end{tabular}
+\caption{Riepilogo dei blocchi di evoluzione temporale derivati per il trimero anello. A differenza del dimero (un solo livello di approssimazione), qui sono presenti tre contributi di errore indipendenti, sommati per disuguaglianza triangolare (Eq.~\ref{eq:total-error-bound}).}
+\label{tab:riepilogo-trimero}
+\end{table}
+
+\section*{Riferimenti bibliografici}
+\addcontentsline{toc}{section}{Riferimenti bibliografici}
+
+\begin{itemize}
+\item H.\,F.\ Trotter, \emph{On the product of semi-groups of operators}, Proc.\ Am.\ Math.\ Soc.\ \textbf{10}, 545--551 (1959).
+\item M.\ Suzuki, \emph{Generalized Trotter's formula and systematic approximants of exponential operators and inner derivations with applications to many-body problems}, Commun.\ Math.\ Phys.\ \textbf{51}, 183--190 (1976).
+\item S.\ Lloyd, \emph{Universal quantum simulators}, Science \textbf{273}, 1073--1078 (1996).
+\item X.\,G.\ Wen, F.\ Wilczek, A.\ Zee, \emph{Chiral spin states and superconductivity}, Phys.\ Rev.\ B \textbf{39}, 11413 (1989) -- definizione dell'operatore di chiralità di spin scalare $\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$ usato in Sezione~\ref{sec:chirality}; citazione verificata via ricerca diretta in questa sessione di lavoro (notazione e geometria a triangolo coincidenti).
+\item M.\ Crippa et al., \emph{Simulating Static and Dynamic Properties of Magnetic Molecules with Prototype Quantum Computers}, Magnetochemistry \textbf{7}, 117 (2021) -- riferimento concettuale generale del progetto.
+\end{itemize}
+
+\end{document}

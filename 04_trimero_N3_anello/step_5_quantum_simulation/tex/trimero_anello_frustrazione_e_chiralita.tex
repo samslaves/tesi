@@ -1,0 +1,256 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Frustrazione vs.\ chiralità nel trimero anello}
+
+\title{\vspace{-1.5em}\color{inkblue}Frustrazione energetica e operatore di chiralità\\[0.1em]\Large\normalfont\color{softgray}Due cose diverse, spesso confuse: equilatero vs.\ isoscele, fisica vs.\ algebra}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Chiarimento richiesto a seguito di
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}}
+(Sezione~4), dove l'operatore di chiralità di spin
+$\chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$ era stato
+introdotto con una frase che accostava troppo strettamente due concetti
+distinti: la frustrazione energetica del triangolo e la non-commutatività
+algebrica dei legami di scambio. Questo documento separa i due piani con
+precisione.
+
+\section{Due domande diverse}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item \textbf{Frustrazione energetica}: esiste una configurazione di spin
+che soddisfi simultaneamente tutti e tre i legami antiferromagnetici del
+triangolo? È una domanda sullo \emph{stato fondamentale}.
+\item \textbf{Non-commutatività algebrica}: $[\vec\sigma_1\cdot\vec\sigma_2,\,\vec\sigma_2\cdot\vec\sigma_3]=0$?
+È una domanda sugli \emph{operatori}, indipendente da quale stato si stia
+considerando.
+\end{enumerate}
+
+La risposta alla prima dipende dai segni e dai valori di $J,J'$ (e nella
+domanda 1 l'equilatero conta); la risposta alla seconda è \textbf{sempre}
+no, qualunque siano $J,J'$ (anche nulli, anche di segno diverso)
+puramente per come sono fatti gli operatori di Pauli su qubit condivisi.
+
+\section{Frustrazione energetica: non serve l'equilatero}
+
+\subsection{Il fatto combinatorio}
+
+Se tutti e tre gli accoppiamenti sono antiferromagnetici ($J,J'>0$ nella
+nostra convenzione, dove il singoletto di un legame, $\vec\sigma_i\cdot\vec\sigma_j=-3$,
+ha energia più bassa del tripletto, $\vec\sigma_i\cdot\vec\sigma_j=+1$),
+\textbf{non esiste nessuna configurazione} che soddisfi
+simultaneamente tutti e tre i legami: il triangolo è un ciclo di lunghezza
+dispari, e non è bipartibile in due sottoreticoli con spin opposti come
+si farebbe su un reticolo bipartito (es.\ una catena o un reticolo
+quadrato). Questo è un fatto \textbf{combinatorio sulla topologia} (un
+triangolo è sempre un ciclo dispari), non sull'uguaglianza esatta delle
+costanti di accoppiamento: vale per l'equilatero ($J=J'$) esattamente come
+per l'isoscele ($J\neq J'$) e, più in generale, per lo scaleno
+($J\neq J'_{23}\neq J'_{31}$).
+
+\subsection{Cosa cambia allora con l'equilatero}
+
+Quello che l'uguaglianza $J=J'$ introduce non è la frustrazione in sé, ma
+un \textbf{grado più alto di simmetria} nella frustrazione. Dalle formule
+esatte di \texttt{\seqsplit{trimer\_ring\_exact.py}} (decomposizione di Kambe):
+\begin{equation}
+E_B = J-4J', \qquad E_C = -3J.
+\end{equation}
+Per $J=J'$ (equilatero) queste due energie \textbf{coincidono
+esattamente}:
+\begin{equation}
+E_B - E_C = J-4J'-(-3J) = 4J-4J' \;\xrightarrow{J=J'}\; 0.
+\end{equation}
+Il fondamentale a campo basso diventa quindi $2+2=4$ volte degenere (i due
+doppietti $B$ e $C$ alla stessa energia), invece dei soli 2 stati del
+doppietto $C$ isolato che si ha per $J\neq J'$ (punto di lavoro
+$J{=}1,J'{=}0.4$ di questo lavoro, dove $E_C=-3$ ed $E_B=-0.6$ sono ben
+separate).
+
+\begin{keyeq}
+\centering
+Equilatero ($J=J'$): fondamentale 4 volte degenere, $E_B=E_C$.\\
+Isoscele con $J\neq J'$ (il nostro caso): fondamentale un doppietto
+ordinario $C$, $E_B\neq E_C$.
+\end{keyeq}
+
+\subsection{Perché la degenerazione è la porta d'ingresso alla chiralità fisica}
+
+È \emph{dentro} questo spazio degenere a 4 dimensioni (presente solo
+all'equilatero) che ha senso chiedersi se il vero stato fondamentale sia
+uno stato \textbf{chirale} -- una sovrapposizione con
+$\langle\chi\rangle\neq0$, che rompe parità $P$ e inversione temporale
+$T$ -- oppure una sovrapposizione \emph{reale} (a coefficienti reali
+nella base computazionale), con $\langle\chi\rangle=0$. Questa è
+esattamente l'ambientazione fisica del lavoro di X.\,G.\ Wen, F.\
+Wilczek, A.\ Zee, \emph{Chiral spin states and superconductivity}, Phys.\
+Rev.\ B \textbf{39}, 11413 (1989): la frustrazione crea la degenerazione,
+e la degenerazione lascia spazio a una scelta fisica (chirale o reale)
+che altrimenti non esisterebbe.
+
+\begin{warnbox}{Il nostro punto di lavoro non è in questo regime}
+A $J{=}1,J'{=}0.4$ (isoscele, non equilatero) il fondamentale a campo
+basso è il doppietto $C$ isolato, non degenere con $B$: resta un
+doppietto ordinario e reale. La fisica "chirale" del paper citato non si
+applica al punto di lavoro specifico di questo lavoro -- è un'osservazione
+di contesto, non un risultato usato altrove nella tesi.
+\end{warnbox}
+
+\section{Non-commutatività algebrica: quella è generica}
+
+\subsection{L'identità vale sempre, non solo all'equilatero}
+
+L'identità derivata in
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}}
+(Sezione~4),
+\begin{equation}
+[\vec\sigma_1\cdot\vec\sigma_2,\,\vec\sigma_2\cdot\vec\sigma_3] = -2i\,\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3),
+\end{equation}
+è un fatto sugli operatori di Pauli sui qubit 1,2,3 quando i legami
+condividono il qubit 2 -- non contiene $J$ n\'e $J'$. Vale identica per
+\textbf{qualunque} valore delle costanti di accoppiamento: equilatero,
+isoscele, scaleno, ferromagnetico, antiferromagnetico, o perfino
+$J=J'=0$ (nel qual caso l'identità resta vera ma banale, essendo entrambi
+i lati della relazione moltiplicati per zero). Non richiede in alcun modo
+che il sistema sia frustrato.
+
+\subsection{Il riscontro concreto che lega davvero le due cose}
+
+C'è comunque un punto in cui le due storie si toccano, ed è un risultato
+non banale derivato nella teoria (Sezione~8.1): sommando i tre
+commutatori ciclici con i pesi dell'Hamiltoniana isoscele,
+\begin{equation}
+[A,B]+[A,C]+[B,C] = -2i\,J'^2\,\chi, \qquad A=J\vec\sigma_1\!\cdot\!\vec\sigma_2,\ \ B=J'\vec\sigma_2\!\cdot\!\vec\sigma_3,\ \ C=J'\vec\sigma_3\!\cdot\!\vec\sigma_1,
+\end{equation}
+i due termini proporzionali al prodotto incrociato $JJ'$ si cancellano
+esattamente, e il risultato dipende \textbf{solo da $J'$} (i due lati
+uguali), non dalla base $J$.
+
+\begin{okbox}{Limite di verifica: $J'\to0$}
+Nel limite $J'\to0$ i due legami laterali si spengono: il triangolo
+degenera in un singolo legame $(1,2)$ più uno spin 3 completamente
+scollegato -- un dimero isolato, non più un ciclo chiuso, e quindi non
+più frustrabile per costruzione (non c'è più nessun ciclo). In questo
+limite l'errore di Trotter di livello 1 si annulla esattamente
+($J'^2\to0$), coerentemente con l'aspettativa fisica: senza triangolo
+chiuso non serve alcun Trotter interno, si ritorna al caso del dimero
+puro. Il coefficiente $J$ del legame forte, restante da solo, non compare
+affatto nella formula finale -- solo i due legami che condividono
+effettivamente i qubit contribuiscono all'errore.
+\end{okbox}
+
+Questo limite è una conferma \emph{strutturale} (non frustrazione, non
+degenerazione) che la formula ha la forma fisicamente corretta: l'errore
+di Trotter interno esiste perché il triangolo è chiuso (tre legami, non
+due), e sparisce esattamente quando si riapre il ciclo, indipendentemente
+da quanto forte sia il legame rimasto.
+
+\section{Riepilogo}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{4.6cm}p{5.1cm}p{5.1cm}@{}}
+\toprule
+& \textbf{Frustrazione energetica} & \textbf{Non-commutatività algebrica} \\
+\midrule
+Cosa richiede & ciclo dispari, $J,J'>0$ & niente: vale sempre \\
+Equilatero vs.\ isoscele & cambia il \emph{grado di simmetria} (degenerazione $4\times$ solo all'equilatero) & irrilevante, l'identità non contiene $J,J'$ \\
+Il nostro punto $(J{=}1,J'{=}0.4)$ & frustrato, ma non degenere: fondamentale reale, non chirale & non commutano comunque: serve il Trotter interno \\
+Riferimento & Wen--Wilczek--Zee 1989 (regime degenere, non il nostro) & teoria \S4, \S8.1 (formula $-2iJ'^2\chi$, verificata) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{editnote}
+In una parola: la frase della sessione precedente suggeriva un legame più
+stretto fra le due cose di quanto ce ne sia in realtà. L'algebra
+(perché serve il Trotter interno) c'è sempre, a prescindere da
+equilatero/isoscele/frustrazione. La fisica della chiralità (stato
+fondamentale con $\langle\chi\rangle\neq0$) è specifica del punto
+degenere equilatero, che non è il punto di lavoro di questo progetto. Il
+ponte reale fra le due storie è solo il limite $J'\to0$ della formula
+d'errore, che conferma la forma della formula, non introduce chiralità
+fisica.
+\end{editnote}
+
+\end{document}

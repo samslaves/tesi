@@ -1,0 +1,280 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Circuito compatto per il passo di Trotter --- trimero anello}
+
+\title{\vspace{-1.5em}\color{inkblue}Circuito compatto per il Trotter del trimero anello\\[0.1em]
+\Large\normalfont\color{softgray}Verifica empirica, e perché la stessa conclusione del dimero vale ancora di più}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Seguito naturale di \texttt{circuito\_compatto\_teoria\_e\_limiti.pdf} (fatto
+per il dimero), applicato ora al trimero anello. La domanda è la stessa: il
+circuito Trotter esplicito (gate fisicamente etichettati per bond) si può
+comprimere? Questo file raccoglie il test fatto, i numeri, e --- come già
+per il dimero --- perché il risultato \textbf{non va usato} come sostituto
+del circuito esplicito quando si arriverà al rumore (Parte 2).
+
+\section{Il problema, e una differenza di partenza rispetto al dimero}
+
+Il circuito Trotter del trimero (\texttt{trotter\_trimero\_anello.py}) usa,
+per un singolo passo esterno, \textbf{15 gate a due qubit nativi}
+($3\times R_{XX}+3\times R_{YY}+9\times R_{ZZ}$: tre bond per lo scambio
+$H_{ex}$, tre bond per il DM $H_{DM}$, ciascuno scomposto nei rispettivi
+blocchi), più 12 Hadamard e 3 $R_z$ per il campo.
+
+\begin{warnbox}{Differenza cruciale rispetto al dimero}
+Per il dimero (2 qubit) esiste un teorema chiuso: ogni unitaria in $SU(4)$
+si realizza con \textbf{al più 3 CNOT} (decomposizione di Cartan/camera di
+Weyl, Vatan--Williams 2004, Vidal--Dawson 2004 --- vedi
+\texttt{circuito\_compatto\_teoria\_e\_limiti.pdf} per la bibliografia
+completa e verificata). Per il trimero (3 qubit, $SU(8)$) \textbf{non
+esiste un risultato altrettanto chiuso}: non è stata reperita né verificata
+alcuna formula analoga con un numero minimo universale di CNOT per
+un'unitaria a 3 qubit generica. Questo documento riporta quindi una
+verifica \textbf{empirica} (cosa produce il transpiler di Qiskit), non un
+teorema, e la differenza va dichiarata esplicitamente: non è un dettaglio,
+cambia lo status epistemico di ogni numero qui sotto.
+\end{warnbox}
+
+\section{Metodo}
+
+A differenza del dimero, per il trimero non è disponibile
+\texttt{TwoQubitWeylDecomposition} (specifico di 2 qubit): manca quindi il
+"metodo 1" indipendente (coordinate di Weyl) usato là come cross-check.
+Resta solo la sintesi via transpiler:
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.25em]
+\item costruzione del circuito Trotter esplicito (fisico, gate
+etichettati per bond) con \texttt{trotter\_trimero\_anello.py};
+\item estrazione della sua unitaria $8\times8$ esatta,
+\texttt{Operator(qc).data} (Qiskit, non un calcolo indipendente --- ma il
+circuito è già stato validato a precisione macchina contro la costruzione
+a matrice nella sessione precedente, quindi l'operatore è affidabile);
+\item la matrice passata come blocco numerico opaco,
+\texttt{qc.unitary(U, [0,1,2])} --- il transpiler non vede più scambio o
+DM, solo 64 numeri complessi;
+\item sintesi: \texttt{transpile(qc, basis\_gates=['cx','rz','sx','x'],
+optimization\_level=3)};
+\item verifica di fedeltà (\texttt{process\_fidelity}) fra compresso ed
+esplicito, per assicurarsi che la compressione riproduca esattamente la
+stessa unitaria e non un'approssimazione.
+\end{enumerate}
+
+\section{Risultati}
+
+\subsection*{Un solo passo}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+\toprule
+& gate a due qubit & fedeltà vs esplicito \\
+\midrule
+circuito fisico (esplicito) & 15 ($R_{XX}{+}R_{YY}{+}R_{ZZ}$ nativi) & --- \\
+compresso (\texttt{optimization\_level=3}) & \textbf{18 CNOT} & $1.0000000000$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Fedeltà a precisione macchina: la compressione riproduce esattamente la
+stessa unitaria, solo con una scomposizione in gate diversa. Notare che 18
+non è necessariamente il minimo raggiungibile (l'ottimizzatore di Qiskit
+non garantisce ottimalità globale) --- è solo quello che
+\texttt{optimization\_level=3} ha trovato.
+
+\subsection*{L'intero prodotto a $N$ passi --- il punto concettualmente importante}
+
+Come già osservato per il dimero, comprimere l'\textbf{intero} prodotto
+$U_\text{Trotter}(t,N)$ (non passo per passo) resta comunque un'unica
+unitaria a 3 qubit, quindi si comprime anch'esso a un numero di gate
+\textbf{indipendente da $N$}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{ccccc}
+\toprule
+\rowcolor{inkblue!10}
+$N$ & gate 2q nativi (esplicito) & CNOT (compresso) & fedeltà \\
+\midrule
+1   & 15   & 18 & $1.0$ \\
+2   & 30   & 19 & $1.0$ \\
+5   & 75   & 19 & $1.0$ \\
+20  & 300  & 19 & $1.0$ \\
+100 & 1500 & 19 & $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il conteggio compresso si stabilizza a $19$ CNOT già da $N=2$ in poi,
+verificato fino a $N=100$: identico fenomeno del dimero (lì il valore fisso
+era 3), qui più marcato in termini assoluti di risparmio percentuale, dato
+che il circuito esplicito cresce linearmente ($15N$ gate) mentre il
+compresso resta piatto.
+
+\begin{editnote}
+Punto di calibrazione importante: nell'analisi di convergenza (punto di
+lavoro $R_0$, $b{=}0.05$, $D{=}1.93$) servono $N\simeq300$--$1000$ per
+un'infedeltà sotto l'1\%--0.01\%. A quei valori di $N$ il circuito
+esplicito avrebbe $4500$--$15000$ gate a due qubit, contro i $\sim19$ del
+compresso: un risparmio ancora più vistoso di quello già visto nel
+dimero, e quindi un invito ancora più forte a non usarlo per la ragione
+sbagliata (vedi sezione successiva).
+\end{editnote}
+
+\section{Perché non si usa per il rumore (stessa conclusione del dimero, rafforzata)}
+
+\begin{warnbox}{Il compromesso $N$-vs-rumore sparirebbe, e di più}
+L'idea della Parte 2 è studiare come l'errore di Trotter ($\sim1/N$,
+vuole $N$ grande) e l'errore fisico dei gate sotto rumore (scala col
+numero di gate, vuole $N$ piccolo) si bilancino. Usando il circuito
+compresso, il costo in gate resta fisso a $\sim19$ \textbf{qualunque sia
+$N$}: il compromesso sparisce dal grafico. Con gli $N$ dell'ordine delle
+centinaia/migliaia che servono qui (più alti che nel dimero, per via dei
+due livelli di bond-splitting e di $D/J$ non piccolo), l'effetto sarebbe
+ancora più ingannevole: si misurerebbe il rumore su un'unitaria a
+\emph{costo fisico completamente slegato} dal numero di passi realmente
+usati per la fisica.
+\end{warnbox}
+
+Vale inoltre, identica, l'osservazione già fatta per il dimero: ottenere
+il circuito compresso richiede il calcolo classico preliminare
+dell'intera matrice $8\times8$ (o della sua potenza $N$-esima) --- fattibile
+qui perché il trimero resta piccolo, ma concettualmente opposto allo
+spirito di Trotter (evitare la diagonalizzazione/esponenziazione
+classica di matrici che diventano intrattabili per sistemi grandi).
+
+\subsection*{Dove la forma compatta avrebbe senso}
+
+Come per il dimero: se in futuro serve rispondere a "qual è il costo
+minimo in gate per realizzare \emph{questa specifica} evoluzione a un $t$
+fissato" (domanda a sé, legittima, per esempio come riferimento per un
+run su hardware reale), il circuito compresso è lo strumento giusto ---
+ma va tenuto separato dal test di Trotter-vs-rumore, che deve usare il
+circuito esplicito o comunque uno il cui conteggio di gate scali con $N$.
+
+\section{Riepilogo}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item Per il trimero (3 qubit) non esiste un teorema di compressione
+universale altrettanto chiuso di quello a 2 qubit del dimero: la verifica
+qui è empirica (transpiler), non un minimo dimostrato.
+\item Un singolo passo si comprime da 15 gate nativi a 18 CNOT, fedeltà
+$1.0$.
+\item L'intero prodotto a $N$ passi si comprime a $\sim19$ CNOT
+\textbf{indipendentemente da $N$} (verificato fino a $N=100$) --- stesso
+fenomeno del dimero, più marcato in valore assoluto.
+\item Conclusione invariata: non usare il circuito compresso per lo
+studio Trotter-vs-rumore della Parte 2 (farebbe sparire la scalata in $N$
+del costo in gate, il fenomeno stesso da studiare); legittimo solo per la
+domanda separata del costo minimo a $t$ fissato.
+\end{enumerate}
+
+\needspace{15\baselineskip}
+\section*{Appendice: comandi Qiskit usati per la verifica}
+\addcontentsline{toc}{section}{Appendice}
+
+\begin{panelbox}{Codice}
+\small
+\begin{verbatim}
+from qiskit import QuantumCircuit, transpile
+from qiskit.quantum_info import Operator, process_fidelity
+from trotter_trimero_anello import trotter_circuit
+
+qc_step = trotter_circuit(J, Jp, b, D, tau, 1)      # un passo esplicito
+U = Operator(qc_step).data                          # unitaria 8x8 esatta
+
+qc_compact = QuantumCircuit(3)
+qc_compact.unitary(U, [0, 1, 2])                    # blocco opaco
+qc_t = transpile(qc_compact, basis_gates=['cx','rz','sx','x'],
+                  optimization_level=3)
+
+print(qc_t.count_ops())
+print(process_fidelity(Operator(qc_t), Operator(qc_step)))
+
+# stesso procedimento ripetuto su trotter_circuit(J, Jp, b, D, T, N)
+# per N = 1, 2, 5, 20, 100, per vedere se il conteggio compresso
+# resta fisso al crescere di N (vedi tabella sopra)
+\end{verbatim}
+\end{panelbox}
+
+\end{document}

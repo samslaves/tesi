@@ -1,0 +1,146 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Manuale d'uso --- correlazioni dinamiche trimero anello\\
+\large versione a stato esatto (\texttt{prepare\_state})}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Scopo}
+
+Questo manuale spiega come eseguire la simulazione delle correlazioni dinamiche
+$C_{ij}^{\alpha\beta}(t)$ per il trimero ad anello nella sua versione
+\emph{originale}: lo stato fondamentale $\ket{\psi_0}$ è preparato sul registro
+con le ampiezze esatte (\texttt{QuantumCircuit.prepare\_state}), non con un
+ansatz VQE. È la versione da usare quando interessa isolare l'errore di
+Trotter e quello statistico (shot), senza mescolarli con un residuo di
+fedeltà dell'ansatz variazionale. Per la versione con il circuito VQE reale
+(\texttt{W-2q.6}), vedi il manuale gemello
+\texttt{\seqsplit{manuale\_uso\_correlazioni\_trimero\_anello\_vqe.tex}}.
+
+\section*{Prerequisiti}
+
+\textbf{File necessari nella stessa cartella} (tutti nella fase
+\emph{correlazioni dinamiche}, trimero anello):
+\begin{itemize}
+\item \texttt{trimer\_ring\_exact.py} --- Hamiltoniana \texttt{trimer\_hamiltonian\_dm}.
+\item \texttt{trotter\_trimero\_anello.py} --- evoluzione $U(t)=e^{-iHt}$ via Suzuki--Trotter.
+\item \texttt{circuito\_correlazioni\_trimero\_anello.py} --- il circuito Hadamard test a 4 qubit.
+\item \texttt{validate\_circuito\_correlazioni.py} --- riferimento classico esatto (\texttt{scipy.linalg.expm}).
+\item \texttt{validate\_shot\_noise\_trimero\_anello.py} --- validazione a shot finiti.
+\item \texttt{scan81\_trimero\_anello.py} --- scan completo delle 81 combinazioni.
+\item \texttt{generate\_figure\_shotnoise.py}, \texttt{generate\_figure\_scan81.py} --- figure.
+\end{itemize}
+
+\textbf{Librerie Python}: \texttt{qiskit} (2.x), \texttt{qiskit-aer}, \texttt{numpy},
+\texttt{scipy}, \texttt{matplotlib} (solo per le figure). Verificare con:
+\begin{verbatim}
+python -c "import qiskit; print(qiskit.__version__)"
+\end{verbatim}
+
+\textbf{Punto di lavoro di riferimento} (usato ovunque in questa fase, salvo
+diversa indicazione): $J=1$, $J'=0.4$, $b=b_c=2.4$, $D=0.15$ (DM, Opzione B),
+$t=1.3$, $N=200$ passi di Trotter.
+
+\section*{Passo 1 --- un correlatore singolo, da riga di comando Python}
+
+Per calcolare un correlatore specifico, ad esempio $C_{11}^{yy}(t{=}1.3)$:
+\begin{verbatim}
+from circuito_correlazioni_trimero_anello import ground_state, correlator_from_circuit
+
+J, Jp, b, D = 1.0, 0.4, 2.4, 0.15
+psi0, E = ground_state(J, Jp, b, D)
+
+C = correlator_from_circuit(1, 'y', 1, 'y', t=1.3, N=200, J=J, Jp=Jp, b=b, D=D, psi0=psi0)
+print(C)   # atteso: un numero complesso, |C| dell'ordine di alcuni decimi
+\end{verbatim}
+Non passare \texttt{ansatz\_params}: di default resta \texttt{None} e la
+preparazione avviene con \texttt{prepare\_state(psi0)}, ampiezze esatte.
+
+\section*{Passo 2 --- validazione contro il riferimento classico esatto}
+
+\begin{verbatim}
+python validate_circuito_correlazioni.py
+\end{verbatim}
+Stampa un confronto, per sei correlatori rappresentativi e tre valori di $t$,
+tra il valore classico esatto ($\texttt{scipy.linalg.expm}$, nessun errore di
+Trotter) e quello dal circuito ($N=200$): il residuo atteso è dell'ordine di
+$10^{-5}$--$10^{-6}$ (errore di Trotter puro). In coda, uno studio di
+convergenza in $N$ su $C_{11}^{yy}(t{=}1.3)$: l'errore deve dimezzarsi
+raddoppiando $N$ (Trotter al primo ordine, $O(1/N)$ sull'ampiezza).
+
+\section*{Passo 3 --- validazione a shot finiti}
+
+\begin{verbatim}
+python validate_shot_noise_trimero_anello.py
+\end{verbatim}
+Separa i due contributi di errore: quello algoritmico (Trotter, statevector
+vs esatto classico) e quello statistico (shot vs statevector, $8192$ shots).
+Al punto di lavoro standard l'errore di Trotter domina nettamente su quello
+statistico (rapporto $\sim16\times$, vedi
+\texttt{\seqsplit{circuito\_correlazioni\_trimero\_anello\_spiegato.tex}}) --
+regime opposto a quello del dimero.
+
+\section*{Passo 4 --- scan completo delle 81 combinazioni}
+
+\begin{verbatim}
+python scan81_trimero_anello.py
+\end{verbatim}
+Richiede qualche minuto (81 combinazioni $\times$ 2 parti Re/Im $\times$
+(statevector + 8192 shots), con cache di trascompilazione). Stampa un
+riepilogo (zeri strutturali confermati, errori medi/massimi, correlatori più
+"ricchi") e salva due file nella cartella corrente:
+\begin{itemize}
+\item \texttt{scan81\_results.npz} --- matrici $9\times9$ (una riga/colonna per
+ogni coppia sito-componente) di riferimento classico, statevector e shot,
+più le statistiche di errore. Si carica con \texttt{numpy.load(...)}.
+\item \texttt{scan81\_results.json} --- stessi dati, riga per riga, in formato
+leggibile/ispezionabile a mano.
+\end{itemize}
+\textbf{Attenzione}: lo script salva con percorso \emph{relativo} --- va
+eseguito da dentro la cartella dove si vogliono i risultati (non da un'altra
+posizione), altrimenti Python solleva \texttt{FileNotFoundError}.
+
+\section*{Passo 5 --- figure}
+
+\begin{verbatim}
+python generate_figure_shotnoise.py
+python generate_figure_scan81.py
+\end{verbatim}
+Il secondo richiede che \texttt{scan81\_results.npz} sia già presente (Passo 4
+completato). Producono i PNG usati nei documenti di teoria/spiegazione.
+
+\section*{Problemi comuni}
+
+\begin{itemize}
+\item \texttt{ModuleNotFoundError} su uno dei moduli locali --- verificare di
+eseguire dalla cartella che contiene tutti i file elencati in
+"Prerequisiti", non da una sottocartella o da altrove.
+\item \texttt{FileNotFoundError} su \texttt{scan81\_results.npz} in uno script
+successivo --- va prima generato eseguendo \texttt{scan81\_trimero\_anello.py}
+(Passo 4); non è incluso di default perché il calcolo richiede qualche minuto.
+\item Risultati leggermente diversi da quelli riportati nei documenti di teoria
+--- controllare punto di lavoro ($J,J',b,D$) e $t,N$: sono hard-coded in testa
+a ogni script, non parametri da riga di comando.
+\end{itemize}
+
+\section*{Riferimenti}
+
+Teoria e derivazioni: \texttt{\seqsplit{simmetrie\_correlatori\_trimero\_anello.tex}},
+\texttt{\seqsplit{circuito\_correlazioni\_trimero\_anello\_spiegato.tex}}. Catalogo
+completo della fase: \texttt{\seqsplit{trimero\_anello\_correlazioni.tex}}.
+Cronologia delle decisioni: \texttt{log\_decisioni.md}.
+
+\end{document}

@@ -1047,3 +1047,770 @@ metà della richiesta originale del relatore ("Trotter e correlazioni
 dinamiche"), non ancora iniziata per il trimero. La derivazione
 principiata stile $R_1$ del punto di lavoro resta rimandata (priorità più
 bassa), non abbandonata.
+
+## Aggiornamento — correlazioni dinamiche trimero anello: simmetria residua derivata, punto di lavoro confermato
+
+Primo passo della fase correlazioni dinamiche per N=3 (mirror del dimero, questa
+volta in una chat separata dedicata all'estensione N=3): analisi di simmetria
+**prima** del circuito, per lezione esplicita imparata sul dimero (i due bug
+del circuito dimero — coniugato complesso mancante, mappa sito↔qubit invertita
+— erano entrambi mascherati dalla simmetria $U$ sui primi correlatori testati,
+quindi qui l'analisi di simmetria viene fatta e verificata numericamente
+**prima** di scrivere una riga di circuito, non dopo).
+
+**Decisione preliminare sul punto di lavoro (discussa con Samuele).** Come per
+il dimero (dove il punto "test2" per le correlazioni non fu scelto con uno scan
+dedicato, ma riusato dal lavoro VQE già fatto, e la sua ricchezza verificata
+*dopo*), si riusa il punto VQE-con-DM già validato per l'anello:
+$J{=}1,\,J'{=}0.4,\,b{=}b_c{=}2.4,\,D{=}0.15$ (Opzione B), ansatz `W-2q.6`
+(vedi `trimero_anello_vqe_dm.tex`) — invece di cercare un nuovo punto dedicato
+o riusare i punti Trotter ($R_0$, $D\gg J$, regime scollegato dal VQE-con-DM
+già validato). Motivazione fisica: $b_c$ è l'incrocio di livello che il DM
+Opzione B apre in anticrossing (`analisi_dm_trimero_anello.tex`) — gap piccolo
+fondamentale/primo eccitato, stesso meccanismo che nel dimero produceva $R_1$
+(dinamica non monocromatica). Decisione condizionata a verifica classica
+esplicita (fatta subito sotto), non assunta a priori.
+
+**Simmetria unitaria residua — generalizzazione non banale del caso dimero.**
+Sotto DM Opzione B, lo scambio puro $P_{12}$ resta rotto (il DM è dispari sotto
+scambio, come nel dimero). La riparazione del dimero,
+$U=\mathrm{SWAP}\cdot(R_z(\pi)\otimes R_z(\pi))$, **non si estende aggiungendo
+banalmente l'identità sul terzo qubit**: verificato numericamente che quella
+versione NON commuta con $H$ ($\|[U_\text{naive},H]\|\sim31$ su parametri
+casuali — non un piccolo residuo, una rottura netta). La simmetria corretta
+richiede $R_z(\pi)$ su **tutti e tre** i qubit:
+$$U_\text{anello} = \mathrm{SWAP}_{12}\cdot\big(R_z(\pi)\big)^{\otimes 3}.$$
+Verificato $[U_\text{anello},H]=0$ a precisione macchina (errore $=0$ esatto)
+su 20 punti casuali $(J,J',b,D)$, per l'Hamiltoniana completa (scambio + campo
++ DM Opzione B). Differenza qualitativa dal dimero: $U_\text{anello}^2=-\mathbb
+I$ (non è un'involuzione, ordine 4 e non 2, per via del terzo fattore $R_z(\pi)$
+— $(-1)^3=-1$ invece di $(-1)^2=+1$) — non hermitiano, ma resta unitario con
+autovalori di modulo 1 ($\pm i$), sufficiente per l'argomento sui correlatori
+(stessa struttura di dimostrazione del dimero, non ripetuta qui in dettaglio).
+
+**Lemma (verificato numericamente, errore $=0$):**
+$U_\text{anello}\,\sigma_i^\alpha\,U_\text{anello}^\dagger=\eta_\alpha\,
+\sigma_{\pi(i)}^\alpha$ per $i=1,2,3$, con $\pi=(1\,2)$ (fissa il sito 3),
+$\eta_x=\eta_y=-1,\eta_z=+1$ — stessa struttura del dimero, estesa al sito
+fisso $3$ (che riceve comunque il fattore $\eta_\alpha$ dalla propria $V$,
+pur non essendo scambiato).
+
+**Corollario nuovo, specifico di $N=3$ (non presente nel dimero: lì non
+esisteva un sito fisso sotto lo scambio).** Poiché il sito 3 è punto fisso di
+$\pi$: $C_{33}^{\alpha\beta}(t)=\eta_\alpha\eta_\beta\,C_{33}^{\alpha\beta}(t)$
+per ogni $t$ — zero rigoroso **per ogni $t$** (non solo $t=0$) quando
+$\eta_\alpha\eta_\beta=-1$:
+$$C_{33}^{xz}(t)=C_{33}^{zx}(t)=C_{33}^{yz}(t)=C_{33}^{zy}(t)\equiv0\quad\forall t.$$
+Verificato numericamente al punto di lavoro: $\max_k|a_kb_k|\sim10^{-17}$
+(precisione macchina) per tutte e quattro.
+
+**Simmetria di time-reversal $K$.** $H$ è reale in base computazionale per
+ogni $J,J',b,D$ (verificato, $\max|\mathrm{Im}\,H|=0$ su 20 punti casuali) —
+stesso argomento del dimero (Lemma "$KHK=H$"), generalizza senza modifiche a
+$N$ siti qualunque (l'argomento non usa la struttura di scambio, solo la
+realtà delle matrici di Pauli $X,Z$ e l'immaginarietà di $Y$). Zero rigoroso a
+$t=0$ per ogni coppia $i\neq j$ con esattamente una componente $y$: verificate
+tutte le $24$ combinazioni (3 coppie di siti ordinate $\times$ 2 ordini
+$\times$ 4 combinazioni di componenti con un solo $y$) al punto di lavoro,
+tutte esattamente zero a $t=0$.
+
+**Controllo classico completo al punto proposto
+($J{=}1,J'{=}0.4,b{=}b_c{=}2.4,D{=}0.15$, Opzione B).** Fondamentale non
+degenere: gap $E_1-E_0=0.2547$ (coerente con $g_\text{min}\approx0.25$ già
+riportato in `analisi_dm_trimero_anello.tex` per $D\approx0.148$-$0.15$).
+Scan completo delle $81$ combinazioni $(i,j,\alpha,\beta)$ con $i,j\in\{1,2,3\}$:
+**esattamente 4 nulle per ogni $t$** — le quattro predette dalla simmetria
+$U_\text{anello}$ (autocorrelazione sito 3, $xz/zx/yz/zy$), nessuna zero
+aggiuntivo non spiegato da simmetria. Le restanti 77 sono non banali, con
+diverse combinazioni genuinamente ricche: es. $C_{11}^{yy},C_{12}^{yy},
+C_{21}^{yy},C_{22}^{yy}$ con $|a_kb_k|_\text{max}\approx0.50$ e fino a 6 modi
+spettrali rilevanti (soglia 5% del massimo) su un massimo possibile di 7;
+$C_{33}^{yy},C_{33}^{xy},C_{33}^{yx},C_{33}^{xx}$ con $|a_kb_k|_\text{max}
+\approx0.49$–$0.52$, 3 modi rilevanti. Alcune combinazioni residue sono
+piccole ma non nulle (es. $C_{33}^{zz}\sim5\times10^{-4}$) — non protette da
+alcuna simmetria trovata, semplicemente piccole a questo punto specifico.
+
+**Decisione presa:** punto di lavoro **confermato**, verificato a posteriori
+(non solo assunto) — nessuna ricerca di un punto dedicato è risultata
+necessaria.
+
+**Formalizzato in `.tex`:** `simmetrie_correlatori_trimero_anello.tex`
+(compilato, verificato pagina per pagina, zero errori/overfull, 8 pagine) —
+tutte le proposizioni/corollari sopra con dimostrazione completa, non solo
+verifica numerica.
+
+## Aggiornamento — circuito Hadamard test per le correlazioni trimero anello: implementato e validato
+
+Secondo passo della fase correlazioni dinamiche per N=3: disegnato,
+implementato e validato il circuito a 4 qubit (3 di registro + 1 ancilla),
+mirror diretto del circuito già validato per il dimero
+(`circuito_correlatori_spiegato.tex`), riusando `trotter_trimero_anello.py`
+come blocco $U(t)$.
+
+**Struttura del circuito** (`circuito_correlazioni_trimero_anello.py`,
+funzioni `ground_state`, `build_correlator_circuit`,
+`ancilla_z_expectation`, `correlator_from_circuit`): preparazione esatta
+delle ampiezze del ground state (`prepare_state`, come stand-in per
+l'ansatz VQE `W-2q.6`, stessa metodologia già usata per il dimero) sul
+registro a 3 qubit; $H$ sull'ancilla; controlled-$W=\sigma_j^\beta$
+(controllo pieno) prima di $U(t)$; $U(t)$ Trotter non controllato sul
+registro; anti-controlled-$V=\sigma_i^\alpha$ dopo $U(t)$; rotazione di
+base sull'ancilla ($H$ per Re, $R_x(\pi/2)$ per Im) e lettura di
+$\langle\sigma_z^{anc}\rangle$ dallo statevector esatto (nessun rumore di
+shot in questa fase — validazione della logica del circuito, non ancora
+dello scenario sperimentale).
+
+**Validazione** (`validate_circuito_correlazioni.py`): riferimento
+classico calcolato **direttamente per esponenziale di matrice**
+($\texttt{scipy.linalg.expm}$), deliberatamente **non** tramite la formula
+spettrale $\sum_k a_kb_k$ — scelta per non poter reintrodurre per
+disattenzione la stessa classe di bug del "coniugato complesso mancante"
+già trovata nel dimero (qui il confronto è fra due calcoli
+concettualmente indipendenti, non fra una formula e la sua stessa
+riscrittura).
+
+Al punto di lavoro confermato ($J{=}1,J'{=}0.4,b{=}b_c{=}2.4,D{=}0.15$,
+Opzione B; gap $=0.2547$), risultati con $N=200$ passi di Trotter, $t\in\{0.5,1.3,2.7\}$:
+
+- Tutti i correlatori testati ($C_{11}^{yy}$, $C_{33}^{yy}$, $C_{13}^{yy}$,
+  $C_{33}^{xz}$, $C_{12}^{yy}$, $C_{21}^{yy}$) concordano col riferimento
+  classico entro $|$residuo$|\sim10^{-4}$–$10^{-3}$, coerente con l'errore
+  di Trotter atteso a $N=200$ per questo punto di lavoro (stesso ordine di
+  grandezza già misurato per l'evoluzione da sola in
+  `quantum_simulation_trimero_anello_trotter.tex`).
+- **Zero strutturale del sito 3 confermato via circuito** (non solo
+  classicamente): $C_{33}^{xz}(t)\approx0$ per tutti e tre i $t$ testati
+  (valori $\sim10^{-4}$, compatibili con solo errore di Trotter, non con
+  un residuo sistematico) — il Corollario del sito fisso è verificato
+  anche a livello di circuito quantistico, non solo di algebra classica.
+- **Relazione di simmetria $C_{12}^{yy}(t)=C_{21}^{yy}(t)$ confermata via
+  circuito**: $\eta_y\eta_y=+1$ predice l'uguaglianza; il circuito la
+  riproduce entro l'errore di Trotter a tutti e tre i $t$ (es. a $t=2.7$:
+  $-0.3574+0.4338i$ classico vs $-0.3565+0.4337i$ / $-0.3564+0.4338i$
+  circuito per le due permutazioni).
+- **Convergenza in $N$** (caso singolo, $C_{11}^{yy}(t{=}1.3)$, $N\in\{10,
+  20,40,80,160,320\}$): rapporto fra errori successivi $\to2.0$ raddoppiando
+  $N$ (misurato: $2.35,2.14,2.05,2.02,2.01$) — errore sull'ampiezza
+  $\sim O(1/N)$, coerente con Trotter al 1° ordine, in linea con la teoria
+  già stabilita per il modulo Trotter (`quantum_simulation_trimero_anello_teoria.tex`).
+
+**Nessun bug trovato in questa fase** (diversamente dal dimero, dove
+l'implementazione del circuito aveva rivelato due bug reali solo dopo lo
+scan sistematico): l'analisi di simmetria è stata fatta e verificata
+**prima** di scrivere il circuito, e tutti i residui osservati sono
+spiegabili quantitativamente come solo errore di Trotter — nessuna
+discrepanza sistematica residua.
+
+**File prodotti:** `circuito_correlazioni_trimero_anello.py`,
+`validate_circuito_correlazioni.py` (più le copie locali di
+`trimer_ring_exact.py` e `trotter_trimero_anello.py`, già esistenti come
+file di progetto, riusate senza modifiche).
+
+**Aperto per il seguito:**
+- [x] ~~Documento `.tex` pedagogico che spieghi il circuito passo per passo~~
+      — completato, vedi aggiornamento sotto.
+- [ ] Validazione con rumore statistico a shot finiti (mirror di
+      `circuito_correlazioni_tutte.ipynb` per il dimero) — finora solo
+      statevector esatto.
+- [ ] Scan sistematico delle 81 combinazioni via circuito effettivo (non
+      solo classicamente) — finora solo 6 casi rappresentativi.
+- [ ] Derivazione principiata (stile $R_1$) del punto Trotter dimostrativo
+      $R_0$ del trimero — priorità più bassa, non abbandonata.
+- [ ] Fase 5 (VQE con DM) per la catena aperta — non ancora affrontata.
+
+## Aggiornamento — documento pedagogico del circuito delle correlazioni (trimero anello)
+
+Terzo passo della fase correlazioni dinamiche per N=3: scritto
+`circuito_correlazioni_trimero_anello_spiegato.tex`, mirror per N=3 di
+`circuito_correlatori_spiegato.tex` (dimero) — spiegazione passo-passo del
+circuito (stato di partenza, perché il correlatore non è misurabile
+direttamente, costruzione stadio per stadio, dimostrazione che l'ancilla
+legge l'overlap, i due punti delicati $U(t)$ non controllato e
+anti-controllo su $V$, struttura del blocco Trotter, misura, validazione
+finale), non solo verifica numerica come nello script già consegnato.
+
+**Adattamento, non copia.** Dove la derivazione è indipendente dalla
+dimensione del registro (lettura dell'ancilla, gate controllati/anti-
+controllati, motivo per cui $U(t)$ non va controllato) il documento
+richiama il risultato del dimero invece di ripeterlo. Due sezioni sono
+riscritte da zero perché il salto a $N=3$ introduce differenze reali, non
+solo di notazione:
+
+1. **Il caso interessante: quando lo spalmamento non succede.** Invece di
+   ripetere l'espansione di Heisenberg a breve tempo su tutti i $4^3=64$
+   prodotti di Pauli (combinatoria che non aggiungerebbe comprensione, solo
+   lunghezza), il documento usa come esempio guida lo zero strutturale del
+   sito 3 per ogni $t$ (già dimostrato in
+   `simmetrie_correlatori_trimero_anello.tex`): il sito 3, punto fisso della
+   simmetria $U_\text{anello}$, non ha equivalente nel dimero (dove ogni
+   sito viene scambiato) — un tipo di annullamento strutturale
+   genuinamente nuovo per $N=3$, non solo "più della stessa cosa".
+2. **Il blocco $U(t)$: Trotter a due livelli annidati.** Sezione nuova,
+   assente nel dimero per costruzione: $H_{ex}$ e $H_{DM}$ (Opzione B),
+   essendo ciascuno somma di tre legami che condividono qubit a due a due
+   (i.e. la chiusura ad anello, non l'equilateralità o la frustrazione —
+   punto già chiarito in `trimero_anello_frustrazione_e_chiralita.tex`),
+   richiedono ciascuno un Trotter interno, oltre al Trotter esterno fra
+   $H_0$ e $H_{DM}$ già presente nel dimero. Tre livelli di errore
+   annidati invece di uno, richiamando la derivazione completa in
+   `quantum_simulation_trimero_anello_teoria.tex` (operatore di chiralità
+   di spin scalare, formula chiusa dell'errore di livello 1) invece di
+   ripeterla.
+
+**Figure prodotte** (generate da script Python dedicati, dati dalla
+validazione già effettuata, non placeholder):
+- diagramma schematico del circuito ($C_{12}^{yy}(t)$, $U(t)$ come box
+  opaco, mirror del diagramma del dimero);
+- convergenza Trotter $C_{11}^{yy}(t{=}1.3)$ vs $N$ (conferma visiva
+  $\sim1/N$);
+- validazione continua $C_{11}^{yy}(t)$ su un intervallo di $t$ (circuito
+  vs esatto classico, Re e Im);
+- zero strutturale del sito 3, $C_{33}^{xz}(t)$, su un intervallo continuo
+  di $t$ (non solo nei tre punti già testati) — mostra visivamente che
+  l'annullamento è per ogni $t$, non un caso isolato di $t=0$.
+
+**Compilazione**: due passate `pdflatex`, zero errori, zero
+overfull/underfull dopo correzioni (due spezzature di parola a metà
+causate da `\seqsplit` su nomi di file lunghi — stesso tipo di problema
+cosmetico già risolto altrove nel progetto — sostituite con interruzione
+di riga manuale; un errore fatale di font expansion di `microtype` con
+`tcolorbox`, risolto con `\microtypesetup{expansion=false}`). 10 pagine.
+
+**File prodotti:** `circuito_correlazioni_trimero_anello_spiegato.tex`
+(+ pdf compilato), `generate_figures_circuito_trimero_anello.py`,
+`generate_circuit_fig_trimero_anello.py` (script di generazione figure,
+riusabili se il punto di lavoro o i casi d'esempio cambiassero).
+
+**Aperto per il seguito:** validazione a shot finiti; scan sistematico
+delle 81 combinazioni via circuito effettivo; derivazione principiata del
+punto Trotter $R_0$; Fase 5 (VQE con DM) per la catena aperta — invariato
+rispetto a sopra.
+
+## Aggiornamento — validazione a shot finiti del circuito delle correlazioni (trimero anello)
+
+Quarto passo della fase correlazioni dinamiche per N=3: validazione a rumore
+statistico finito, mirror per N=3 di `circuito_correlazioni_tutte.ipynb`
+(dimero) — finora il circuito era stato validato solo su statevector esatto
+(nessun rumore di shot).
+
+**Metodologia.** `AerSimulator()` (shot-based, non statevector); stima
+$\langle\sigma_z^{anc}\rangle=(n_0-n_1)/N_\text{shots}$ da conteggi, per le
+due esecuzioni separate (Re e Im) di ciascun correlatore. Nota tecnica:
+`AerSimulator.run()` su un circuito con `prepare_state` non transpilato
+fallisce (`AerError: unknown instruction: state_preparation`) — richiede
+`transpile(qc, backend)` prima dell'esecuzione. Cache di transpilazione
+(`_TRANSPILE_CACHE`, chiave su tutti i parametri del circuito) per evitare
+di ritranspilare l'intero circuito Trotter a $N=200$ passi a ogni chiamata
+— porta il tempo totale dello script a $\sim44$ s.
+
+**Punto di lavoro**: quello confermato per le correlazioni ($J{=}1,J'{=}0.4,
+b{=}b_c{=}2.4,D{=}0.15$, Opzione B), $N=200$ passi di Trotter (stesso $N$
+già usato per la validazione a statevector).
+
+**Tre correlatori rappresentativi** (esatto classico / statevector $N=200$ /
+shots $N=200$, $8192$ shots, seed fisso): $C_{11}^{yy}(t{=}1.3)$,
+$C_{33}^{xz}(t{=}2.7)$ (atteso $\approx0$, zero strutturale del sito 3),
+$C_{12}^{yy}(t{=}2.7)$ — tutti concordano entro l'ordine di grandezza atteso
+dal rumore statistico a $8192$ shots.
+
+**Risultato quantitativo centrale — separazione dei due errori (Trotter vs
+statistico), stesso confronto già fatto per il dimero (R1):**
+
+| quantità | valore |
+|---|---|
+| errore di Trotter ($N=200$, statevector vs esatto) | $7.08\times10^{-4}$ |
+| soglia statistica nel caso peggiore, $1/\sqrt{8192}$ | $0.0110$ |
+| rapporto (statistico / Trotter) | $\sim15.6\times$ |
+
+**Conclusione, opposta a quella del dimero**: qui l'errore statistico
+**domina** nettamente su quello di Trotter (fattore $\sim16$), l'esatto
+contrario del regime R1 del dimero (dove il Trotter dominava di oltre
+$30\times$). Non è una conferma dello stesso pattern, ma un risultato
+distinto — a $N=200$ il Trotter è già ben oltre il punto di convergenza
+necessario, mentre il rumore di campionamento a $8192$ shots resta il
+collo di bottiglia. Implicazione pratica: con questo numero di shots, non
+avrebbe senso spingere $N$ molto oltre 200 senza anche aumentare gli shots.
+
+**Convergenza vs $N_\text{shots}$** (stesso correlatore, $256\to16384$
+shots, $40$ ripetizioni indipendenti per punto): la deviazione standard
+misurata segue l'andamento atteso $\sim1/\sqrt{N_\text{shots}}$ (es. a
+$256$ shots: dev.std $=0.0523$ vs atteso $0.0625$; a $16384$: $0.0066$ vs
+$0.0078$), con la media che converge visibilmente al valore esatto
+classico ($+0.4521$) al crescere del numero di shots.
+
+**File prodotti:** `validate_shot_noise_trimero_anello.py`,
+`generate_figure_shotnoise.py` (produce `fig_shot_trimero.png`, grafico di
+convergenza con barre d'errore e banda $\pm1/\sqrt{N_\text{shots}}$).
+
+**Documento pedagogico aggiornato**: aggiunta la sottosezione "Validazione
+a shot finiti: quale errore domina?" a
+`circuito_correlazioni_trimero_anello_spiegato.tex` (tabella di confronto,
+box con la conclusione opposta al dimero, nuova Fig. 4). Ricompilato,
+zero errori, un solo underfull hbox cosmeticamente trascurabile
+(badness 1735), 11 pagine.
+
+**Aperto per il seguito:** scan sistematico delle 81 combinazioni via
+circuito effettivo (ora estendibile sia a statevector sia a shot finiti);
+derivazione principiata del punto Trotter $R_0$; Fase 5 (VQE con DM) per
+la catena aperta — invariato rispetto a sopra, tolta la voce shot-noise
+(completata qui).
+
+## Aggiornamento — scan sistematico delle 81 combinazioni via circuito effettivo (trimero anello)
+
+Quinto passo della fase correlazioni dinamiche per N=3: esteso a **tutte e
+81** le combinazioni $(i,j,\alpha,\beta)$ lo scan finora fatto solo su 6
+casi rappresentativi (statevector) e 3 casi (shot finiti) — misurando
+ciascuna **via circuito vero e proprio** (non più solo classicamente),
+sia a statevector esatto sia a shot finiti ($8192$ shots), allo stesso
+punto di lavoro confermato ($J{=}1,J'{=}0.4,b{=}b_c{=}2.4,D{=}0.15$,
+Opzione B), $t=1.3$, $N=200$.
+
+**Nota sullo scan precedente**: lo scan delle 81 combinazioni era già
+stato fatto in `simmetrie_correlatori_trimero_anello.tex`, ma **solo per
+via classica** (algebra/`expm`), per identificare quali fossero
+strutturalmente nulle. Questo è il primo scan completo che passa per il
+circuito quantistico reale su tutte e 81, non solo su un sottoinsieme.
+
+**Risultati principali:**
+- **I quattro zeri strutturali** predetti dal Corollario del sito fisso
+  ($C_{33}^{xz},C_{33}^{zx},C_{33}^{yz},C_{33}^{zy}$) sono confermati
+  esattamente — né un quinto zero "spurio", né uno dei quattro previsti
+  che risulti in realtà non nullo. Massimo $|C|$ misurato fra questi:
+  $2.6\times10^{-3}$ a statevector (coerente con solo errore di Trotter),
+  $2.2\times10^{-2}$ a shot finiti (coerente con solo rumore statistico).
+- **Errori uniformemente piccoli su tutte le 81** (non solo sui 6/3 casi
+  già visti): errore di Trotter medio $8.8\times10^{-4}$, massimo
+  $2.6\times10^{-3}$; errore statistico medio $1.4\times10^{-2}$, massimo
+  $3.7\times10^{-2}$ — nessun caso patologico isolato.
+- **Risultato nuovo, non previsto dalla sola analisi di simmetria**:
+  $C_{33}^{zz}(t{=}1.3)\approx0.9995$ — l'autocorrelazione
+  $\langle\sigma_3^z(t)\sigma_3^z(0)\rangle$ è quasi congelata. Nessuna
+  delle simmetrie derivate lo impone: è un fatto dinamico specifico del
+  punto di lavoro (DM piccolo rispetto a scambio/campo, $\sigma_3^z$
+  quasi conservato) — un'osservazione fisica ulteriore rispetto a
+  quanto richiesto dalla sola validazione del circuito.
+- Fra i correlatori non banali, i più intensi sono le coppie sito-1/sito-3
+  ($|C_{31}^{zx}|,|C_{13}^{xz}|\approx0.663$), non le autocorrelazioni del
+  sito 1 usate come esempio pedagogico principale nel documento.
+
+**Figura prodotta**: heatmap $9\times9$ di $|C_{ij}^{\alpha\beta}(t{=}1.3)|$
+(righe/colonne raggruppate per sito, separatori bianchi), con i quattro
+zeri strutturali evidenziati da un riquadro rosso — visivamente confermano
+di cadere esattamente nel blocco $(3,3)$ previsto.
+
+**File prodotti:** `scan81_trimero_anello.py` (scan completo, cache di
+transpilazione, $\sim4.5$ minuti di esecuzione per le 81 combinazioni×2
+esecuzioni(statevector)+2 esecuzioni(shots)), `generate_figure_scan81.py`
+(produce `fig_scan81_trimero.png`), `scan81_results.npz`/`.json` (risultati
+completi salvati per riuso).
+
+**Documento pedagogico aggiornato**: aggiunta la sottosezione "Scan
+sistematico delle 81 combinazioni, via circuito effettivo" a
+`circuito_correlazioni_trimero_anello_spiegato.tex` (Sez. 8.1), con
+tabella degli errori aggregati e la nuova Fig. 6. Ricompilato, zero
+errori, stesso unico underfull hbox cosmetico già presente prima
+(badness 1735), 13 pagine.
+
+**Aperto per il seguito:** derivazione principiata (stile $R_1$ del
+dimero) del punto Trotter dimostrativo $R_0$ del trimero; rumore di gate
+reale (Parte 2 della tesi); Fase 5 (VQE con DM) per la catena aperta —
+tolta la voce "scan sistematico delle 81 combinazioni" (completata qui).
+
+## Aggiornamento — tre notebook della fase correlazioni, trimero anello (mirror del dimero)
+
+Sesto passo della fase correlazioni dinamiche per N=3: costruiti i tre
+notebook Jupyter che mirrorano, per il trimero anello, la struttura già
+usata per il dimero (`circuito_correlazioni_tutte.ipynb`) — eseguiti per
+intero (non solo listati di codice), con output reali salvati nel file.
+Su richiesta esplicita di Samuele, tutta la logica pesante è riusata per
+import dai moduli `.py` già scritti e validati
+(`circuito_correlazioni_trimero_anello.py`,
+`validate_circuito_correlazioni.py`, `trotter_trimero_anello.py`,
+`trimer_ring_exact.py`) invece di essere riscritta nei notebook.
+
+**`correlazioni_trimero_anello_simmetria.ipynb`** — mirror computazionale
+di `simmetrie_correlatori_trimero_anello.tex`: verifica passo per passo
+(non solo teoria) che $S_z^{tot}$ non è conservato, che $U_\text{naive}$
+fallisce, che $U_\text{anello}=\mathrm{SWAP}_{12}\cdot(R_z(\pi))^{\otimes3}$
+commuta con $H$ (anche su 20 punti casuali), il Lemma sui 9 operatori di
+sito, i quattro zeri strutturali a precisione macchina, gli zeri a $t=0$
+da time-reversal, e lo scan completo delle 81 combinazioni via formula
+spettrale (non via circuito — quello è nel terzo notebook).
+
+**`correlazioni_trimero_anello_esplorazione.ipynb`** — mirror di
+`circuito_correlazioni_tutte.ipynb` del dimero nella parte "circuito":
+disegno del circuito, validazione su 6 casi rappresentativi (statevector
+vs classico esatto), convergenza Trotter, un confronto shot-vs-Trotter.
+Nessuna riderivazione delle simmetrie (rimanda al primo notebook e al
+`.tex`).
+
+**`circuito_correlazioni_trimero_anello_tutte.ipynb`** — mirror snello:
+misura diretta (non dedotta per simmetria) di tutte le 81 combinazioni via
+circuito a $t=1.3,N=200$, heatmap $9\times9$ con i quattro zeri
+strutturali evidenziati, una vista d'insieme nel tempo (griglia
+$9\times9$, deliberatamente ridotta a $N=100$/8 punti di $t$ per non
+appesantire l'esecuzione — scelta dichiarata esplicitamente nel notebook,
+non un limite nascosto), un selettore manuale (niente `ipywidgets`, bug di
+rendering già noto in questo ambiente), l'analisi escursione/simmetria/
+spettro, e un confronto finale con lo scan a shot finiti precomputato da
+`scan81_trimero_anello.py` (non ricalcolato nel notebook, per evitare di
+ripetere ~4-5 minuti di esecuzione).
+
+**Bug incontrato e risolto durante la costruzione (degno di nota
+metodologico).** Lo script generatore del terzo notebook costruisce il
+testo delle celle dentro stringhe Python non-raw; una riga con `\beta` e
+`\alpha` destinati a comparire letteralmente nel LaTeX della cella è stata
+consumata come sequenza di escape Python (`\b`=backspace, `\a`=bell) **due
+volte, in due punti distinti**: una volta nello script generatore
+(backslash singolo invece di doppio, corretto raddoppiandolo) e una
+seconda volta, indipendentemente, nel codice generato stesso — un
+f-string non raw, `f"...\alpha\beta..."`, che il kernel Jupyter
+reinterpreta come escape al momento dell'esecuzione della cella, non solo
+in fase di scrittura del file (corretto rendendo la f-string raw,
+`rf"..."`). Errore silenzioso — non un traceback all'origine ma un
+`ParseException` di matplotlib mathtext a valle, con lettere mancanti nel
+titolo del grafico (`lpha`, `eta` invece di `alpha`, `beta`) come unico
+indizio: utile da ricordare per il seguito, ogni volta che si genera
+codice Python contenente LaTeX via uno script wrapper.
+
+**Esecuzione**: tutte e tre le celle eseguite senza errori (verificato
+iterando su tutti gli output di tutte le celle), risultati numerici
+coerenti con quanto già misurato negli script standalone (es. rapporti di
+simmetria $C_{11}^{\alpha\beta}/C_{22}^{\alpha\beta}$ entro qualche punto
+percentuale da $\eta_\alpha\eta_\beta=\pm1$, coerente col rumore della
+griglia ridotta $N=100$/8 punti usata in quella sezione).
+
+**Nota sulla consegna, valida da qui in avanti**: su richiesta di
+Samuele, niente più compilazione PDF (solo sorgenti `.tex`, per non
+consumare token) e i file testuali (`.tex`, `.py`, `.ipynb`) vengono
+salvati nel Project (`project_write`, consultabili senza bisogno di
+scaricarli) invece che solo allegati in chat, perché il download diretto
+degli allegati non funziona dal suo client.
+
+**File prodotti (salvati nel Project):**
+`correlazioni_trimero_anello_simmetria.ipynb`,
+`correlazioni_trimero_anello_esplorazione.ipynb`,
+`circuito_correlazioni_trimero_anello_tutte.ipynb`.
+
+**Problema di consegna file allegati (`.ipynb`/`.tex`/`.py`) — aperto,
+non risolto, workaround rifiutato da Samuele.** Samuele riceve
+"Impossibile aprire il file" scaricando notebook/`.py`/`.tex` da un
+allegato in chat — problema comparso da quando (su sua stessa richiesta)
+si è smesso di compilare i `.tex` in PDF: prima i documenti tex arrivavano
+sempre anche come PDF compilato (che apriva senza problemi), i sorgenti
+grezzi invece no. Primo tentativo: esportare ogni file anche in **HTML
+autonomo** (`nbconvert`/`pandoc`/`pygments`, zero token — conversione
+locale, non ricompilazione) — confermato apribile per i notebook, ma
+**Samuele l'ha esplicitamente rifiutato come soluzione** ("non voglio gli
+html") e ha chiesto di segnalare il problema "a chi di dovere" invece di
+aggirarlo lato mio. **Nessun meccanismo disponibile per aprire un ticket
+verso l'infrastruttura Anthropic per conto suo** — indicato a Samuele di
+usare il pulsante di feedback (thumbs down) o support.claude.com per
+segnalarlo direttamente lui.
+
+**Decisione operativa, valida da qui in avanti**: niente più conversioni
+HTML di cortesia non richieste. I file continuano a essere salvati nel
+Project (fonte primaria, consultabile senza download) e/o allegati in
+chat come `.tex`/`.py`/`.ipynb` grezzi come sempre fatto finora; Samuele
+gestisce da sé, con copia-incolla, i casi in cui il download/apertura
+dell'allegato non funziona.
+
+**Aperto per il seguito:** derivazione principiata (stile $R_1$ del
+dimero) del punto Trotter dimostrativo $R_0$ del trimero; rumore di gate
+reale (Parte 2 della tesi); Fase 5 (VQE con DM) per la catena aperta —
+invariato rispetto a sopra.
+
+## Aggiornamento — documento di catalogazione della fase correlazioni (trimero anello)
+
+Creato `trimero_anello_correlazioni.tex`, stesso stile di
+`trimero_anello_quantum_simulation.tex` (un `\section*` per file: cosa fa,
+funzioni interne, come si usa, verifiche, conclusione) — riferimento unico
+per ritrovare rapidamente cosa fa ciascun file della fase correlazioni
+dinamiche del trimero anello: `simmetrie_correlatori_trimero_anello.tex`,
+`circuito_correlazioni_trimero_anello.py`,
+`validate_circuito_correlazioni.py`,
+`circuito_correlazioni_trimero_anello_spiegato.tex` (+ script figure),
+`validate_shot_noise_trimero_anello.py` + `generate_figure_shotnoise.py`,
+`scan81_trimero_anello.py` + `generate_figure_scan81.py`, e i tre notebook
+(`correlazioni_trimero_anello_simmetria.ipynb`,
+`correlazioni_trimero_anello_esplorazione.ipynb`,
+`circuito_correlazioni_trimero_anello_tutte.ipynb`).
+
+Non compilato in PDF (regola "solo `.tex`" tuttora valida) — solo sorgente,
+salvato nel Project.
+
+## Aggiornamento — bug percorso assoluto in `scan81_trimero_anello.py` (secondo giro)
+
+Samuele ha eseguito lo script sulla propria macchina e ottenuto
+`FileNotFoundError` su `np.savez('/home/claude/thesis_work/scan81_results.npz', ...)`
+in fondo allo script — il calcolo numerico era corretto (valori coerenti
+con quanto già noto), il crash era solo sul salvataggio finale. Causa:
+la copia incollata da Samuele conteneva ancora il percorso assoluto del
+mio sandbox (`/home/claude/thesis_work/...`), non valido sulla sua
+macchina — bug già corretto una volta in questa sessione ma non ancora
+recepito lato Samuele, che lavora per copia-incolla manuale (vedi sopra).
+Corretto di nuovo, qui e nel Project, a percorsi relativi:
+```
+np.savez('scan81_results.npz', ...)
+...
+with open('scan81_results.json', 'w') as f:
+```
+Diff comunicato a Samuele in chiaro (le due righe, prima/dopo) per
+permettergli di patchare la propria copia senza dover ricopiare tutto lo
+script.
+
+## Aggiornamento — VQE reale nel circuito dei correlatori (trimero anello)
+
+Chiusa la pipeline VQE→correlazioni con il circuito effettivo, sostituendo
+lo stand-in a ampiezze esatte (`prepare_state`) usato finora — mirror
+dell'analoga chiusura già fatta per il dimero.
+
+**Scoperta preliminare:** i file `vqe_trimer_ring_W.py` e affini, descritti
+a lungo in `trimero_anello_vqe.tex`/`trimero_anello_vqe_dm.tex`, **non
+esistono** come moduli separati nel Project (confermato da un
+`project_read` fallito, con l'elenco completo dei doc disponibili in
+risposta). Il codice reale dell'ansatz vive dentro due notebook,
+`confronto_ansatz_entangler_trimero_anello.ipynb` e
+`analisi_espressivita_PMA_anello.ipynb`. Creato quindi un modulo nuovo,
+`vqe_w2q6_trimero_anello.py`, che isola la costruzione dell'ansatz
+`W-2q.6` (`pma_2q_trimer_exact(6, w_block)`, blocco
+`CNOT`–$R_y(\theta)$–`CNOT`, bond `BOND12=(2,1)`, `BOND23=(1,0)`,
+`BOND31=(0,2)`) in un file riusabile, così da non dipendere da import di
+notebook.
+
+**Ottimizzazione VQE** (multistart COBYLA, 12 partenze casuali seed
+fissato, + polish L-BFGS-B) al punto di lavoro confermato $J=1$, $J'=0.4$,
+$b=b_c=2.4$, $D=0.15$ (Opzione B): tutte le 12 partenze convergono allo
+stesso punto, $E_{vqe}=-5.53437001739340$ vs $E_{esatto}=-5.53437001739350$
+($\Delta E=9.8\times10^{-14}$), fidelity $\mathcal F=0.99999999999961$ —
+coerente con il valore già presente in
+`trimer_ansatz_sweep_cache_v2.json` (voce `"DM|W-2q.6|2.4"`), che però
+non conservava il vettore dei parametri ottimali (solo metriche
+scalari) — da qui la necessità di rieseguire l'ottimizzazione. Parametri
+salvati in `w2q6_params_optimal.npz`.
+
+**Integrazione nel circuito.** Modificato
+`circuito_correlazioni_trimero_anello.py`: `build_correlator_circuit` e
+`correlator_from_circuit` accettano ora un argomento opzionale
+`ansatz_params` — se `None` (default), preparazione invariata via
+`prepare_state`; se fornito (i 6 parametri), preparazione via il circuito
+reale `w2q6_circuit()` composto sul registro. Nessuna modifica al
+comportamento di default (retrocompatibile con tutto il codice esistente:
+`scan81_trimero_anello.py`, `validate_shot_noise_trimero_anello.py`,
+i tre notebook).
+
+**Validazione** (`validate_vqe_circuito_correlazioni.py`, nuovo file):
+confronto sistematico delle 81 combinazioni $C_{ij}^{\alpha\beta}(t)$,
+preparazione VQE reale vs preparazione esatta — errore medio
+$3.0\times10^{-7}$, massimo $8.3\times10^{-7}$ (su $C_{21}^{zz}$), come
+atteso dell'ordine di $\sqrt{1-\mathcal F}$. Nessuna discrepanza
+anomala; la sostituzione è validata su tutte le combinazioni, non solo
+su un sottoinsieme.
+
+**Documentazione aggiornata:** rimosso il linguaggio "stand-in" da
+`circuito_correlazioni_trimero_anello_spiegato.tex` (aggiunta la
+sottosezione con risultato dell'ottimizzazione e della validazione) e da
+`trimero_anello_correlazioni.tex` (nuova sezione per i due file nuovi,
+conclusione generale aggiornata).
+
+File nuovi di questa milestone: `vqe_w2q6_trimero_anello.py`,
+`validate_vqe_circuito_correlazioni.py`, `w2q6_params_optimal.npz`
+(quest'ultimo dato binario, non salvato nel Project — rigenerabile
+eseguendo `vqe_w2q6_trimero_anello.py`).
+
+**Aperto per il seguito:** derivazione principiata (stile $R_1$ del
+dimero) del punto Trotter dimostrativo $R_0$ del trimero; rumore di gate
+reale (Parte 2 della tesi); Fase 5 (VQE con DM) per la catena aperta —
+invariato rispetto a sopra.
+
+## Aggiornamento — manuali d'uso e quarto notebook (chiusura VQE reale, trimero anello)
+
+Completata la documentazione pratica della milestone precedente (VQE reale
+nel circuito dei correlatori), su richiesta esplicita di Samuele.
+
+**Due manuali d'uso** (nuovi), uno per versione, entrambi `.tex`,
+struttura: Scopo, Prerequisiti, Passi numerati con comandi/output attesi,
+Problemi comuni, Riferimenti:
+- `manuale_uso_correlazioni_trimero_anello_statevector.tex` — versione a
+  preparazione esatta (`prepare_state`), invariata; copre i quattro script
+  standalone della fase in ordine d'uso (validazione classica, shot noise,
+  scan81, figure).
+- `manuale_uso_correlazioni_trimero_anello_vqe.tex` — versione attuale
+  (ansatz VQE reale `W-2q.6`); copre in più il passo di ottimizzazione
+  (`vqe_w2q6_trimero_anello.py`, con l'avviso che i parametri vanno
+  rigenerati se cambia il punto di lavoro $J,J',b,D$) e la validazione
+  incrociata (`validate_vqe_circuito_correlazioni.py`); nota esplicita
+  sulla retrocompatibilità (`ansatz_params=None` invariato).
+
+**Quarto notebook** (nuovo), `circuito_correlazioni_trimero_anello_vqe.ipynb`
+— Samuele ha fatto notare che le tre notebook esistenti della fase usano
+tutte `prepare_state`, nessuna mostra la pipeline con l'ansatz VQE reale.
+A differenza delle prime tre (mirror diretto delle notebook del dimero),
+questo non ha un equivalente nel dimero: documenta specificamente la
+chiusura VQE→correlazioni per il trimero anello. Contenuto: ottimizzazione
+inline dell'ansatz `W-2q.6` (stessi 12 multistart + polish, stesso
+risultato $\mathcal F=0.99999999999961$), le 81 correlazioni ricalcolate
+con preparazione VQE vs esatta (stessi numeri di
+`validate_vqe_circuito_correlazioni.py`: errore medio $3.0\times10^{-7}$,
+massimo $8.3\times10^{-7}$), heatmap $9\times9$ del residuo in scala
+logaritmica (verificata visivamente: range $\sim10^{-9}$--$10^{-6.5}$,
+nessuna anomalia). 12 celle, eseguite senza errori.
+
+`trimero_anello_correlazioni.tex` aggiornato di conseguenza (sezione
+notebook rinominata "Quattro notebook...", nuovo paragrafo descrittivo,
+"Come si usano"/"Verifiche"/"Conclusione" aggiornati).
+
+**Aperto per il seguito:** invariato rispetto a sopra.
+
+## Aggiornamento — quarto notebook esteso a mirror completo di "tutte" (trimero anello)
+
+Samuele ha fatto notare che la versione precedente del quarto notebook (solo
+ottimizzazione + confronto 81 combinazioni + un heatmap del residuo) non era
+un vero equivalente di `circuito_correlazioni_trimero_anello_tutte.ipynb`:
+mancavano heatmap di $|C|$, griglia $9\times9$ nel tempo, selettore,
+simmetria, spettro, confronto shot noise. Confermato via
+`AskUserQuestion` di rifare il mirror completo.
+
+**`circuito_correlazioni_trimero_anello_vqe.ipynb` riscritto** (stesso
+nome, contenuto sostituito): ora rispecchia tutte e otto le sezioni del
+terzo notebook, con la preparazione VQE (`ansatz_params`) al posto di
+`prepare_state` ovunque, precedute da una sezione 0 di ottimizzazione
+dell'ansatz (stesso schema: 12 multistart COBYLA + polish, stesso
+risultato $\mathcal F=0.99999999999961$). 28 celle, eseguite senza
+errori. Risultati verificati: heatmap $|C|$ con gli stessi quattro zeri
+strutturali evidenziati e la stessa cella $C_{33}^{zz}$ dominante;
+griglia $9\times9$ nel tempo visivamente indistinguibile dalla versione
+esatta; simmetria $C_{11}/C_{22}=\eta_\alpha\eta_\beta$ confermata entro
+$\pm3\%$ su tutte e nove le coppie $(\alpha,\beta)$; spettro
+ricco/piatto invariato (è teoria pura, indipendente dalla preparazione);
+errore totale (Trotter+VQE) medio $8.81\times10^{-4}$, massimo
+$2.64\times10^{-3}$ — indistinguibile da quello della versione a stato
+esatto.
+
+**File nuovo:** `scan81_vqe_trimero_anello.py` — mirror di
+`scan81_trimero_anello.py` con preparazione VQE, richiesto dalla Sez. 7
+del notebook (confronto con lo scan a shot finiti); richiede
+`w2q6_params_optimal.npz` già presente. Eseguito una volta per generare
+`scan81_vqe_results.npz`/`.json` (dati binari/derivati, non salvati nel
+Project — rigenerabili eseguendo lo script). Errore statistico (shot vs
+statevector) medio $1.33\times10^{-2}$, massimo $3.33\times10^{-2}$ —
+stesso ordine di grandezza della versione a stato esatto, rumore
+statistico ancora dominante sull'errore di Trotter e sul residuo VQE.
+
+**Problema tecnico incontrato:** la prima versione del notebook riscritto
+(736 KB, griglia $9\times9$ a `figsize=(11,11), dpi=70`) ha fatto
+superare il tetto del Project (2.137M contro il limite di 2M) al momento
+del salvataggio — lo stesso problema di dimensione già incontrato con le
+prime tre notebook. Risolto riducendo la griglia a `figsize=(8,8),
+dpi=45` (416 KB, verificato ancora leggibile) e ripetendo il pattern
+`project_delete` + `project_write` per far scendere davvero il totale
+sotto il tetto prima di aggiungere il nuovo file
+`scan81_vqe_trimero_anello.py`.
+
+`trimero_anello_correlazioni.tex` aggiornato di conseguenza (paragrafo
+del quarto notebook riscritto per descrivere il mirror completo,
+"Come si usano"/"Verifiche"/"Conclusione" aggiornati con i nuovi numeri).
+
+**Aperto per il seguito:** invariato rispetto a sopra.
+
+## Aggiornamento — manuale d'uso VQE allineato al quarto notebook completo
+
+`manuale_uso_correlazioni_trimero_anello_vqe.tex` era rimasto fermo alla
+versione precedente del quarto notebook: non citava
+`scan81_vqe_trimero_anello.py` né il notebook esteso, e "Cosa NON cambia"
+parlava ancora di "tre notebook". Aggiunto un Passo 4 (scan completo,
+mirror del Passo 4 del manuale gemello) e una sezione "Come esplorare
+tutto insieme" che rimanda al notebook come percorso rapido per farsi
+un'idea complessiva senza lanciare gli script uno per uno; aggiornati
+prerequisiti, problemi comuni (`FileNotFoundError` su
+`scan81_vqe_results.npz`) e il riferimento ai "tre notebook" (ora
+esplicitamente "i primi tre... che usano ancora `prepare_state`").
+
+**Aperto per il seguito:** invariato rispetto a sopra.
+
+## Aggiornamento — due relazioni .docx per il trimero anello (stile Samuele)
+
+Samuele ha allegato due relazioni .docx già scritte per il dimero
+(`relazione_test_parametri.docx`, `relazione_correlazioni.docx`) e ha
+chiesto l'equivalente per il trimero, stesso font (Times New Roman),
+stessa dimensione (corpo 11pt, didascalie 9.5pt corsivo centrato), stessa
+impostazione (nessun titolo, testo giustificato, tono diretto in prima
+persona da studente, non da relazione accademica formale).
+
+Chiarito con l'utente quale contenuto abbinare (via AskUserQuestion, non
+ovvio 1:1 col dimero): relazione 1 = ottimizzazione e test del circuito
+VQE reale W-2q.6 (lavoro di questa sessione, dati e figure già pronti);
+relazione 2 = correlazioni dinamiche trimero anello (mirror diretto di
+`relazione_correlazioni.docx`, scan81/simmetrie/ricco-piatto/chiusura
+VQE). Scartata l'alternativa (Trotter/ricerca del punto R0) perché le
+figure originali di quella fase (Aug 22) non sono più disponibili — solo
+il testo tex sopravvive, sul disco locale non c'erano i PNG.
+
+**File prodotti** (consegnati via SendUserFile, non salvati nel Project
+per non far esplodere il tetto di dimensione con le immagini incorporate):
+- `relazione_vqe_trimero_anello.docx` — circuito dell'ansatz (versione
+  scomposta CNOT-Ry-CNOT), ottimizzazione (12 multistart, tutti convergenti
+  allo stesso minimo, F=0.99999999999961), tabella delle 5 combinazioni
+  con residuo maggiore fra preparazione VQE ed esatta, heatmap del
+  residuo log10 sulle 81 combinazioni, domanda aperta al relatore su
+  se F=1 sia specifico di questo punto o generale nella regione DM.
+- `relazione_correlazioni_trimero_anello.docx` — scan81 con esempi
+  ricco/piatto (C_11^yy, C_33^zz con nota sulla scala verticale),
+  heatmap |C| con i quattro zeri strutturali, griglia 9x9 nel tempo,
+  scoperta C_33^zz≈0.9995, nota onesta sul residuo peggiore che cade su
+  uno zero strutturale, chiusura VQE, domanda aperta al relatore su quale
+  correlatore usare come primo banco di prova per il rumore (Parte 2).
+
+**Metodo:** letti i due docx di riferimento con pandoc (testo) e ispezione
+diretta di `word/document.xml`/`styles.xml` (font, dimensioni, spaziature,
+bordi tabella) per replicare esattamente lo stile, non solo il tono.
+Figure riusate da notebook già eseguiti in questa sessione dove possibile
+(`circuito_correlazioni_trimero_anello_tutte.ipynb`) per evitare ricalcoli;
+rigenerate solo le due mancanti (circuito ansatz, heatmap residuo VQE).
+Documenti costruiti con `docx` (npm) via script Node, verificati
+convertendoli in PDF/JPEG e ispezionando visivamente ogni pagina.
+
+## Aggiornamento — correzione formattazione matematica nei due .docx del trimero
+
+Samuele ha segnalato che le formule nei due report appena consegnati erano
+scritte come testo ASCII semplice (es. la stringa letterale `C_ij^αβ(t)`)
+invece che con la formattazione matematica reale di Word (corsivo sulle
+lettere-variabile, apice/pedice veri), come nei documenti di riferimento
+del dimero — non accettabile per un elaborato che deve leggersi come un
+paper/libro di fisica.
+
+**Causa:** gli script Node (`build_relazione_vqe.js`,
+`build_relazione_correlazioni.js`) scrivevano ogni paragrafo come un unico
+`TextRun` di testo piatto, senza mai usare le proprietà `italics`,
+`subScript`, `superScript` del pacchetto `docx`.
+
+**Convenzione estratta per confronto diretto dall'XML dei due riferimenti**
+(`relazione_correlazioni.docx`, Calibri, uso estensivo di `w:vertAlign`;
+`relazione_test_parametri.docx`, Times New Roman, zero formattazione
+matematica — i suoi unici 6 tag `<w:i/>` sono le didascalie in corsivo,
+non notazione fisica, coerente col fatto che quel report non contiene mai
+indici/apici, solo rapporti semplici come b/J scritti in chiaro):
+- lettera-variabile di base (C, a, b, D, J, N, t, k, E, F, σ, θ) → corsivo;
+- indici in pedice (ij, 1, 2, k, c, anello, VQE, esatto) → pedice reale,
+  non corsivo;
+- componenti/esponenti in apice (αβ, xy, zz, vqe, esatto) → apice reale,
+  non corsivo;
+- lettere greche usate come etichette nude (α,β∈{...}) → testo semplice,
+  non corsivo; i simboli dentro le graffe (x,y,z) restano corsivo in
+  quanto valori rappresentativi della variabile;
+- Δ maiuscolo → testo semplice, la lettera che segue (es. ΔE) → corsivo;
+- numeri puri → testo semplice;
+- nomi di gate (CNOT, Ry, RXX, RZZ) e identificatori di codice
+  (`prepare_state`, nomi di file) → testo semplice, mai formule.
+
+**Fix:** introdotto in entrambi gli script un mini-linguaggio di markup
+(`*corsivo*`, `~pedice~`, `^apice^`, sequenziale non annidato) con un
+parser (`parseMath`) che genera i `TextRun` corretti; applicato a ogni
+formula nei paragrafi, nelle didascalie e nella tabella del report VQE
+(intestazioni e valori di colonna *C*~ij~, αβ). Un solo conflitto di
+delimitatore trovato e risolto: "~0.0015" (tilde come "circa") sostituito
+con "≈0.0015" per non essere scambiato per un pedice.
+
+Entrambi i file rigenerati, riconvertiti in PDF/JPEG e verificati
+visivamente pagina per pagina (corsivo/pedice/apice ora corretti su tutte
+le formule, tabella inclusa) prima di essere riconsegnati via SendUserFile.

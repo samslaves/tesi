@@ -1,0 +1,667 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{margin=2.4cm}
+\usepackage{graphicx}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{microtype}
+\microtypesetup{expansion=false}
+\usepackage{seqsplit}
+\setlength{\emergencystretch}{3em}
+\usepackage{xcolor}
+\usepackage{tcolorbox}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue!50!black,urlcolor=blue!50!black}
+
+\newtcolorbox{ideabox}[1][]{colback=blue!4,colframe=blue!45!black,
+  fonttitle=\bfseries,title={#1},boxrule=0.6pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+\newtcolorbox{warnbox}[1][]{colback=orange!5,colframe=orange!60!black,
+  fonttitle=\bfseries,title={#1},boxrule=0.6pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+\newtcolorbox{noveltybox}[1][]{colback=green!4,colframe=green!35!black,
+  fonttitle=\bfseries,title={#1},boxrule=0.6pt,left=4pt,right=4pt,top=3pt,bottom=3pt}
+
+\newtheorem{proposizione}{Proposizione}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollario}{Corollario}
+
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\bra}[1]{\langle #1\rvert}
+
+\title{Il circuito per le correlazioni dinamiche del trimero anello\\
+\large Dallo stato fondamentale alla misura, passo per passo --- estensione a $N=3$}
+\author{Note di lavoro --- tesi triennale in Fisica (UniPR)\\
+Relatore: Prof.\ Alessandro Chiesa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Spiegazione completa e autocontenuta del circuito quantistico che misura la funzione di
+correlazione dinamica $C_{ij}^{\alpha\beta}(t)=\langle\psi_0|\sigma_i^\alpha(t)\,
+\sigma_j^\beta(0)|\psi_0\rangle$ sul trimero anello isoscele di spin-1/2, con interazione di
+Dzyaloshinskii--Moriya (Opzione B). Questo documento è il \emph{mirror} per $N=3$ di
+\texttt{circuito\_correlatori\_spiegato.tex} (dimero, $N=2$): stessa struttura, stesso livello di
+dettaglio, adattato dove il salto da 2 a 3 qubit introduce differenze reali --- non solo di
+notazione. Due sono sostanziali e vengono evidenziate esplicitamente man mano che emergono: un
+\textbf{sito fisso} sotto la simmetria residua (assente nel dimero, dove lo scambio coinvolge
+entrambi i siti), che protegge alcuni correlatori dall'annullarsi per ogni $t$; e una struttura di
+\textbf{Trotter a due livelli annidati} per il blocco $U(t)$, perché nell'anello i tre legami di
+scambio (e i tre legami DM) condividono i qubit a due a due. Dove la derivazione è identica a
+quella già data per il dimero (indipendente dal numero di qubit), si richiama il risultato invece
+di ripeterlo integralmente, con riferimento preciso alla sezione corrispondente.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Il punto di partenza e il problema}
+% =====================================================================
+
+\subsection{Cosa abbiamo già}
+
+Al punto di lavoro confermato per le correlazioni dell'anello ($J=1$, $J'=0.4$, $b=b_c=2.4$,
+$D=0.15$, Opzione B --- vedi \texttt{simmetrie\_correlatori\_trimero\_anello.tex} per la scelta e
+la sua verifica) l'Hamiltoniana è
+\begin{align}
+H ={}& \underbrace{J\,\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2
+     + J'(\boldsymbol\sigma_2\!\cdot\!\boldsymbol\sigma_3+\boldsymbol\sigma_3\!\cdot\!\boldsymbol\sigma_1)}_{\text{scambio isotropo, }H_{ex}}
+     + \underbrace{b\,(Z_1+Z_2+Z_3)}_{\text{Zeeman}} \notag\\
+     &+ \underbrace{D J\,T_{12} + DJ'\,T_{23} + DJ'\,T_{31}}_{\text{Dzyaloshinskii--Moriya, Opzione B}},
+     \qquad T_{ij}\equiv X_iZ_j-Z_iX_j,
+\label{eq:H}
+\end{align}
+in convenzione Pauli diretta, su tre qubit, uno per spin (nessun mapping fermionico). Convenzione
+sito$\leftrightarrow$qubit (identica in tutto il progetto trimero, da \texttt{trimer\_ring\_exact.py}):
+$\text{sito }1\to q_2$, $\text{sito }2\to q_1$, $\text{sito }3\to q_0$.
+
+\begin{warnbox}[Lezione imparata dal dimero]
+Nel circuito delle correlazioni del dimero, una mappa sito$\leftrightarrow$qubit invertita è
+stata uno dei due bug reali trovati --- mascherato per coincidenza sui primi correlatori
+testati, visibile solo scansionando tutte le combinazioni. Qui la mappa è dichiarata una volta
+per tutte (funzione \texttt{Q} in \texttt{trotter\_trimero\_anello.py}, condivisa da benchmark
+esatto, Trotter e circuito delle correlazioni --- nessuna ridefinizione locale) e verificata
+esplicitamente nella validazione di Sez.~\ref{sec:validazione}.
+\end{warnbox}
+
+Il VQE con DM (ansatz \texttt{W-2q.6}, fedeltà $\mathcal F=1$ a precisione macchina, vedi
+\texttt{\seqsplit{trimero\_anello\_vqe\_dm.tex}}) ha prodotto lo stato fondamentale, non degenere:
+\begin{equation}
+E_0=-5.534370,\qquad E_1-E_0=0.2547,
+\end{equation}
+\begin{align}
+\ket{\psi_0}\simeq{}& 0.0283\ket{001}-0.0094\ket{010}+0.5131\ket{011} \notag\\
+&-0.0094\ket{100}-0.5131\ket{101}+0.6874\ket{111}
+\end{align}
+(componenti $\ket{000},\ket{110}$ nulle a questo punto; base $\ket{\text{sito}1\,\text{sito}2\,\text{sito}3}$).
+Come nel dimero, questo stato è il punto di partenza di tutto il seguito: nel circuito compare
+come blocco di \emph{state preparation}. Il modulo \texttt{circuito\_correlazioni\_trimero\_anello.py}
+supporta due varianti, selezionabili con l'argomento \texttt{ansatz\_params} di
+\texttt{build\_correlator\_circuit}: la preparazione esatta delle ampiezze
+(\texttt{QuantumCircuit.prepare\_state}, usata per il confronto classico e come riferimento) e la
+preparazione via il \emph{circuito VQE reale} \texttt{W-2q.6} (\texttt{vqe\_w2q6\_trimero\_anello.py}),
+con i parametri ottenuti da un'ottimizzazione a due stadi (multistart COBYLA + polish L-BFGS-B,
+12 partenze casuali, tutte convergenti allo stesso punto): $\mathcal F=0.99999999999961$,
+$\Delta E=9.8\times10^{-14}$. Il confronto sistematico delle 81 combinazioni tra le due varianti
+(\texttt{validate\_vqe\_circuito\_correlazioni.py}) dà un errore medio $3.0\times10^{-7}$ e massimo
+$8.3\times10^{-7}$ su $|C_{ij}^{\alpha\beta}(t)|$ --- dell'ordine di $\sqrt{1-\mathcal F}$, come atteso
+per un residuo di fedeltà a livello di stato. La pipeline VQE$\to$correlazioni è quindi chiusa con il
+circuito effettivo, non più con lo stand-in a ampiezze esatte.
+
+\subsection{Cosa vogliamo calcolare}
+
+L'oggetto di interesse è, come per il dimero, la funzione di correlazione dinamica a due tempi
+\begin{equation}
+\boxed{\;C_{ij}^{\alpha\beta}(t) \;=\; \langle\psi_0|\;\sigma_i^\alpha(t)\;\sigma_j^\beta(0)\;|\psi_0\rangle\;}
+\label{eq:Cdef}
+\end{equation}
+\begin{equation}
+\sigma_i^\alpha(t)\equiv e^{iHt}\,\sigma_i^\alpha\,e^{-iHt},
+\end{equation}
+ma ora con $i,j\in\{1,2,3\}$ e $\alpha,\beta\in\{x,y,z\}$: $3^2\times3^2=81$ combinazioni invece
+delle $36$ del dimero. La lettura fisica è identica (risposta dinamica del sistema a una
+``perturbazione'' $\sigma_j^\beta$ al tempo $0$, letta con $\sigma_i^\alpha$ al tempo $t$); qui non
+si ripete quella discussione (si veda\\ \texttt{circuito\_correlatori\_spiegato.tex}, Sez.~1.2) e ci
+si concentra su cosa cambia nel passaggio a tre siti.
+
+\subsection{Perché non si può misurare direttamente}
+
+L'argomento non dipende dal numero di qubit: per $t\neq0$ il prodotto
+$\sigma_i^\alpha(t)\sigma_j^\beta(0)$ non è hermitiano, perché
+\begin{equation}
+\big[\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\big]^\dagger
+= \sigma_j^\beta(0)\,\sigma_i^\alpha(t),
+\end{equation}
+che coincide con l'operatore di partenza solo se i due fattori commutano --- vero a $t=0$ per siti
+diversi, falso in generale per $t\neq0$ (Sez.~\ref{sec:spalmamento} lo dimostra esplicitamente per
+il caso a tre qubit). Conseguenza: $C_{ij}^{\alpha\beta}(t)$ è in generale complesso, e nessun
+apparato di misura restituisce direttamente un numero complesso.
+
+\begin{ideabox}[L'idea centrale, invariata rispetto al dimero]
+Non si misura il correlatore: si costruisce uno stato in cui il correlatore compare come
+\emph{ampiezza di interferenza} fra due cammini, e si misura l'interferenza --- reale e
+osservabile --- su un qubit ausiliario. L'unica differenza strutturale rispetto al dimero è che
+qui i due cammini vivono in un registro a tre qubit (dimensione 8) invece che a due (dimensione
+4): l'ancilla resta un singolo qubit, sempre.
+\end{ideabox}
+
+% =====================================================================
+\section{Perché \texorpdfstring{$\sigma_i^\alpha(t)$}{sigma\_i\^{}alpha(t)} smette di essere locale, a tre qubit}
+\label{sec:spalmamento}
+% =====================================================================
+
+\subsection{La base dei prodotti di Pauli a tre qubit, in breve}
+
+Per il dimero, \texttt{circuito\_correlatori\_spiegato.tex} (Sez.~2) costruisce da zero la base
+$\{P_\mu\otimes P_\nu\}$ a $16$ elementi, la sua ortogonalità di Hilbert--Schmidt e la formula di
+estrazione dei coefficienti. L'argomento generalizza \textbf{parola per parola} a $n$ qubit
+qualsiasi, sostituendo il prodotto tensoriale di due matrici con quello di $n$: la base
+$\{P_{\mu_1}\otimes\cdots\otimes P_{\mu_n}\}$, $\mu_k\in\{\mathbb I,X,Y,Z\}$, ha $4^n$ elementi
+($64$ per $n=3$), soddisfa
+\begin{equation}
+\mathrm{Tr}\big[(P_{\mu_1}\!\otimes\!\cdots\!\otimes\! P_{\mu_n})^\dagger
+(P_{\nu_1}\!\otimes\!\cdots\!\otimes\! P_{\nu_n})\big]=2^n\prod_{k=1}^n\delta_{\mu_k\nu_k},
+\label{eq:ortogN}
+\end{equation}
+per lo stesso motivo (la traccia di un prodotto tensoriale fattorizza, e ogni fattore dà
+$2\delta_{\mu_k\nu_k}$ come nel caso $n=2$), e ogni operatore $M$ agente su $n$ qubit si espande
+in modo unico come $M=\sum c_{\mu_1\cdots\mu_n}P_{\mu_1}\otimes\cdots\otimes P_{\mu_n}$ con
+$c_{\mu_1\cdots\mu_n}=2^{-n}\mathrm{Tr}[(\cdots)^\dagger M]$. Non si ripete qui la dimostrazione
+(identica, solo con più indici); si userà solo la conseguenza diretta già sfruttata per il
+dimero: un operatore che vive su un solo qubit ha, a $t=0$, un solo coefficiente non nullo (quello
+con tutti gli altri $n-1$ indici uguali a $\mathbb I$), e l'evoluzione $e^{-iHt}$ genera nel
+tempo i coefficienti con indici diversi da $\mathbb I$ su un numero crescente di qubit --- è
+esattamente questo meccanismo, non ripetuto qui in dettaglio combinatorio (con $64$ invece di
+$16$ termini l'espansione esplicita a breve tempo non aggiungerebbe comprensione, solo lunghezza),
+a rendere $\sigma_i^\alpha(t)\sigma_j^\beta(0)$ non hermitiano per $t\neq0$ nella stragrande
+maggioranza dei casi.
+
+\subsection{Il caso interessante: quando \emph{non} succede}
+\label{sec:caso3}
+
+La domanda pedagogicamente più utile per $N=3$ non è ``perché lo spalmamento avviene'' (identico
+al dimero), ma ``perché in certi casi \emph{non} avviene, per ogni $t$, invece che solo a
+$t=0$''. Qui l'anello mostra qualcosa che il dimero non può mostrare per costruzione.
+
+Nel dimero, la simmetria residua $U=\mathrm{SWAP}\cdot(R_z(\pi)\otimes R_z(\pi))$ scambia i due
+\emph{unici} siti: non esiste un sito che resti fermo. Nell'anello, la simmetria corretta sotto
+DM Opzione B (derivata e verificata in \texttt{simmetrie\_correlatori\_trimero\_anello.tex},
+Prop.~3--4)
+\begin{equation}
+U_\text{anello} = \mathrm{SWAP}_{12}\cdot\big(R_z(\pi)\big)^{\otimes 3}
+\end{equation}
+scambia solo i siti $1,2$: il sito $3$ è un \textbf{punto fisso} della permutazione
+$\pi=(1\,2)$. Dal Lemma di trasformazione
+$U_\text{anello}\,\sigma_i^\alpha\,U_\text{anello}^\dagger=\eta_\alpha\,\sigma_{\pi(i)}^\alpha$
+($\eta_x=\eta_y=-1,\eta_z=+1$), applicato al sito fisso $i=3$, segue che $C_{33}^{\alpha\beta}(t)$
+soddisfa $C_{33}^{\alpha\beta}(t)=\eta_\alpha\eta_\beta\,C_{33}^{\alpha\beta}(t)$ \textbf{per ogni}
+$t$, non solo a $t=0$: se $\eta_\alpha\eta_\beta=-1$ (esattamente una fra $\alpha,\beta$ è $y$ e
+l'altra è $x$ oppure $z$), il correlatore è identicamente nullo su tutta la traiettoria.
+
+\begin{corollario}[già dimostrato in \texttt{simmetrie\_correlatori\_trimero\_anello.tex}, qui richiamato]
+$C_{33}^{xz}(t)=C_{33}^{zx}(t)=C_{33}^{yz}(t)=C_{33}^{zy}(t)\equiv0$ per ogni $t$.
+\end{corollario}
+
+La Fig.~\ref{fig:sito3} mostra $C_{33}^{xz}(t)$ su un intervallo continuo di $t$: la linea (calcolo
+classico esatto) resta a zero macchina su tutto l'intervallo, non solo nel punto $t=0$ dove
+un annullamento potrebbe sembrare un caso particolare degli argomenti di simmetria a tempo fissato
+già visti nel dimero (time-reversal $K$, Sez.~5 di \texttt{simmetrie\_correlatori\_trimero\_anello.tex}).
+I punti (dal circuito quantistico, $N=200$) restano entro $\sim2\times10^{-3}$ da zero su tutto
+l'intervallo --- compatibile con solo errore di Trotter (Sez.~\ref{sec:trotter}), non con un
+residuo sistematico.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{fig_sito3_zero_trimero.png}
+\caption{$C_{33}^{xz}(t)$: il calcolo classico esatto (linee, $\equiv0$ per ogni $t$, Re e Im
+sovrapposte all'asse) confrontato con il circuito quantistico ($N=200$ passi di Trotter, punti).
+Zero strutturale per ogni $t$, non solo a $t=0$ --- conseguenza del sito 3 come punto fisso della
+simmetria residua $U_\text{anello}$, un tipo di zero che non può comparire nel dimero (dove ogni
+sito viene scambiato).}
+\label{fig:sito3}
+\end{figure}
+
+\begin{noveltybox}[Perché questo è specifico di $N=3$]
+Nel dimero ogni sito partecipa allo scambio: non c'è un ``osservatore fermo''. Con $N=3$ e una
+simmetria di scambio su una sola coppia, il terzo sito è strutturalmente diverso dagli altri due
+--- e la sua autocorrelazione mista eredita uno zero rigoroso che gli altri correlatori non hanno.
+È un esempio concreto di come l'aumento dimensionale non sia solo ``più della stessa cosa'': cambia
+quali domande hanno risposta strutturale immediata.
+\end{noveltybox}
+
+\subsection{Il qubit ausiliario e la sovrapposizione di cammini}
+
+Come nel dimero, si aggiunge un qubit ausiliario $a$ (l'\textbf{ancilla}) che non rappresenta
+nessuno spin fisico. Ora lo stato totale vive in $\mathcal H_a\otimes\mathcal H_R$, con
+$\mathcal H_R$ lo spazio a \textbf{tre} qubit del registro (dimensione $8$, non $4$). Si parte da
+$\ket0_a\otimes\ket{\psi_0}_R$ e si applica Hadamard sull'ancilla soltanto:
+\begin{equation}
+\ket{\Phi_1}=\frac{1}{\sqrt2}\Big(\ket0_a+\ket1_a\Big)\otimes\ket{\psi_0}_R.
+\end{equation}
+Nessuna modifica concettuale rispetto al dimero: il registro resta $\ket{\psi_0}$ in entrambi i
+rami, solo la sua dimensione è raddoppiata.
+
+\subsection{Gate controllati e anti-controllati}
+
+Definizioni invariate:
+\begin{equation}
+\mathrm{C}\text{-}G = \ket0\!\bra0_a\otimes\mathbb{I}_R + \ket1\!\bra1_a\otimes G_R,
+\qquad
+\mathrm{C}_0\text{-}G = \ket0\!\bra0_a\otimes G_R + \ket1\!\bra1_a\otimes\mathbb{I}_R,
+\label{eq:ctrl}
+\end{equation}
+con l'unica differenza pratica che $G_R$ ora agisce su un solo qubit del registro a tre (il
+bersaglio è \texttt{Q[i]} o \texttt{Q[j]}, non l'intero registro): in Qiskit,
+\texttt{PAULI\_GATE[beta].control(1, ctrl\_state=1)} applicato a \texttt{[ANCILLA, Q[j]]}.
+
+% =====================================================================
+\section{Costruzione del circuito, stato per stato}
+% =====================================================================
+
+Fissiamo un esempio concreto, ripreso nelle figure e nella validazione:
+$C_{12}^{yy}(t)$, cioè $W=\sigma_2^y$ (sito 2, perturbazione al tempo $0$) e $V=\sigma_1^y$ (sito
+1, operatore al tempo $t$) --- una delle coppie usate per verificare via circuito la relazione di
+simmetria $C_{12}^{yy}=C_{21}^{yy}$ (Sez.~\ref{sec:validazione}).
+
+\paragraph{Stadio 0 --- preparazione.} $\ket{\Phi_0}=\ket0_a\,\ket{\psi_0}_R$, con
+$\ket{\psi_0}_R$ sui tre qubit di registro $q_0,q_1,q_2$ (blocco \emph{State Preparation}).
+
+\paragraph{Stadio 1 --- Hadamard sull'ancilla.}
+$\ket{\Phi_1}=\tfrac{1}{\sqrt2}\big(\ket0_a\ket{\psi_0}+\ket1_a\ket{\psi_0}\big)$.
+
+\paragraph{Stadio 2 --- controlled-$W$.} $W=\sigma_2^y$ sul qubit $Q[2]=q_1$, controllo pieno
+dall'ancilla:
+$\ket{\Phi_2}=\tfrac{1}{\sqrt2}\big(\ket0_a\ket{\psi_0}+\ket1_a\,W\ket{\psi_0}\big)$.
+
+\paragraph{Stadio 3 --- evoluzione $U(t)$, senza controllo.} Applicato ai tre qubit di registro,
+identicamente in entrambi i rami (Sez.~\ref{sec:trotter} per la sua struttura interna):
+$\ket{\Phi_3}=\tfrac{1}{\sqrt2}\big(\ket0_a\,U(t)\ket{\psi_0}+\ket1_a\,U(t)W\ket{\psi_0}\big)$.
+
+\paragraph{Stadio 4 --- anti-controlled-$V$.} $V=\sigma_1^y$ sul qubit $Q[1]=q_2$,
+anti-controllo dall'ancilla:
+\begin{equation}
+\boxed{\;\ket{\Phi_4}=\frac{1}{\sqrt2}\Big(\ket0_a\,\underbrace{VU(t)\ket{\psi_0}}_{\ket A}
++\ket1_a\,\underbrace{U(t)W\ket{\psi_0}}_{\ket B}\Big).}
+\label{eq:phi4}
+\end{equation}
+
+Come nel dimero (Sez.~7 lo ridimostra in dettaglio più sotto), $\sigma_x$ e $\sigma_y$ non
+commutano: servono \textbf{due esecuzioni distinte} del circuito, identiche in tutto tranne
+l'ultima rotazione sull'ancilla, una per la parte reale e una per la parte immaginaria di
+$C_{ij}^{\alpha\beta}(t)$. La Fig.~\ref{fig:circuito} mostra entrambe per $C_{12}^{yy}(t)$
+(registro a 3 qubit + ancilla), con $U(t)$ disegnato come un unico box opaco --- esattamente come
+nel diagramma del dimero: la sua struttura Trotter interna è discussa a parte in
+Sez.~\ref{sec:trotter}, non nel disegno del circuito esterno.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{fig_circuito_trimero.png}
+\caption{Le due esecuzioni del circuito per $C_{12}^{yy}(t)$: registro a 3 qubit
+($q_0,q_1,q_2$) più ancilla ($q_3$). In entrambe: preparazione dello stato (box \emph{State
+Prep.}); Hadamard sull'ancilla; controlled-$Y$ su $q_1=Q[2]$ (controllo pieno, $W=\sigma_2^y$);
+blocco $U(t)$ non controllato sui tre qubit di registro (box opaco --- struttura interna in
+Sez.~\ref{sec:trotter}); anti-controlled-$Y$ su $q_2=Q[1]$ (cerchio vuoto, $V=\sigma_1^y$).
+\emph{Sopra}: rotazione $H$ e misura $\Rightarrow\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,C(t)$.
+\emph{Sotto}: rotazione $R_x(\pi/2)$ e misura $\Rightarrow\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,C(t)$.}
+\label{fig:circuito}
+\end{figure}
+
+% =====================================================================
+\section{Perché funziona: la lettura dell'ancilla}
+% =====================================================================
+
+Questa sezione non dipende dalla dimensione del registro: la dimostrazione data per il dimero
+(\texttt{circuito\_correlatori\_spiegato.tex}, Sez.~4) si applica parola per parola, perché usa
+solo l'unitarietà di $U(t)$ e l'hermitianità di $V,W$ (proprietà delle singole Pauli, non della
+loro molteplicità). La si richiama in forma compatta per autosufficienza.
+
+\begin{proposizione}
+Con $\ket A=VU(t)\ket{\psi_0}$, $\ket B=U(t)W\ket{\psi_0}$ come in \eqref{eq:phi4}, e $V,W$
+hermitiani,
+\begin{equation}
+\langle A|B\rangle=\langle\psi_0|\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,|\psi_0\rangle
+=C_{ij}^{\alpha\beta}(t).
+\end{equation}
+\end{proposizione}
+\begin{proof}
+$\langle A|B\rangle=\big(VU\ket{\psi_0}\big)^\dagger\big(UW\ket{\psi_0}\big)
+=\bra{\psi_0}U^\dagger V^\dagger U\,W\ket{\psi_0}$. Con $U^\dagger=e^{iHt}$,
+$U^\dagger V^\dagger U=e^{iHt}V^\dagger e^{-iHt}=\sigma_i^\alpha(t)$ (rappresentazione di
+Heisenberg, usando $V^\dagger=V$), da cui la tesi.
+\end{proof}
+
+\begin{proposizione}
+Nello stato \eqref{eq:phi4}: $\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,\langle A|B\rangle$,
+$\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,\langle A|B\rangle$.
+\end{proposizione}
+\begin{proof}
+Identica a quella del dimero (usa solo $\sigma_x=\ket0\!\bra1+\ket1\!\bra0$,
+$\sigma_y=-i\ket0\!\bra1+i\ket1\!\bra0$ sull'ancilla e l'ortonormalità
+$\langle0|1\rangle=0,\langle k|k\rangle=1$ --- nessun passaggio coinvolge il registro).
+\end{proof}
+
+Quindi $\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,C_{ij}^{\alpha\beta}(t)$,
+$\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,C_{ij}^{\alpha\beta}(t)$: il numero complesso non
+misurabile è scomposto in due osservabili hermitiane su un singolo qubit, indipendentemente da
+quanti qubit compongono il registro.
+
+% =====================================================================
+\section{Due punti delicati, verificati numericamente sul trimero}
+% =====================================================================
+
+\subsection{Perché $U(t)$ non è controllato}
+
+Stesso argomento del dimero: se $U(t)$ fosse controllato, lo stadio 3 diventerebbe
+$\tfrac1{\sqrt2}(\ket0_a\ket{\psi_0}+\ket1_a\,U(t)W\ket{\psi_0})$, e l'overlap finale conterrebbe
+$V^\dagger U$ invece di $U^\dagger V^\dagger U$ --- non l'operatore di Heisenberg. Verifica
+numerica su $C_{12}^{yy}(t)$ al punto di lavoro dell'anello ($N=200$):
+
+\begin{center}
+\begin{tabular}{cccc}
+\toprule
+$t$ & valore esatto & $U$ non controllato & $U$ controllato \\
+\midrule
+$0.7$ & $-0.8048-0.0623i$ & $-0.8053-0.0619i$ & $\phantom{-}0.5570+0.5844i$ \\
+$1.6$ & $-0.5489-0.0309i$ & $-0.5489-0.0301i$ & $\phantom{-}0.4778-0.2704i$ \\
+$2.4$ & $-0.2860+0.1368i$ & $-0.2862+0.1371i$ & $-0.3051-0.0843i$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Stessa conclusione del dimero: la colonna con $U$ controllato non è ``leggermente peggiore'', è
+un'altra quantità --- un errore che non si manifesta come crash e va escluso per costruzione, non
+per confronto a posteriori.
+
+\subsection{Controllo o anti-controllo su $V$?}
+
+Argomento invariato (Sez.~5.2 del documento dimero): con $V$ hermitiana (vero per ogni Pauli, su
+qualunque sito), controllo pieno e anti-controllo su $V$ sono equivalenti; si mantiene
+l'anti-controllo per coerenza con la letteratura di riferimento e per generalità (resta corretto
+anche per $V$ non hermitiana, es.\ operatori di innalzamento/abbassamento).
+
+% =====================================================================
+\section{Il blocco $U(t)$: la struttura Trotter a due livelli dell'anello}
+\label{sec:trotter}
+% =====================================================================
+
+Qui, non nella dimostrazione precedente, sta la seconda vera differenza rispetto al dimero.
+
+\subsection{Perché un livello di Trotter non basta}
+
+Nel dimero, $H=H_1+H_2$ con $H_1$ (scambio+Zeeman) e $H_2$ (DM) è già la scomposizione finale:
+$H_1$ stesso si esponenzia in un unico blocco esatto (nessuna condivisione di qubit da gestire,
+essendoci un solo legame). Nell'anello questo non basta:
+\begin{equation}
+H_0=b\!\sum_{i=1}^3 Z_i+H_{ex}\quad\text{fattorizza esattamente}\quad([H_0,H_{DM}]\neq0\text{ resta,
+come nel dimero}),
+\end{equation}
+ma $H_{ex}=J\,\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2+J'(\boldsymbol\sigma_2\!\cdot\!\boldsymbol\sigma_3+\boldsymbol\sigma_3\!\cdot\!\boldsymbol\sigma_1)$
+\textbf{non} è un singolo blocco esponenziabile: i legami $(1,2)$ e $(2,3)$ condividono il qubit
+$2$, e $[\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2,\boldsymbol\sigma_2\!\cdot\!\boldsymbol\sigma_3]\neq0$
+(l'operatore di chiralità di spin scalare
+$\chi=\boldsymbol\sigma_1\!\cdot\!(\boldsymbol\sigma_2\times\boldsymbol\sigma_3)$,
+Wen--Wilczek--Zee 1989, identifica esattamente questo commutatore --- derivazione completa in
+\texttt{quantum\_simulation\_trimero\_anello\_teoria.tex}). Lo stesso vale per $H_{DM}$ (Opzione
+B), somma di tre legami sugli stessi tre bond. Servono dunque \textbf{due Trotter interni},
+uno per $H_{ex}$ e uno per $H_{DM}$, entrambi a singolo passo per ciascun passo esterno, oltre al
+Trotter esterno fra $H_0$ e $H_{DM}$ già presente nel dimero:
+\begin{equation}
+e^{-iHt}\approx\Big(e^{-iH_{DM}\tau}\,e^{-i(b\sum Z_i)\tau}\,e^{-iH_{ex}\tau}\Big)^N,
+\qquad
+e^{-iH_{ex}\tau}\approx\!\!\prod_{(i,j)\in\{(1,2),(2,3),(3,1)\}}\!\!e^{-iJ_{ij}\,\boldsymbol\sigma_i\cdot\boldsymbol\sigma_j\,\tau},
+\end{equation}
+e analogamente per $H_{DM}$ sui tre legami. Ogni prodotto sui bond introduce il proprio errore
+$O(\tau^2)$ (formula chiusa per il livello scambio: $i\tau^2J'^2\chi+O(\tau^3)$, il prodotto
+incrociato $JJ'$ si cancella esattamente --- vedi teoria dedicata), che si somma, non si
+cancella, con l'errore di Trotter esterno.
+
+\begin{ideabox}[In una frase]
+Il dimero ha un solo ``anello'' concettuale di errore (fra $H_1$ e $H_2$); il trimero ad anello
+ne ha \emph{tre}, annidati: esterno ($H_0\leftrightarrow H_{DM}$), interno-scambio (i tre bond di
+$H_{ex}$ condividono qubit), interno-DM (i tre bond di $H_{DM}$ condividono qubit). Il nome
+``anello'' non è solo geometrico: è la chiusura del ciclo a tre legami, non l'equilateralità, a
+rendere necessario il livello interno (vedi \texttt{trimero\_anello\_frustrazione\_e\_chiralita.tex}
+per la distinzione esplicita fra frustrazione energetica e non-commutatività algebrica).
+\end{ideabox}
+
+\subsection{Convergenza al punto di lavoro delle correlazioni}
+
+Il punto $R_0$ usato per la \emph{dimostrazione} di Trotter di per sé (Sez.\ dedicata,
+$D/J\simeq1.9$) richiede $N\simeq300$--$1000$ per una buona convergenza. Il punto di lavoro qui
+usato per le correlazioni ($b=b_c=2.4$, $D=0.15$, $D/J$ molto più piccolo) è un regime diverso, non
+ottimizzato per la dimostrazione di Trotter ma per la fisica del VQE con DM: converge più
+rapidamente. La Fig.~\ref{fig:trotter} mostra, per $C_{11}^{yy}(t{=}1.3)$, che l'errore scala come
+$1/N$ (rapporto fra errori successivi $\to2.0$ raddoppiando $N$: misurato $2.35, 2.14, 2.05,
+2.02, 2.01$ per $N=10\to320$), coerente con Trotter al 1° ordine; a $N=200$ (usato in tutta la
+validazione seguente) l'errore residuo è dell'ordine di $10^{-4}$--$10^{-3}$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{fig_trotter_trimero.png}
+\caption{Errore del circuito rispetto al valore esatto, $C_{11}^{yy}(t{=}1.3)$, in funzione del
+numero di passi di Trotter $N$ (scala doppio-logaritmica). La linea tratteggiata è $1/N$. L'accordo
+con la pendenza attesa conferma che lo scarto residuo è solo errore di troncamento, malgrado la
+struttura a due livelli annidati discussa sopra: i livelli aggiuntivi cambiano il prefattore
+dell'errore, non il suo ordine in $N$.}
+\label{fig:trotter}
+\end{figure}
+
+% =====================================================================
+\section{La misura}
+% =====================================================================
+
+Anche questa sezione è indipendente dalla dimensione del registro (l'ancilla resta un singolo
+qubit in ogni caso): $\sigma_x$ e $\sigma_y$ non commutano, quindi servono due esecuzioni separate,
+identiche fino all'ultima rotazione sull'ancilla ($H$ per la parte reale, $R_x(\pi/2)$ per
+l'immaginaria --- stessa derivazione del dimero, Sez.~6.2, non ripetuta). Misurando l'ancilla in
+base computazionale, $\langle\sigma_z\rangle\simeq(n_0-n_1)/N_{\text{shots}}$, con errore
+statistico $\lesssim1/\sqrt{N_{\text{shots}}}$; i qubit di registro possono essere ignorati, tutta
+l'informazione è nell'ancilla.
+
+\subsection{Validazione a shot finiti: quale errore domina?}
+\label{sec:shotnoise}
+
+Tutte le validazioni delle sezioni precedenti usano lo statevector esatto (nessun rumore di
+shot). Qui si esegue il circuito \textbf{davvero}, con \texttt{AerSimulator} e un numero finito
+di shot, per rispondere a una domanda concreta: al punto di lavoro e a $N=200$, l'errore
+dominante è quello di Trotter (algoritmico) o quello statistico (di campionamento)?
+
+Per $C_{11}^{yy}(t{=}1.3)$, confrontando l'errore di Trotter puro (statevector vs esatto
+classico) con la soglia statistica nel caso peggiore $1/\sqrt{N_{\text{shots}}}$:
+\begin{center}
+\begin{tabular}{lc}
+\toprule
+Errore di Trotter (statevector vs esatto, $N{=}200$) & $7.1\times10^{-4}$\\
+Soglia statistica, caso peggiore ($N_{\text{shots}}=8192$) & $1.10\times10^{-2}$\\
+Rapporto (statistico/Trotter) & $\sim16\times$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{ideabox}[Conclusione, opposta a quella del dimero]
+Qui l'errore \textbf{statistico domina} su quello di Trotter di circa un ordine di grandezza:
+a $8192$ shot il rumore di campionamento è il collo di bottiglia, non l'approssimazione
+Suzuki--Trotter (già ottima a $N{=}200$ su questo punto di lavoro). È l'opposto di quanto trovato
+per il regime dimostrativo $R_1$ del dimero
+(\texttt{quantum\_simulation\_dimero\_applicazione.tex}, dove l'errore di Trotter, $\approx0.25$
+a $N=20$, era oltre 30 volte il rumore statistico): lì serviva aumentare $N$, qui aumentare
+$N_{\text{shots}}$ sarebbe la prima leva utile per ridurre l'errore totale. Nessuna delle due
+conclusioni è generale: dipende dal punto di lavoro e da $N$ scelti in ciascun caso.
+\end{ideabox}
+
+La Fig.~\ref{fig:shotconv} mostra la convergenza della stima al crescere di $N_{\text{shots}}$
+(media e deviazione standard su $40$ ripetizioni indipendenti dell'intero campionamento, stesso
+schema di \texttt{circuito\_correlazioni\_tutte.ipynb} per il dimero): la dispersione si restringe
+in accordo con la banda $\pm1/\sqrt{N_{\text{shots}}}$, e la media converge al valore esatto.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{fig_shot_trimero.png}
+\caption{Stima di $\mathrm{Re}\,C_{11}^{yy}(t{=}1.3)$ al crescere del numero di shot (media e
+deviazione standard su 40 ripetizioni indipendenti del campionamento, $N{=}200$ passi di
+Trotter). La banda ombreggiata è $\pm1/\sqrt{N_{\text{shots}}}$. La dispersione si restringe
+coerentemente con la soglia statistica attesa; la media converge al valore esatto classico
+(linea tratteggiata).}
+\label{fig:shotconv}
+\end{figure}
+
+% =====================================================================
+\section{Il circuito completo e la sua validazione}
+\label{sec:validazione}
+% =====================================================================
+
+Riferimento classico calcolato \textbf{direttamente per esponenziale di matrice}\\
+(\texttt{scipy.linalg.expm}), deliberatamente non tramite la formula spettrale
+$\sum_k\overline{a_k}b_k$ --- per non poter reintrodurre per disattenzione la stessa classe di bug
+del ``coniugato complesso mancante'' già trovata nel dimero: qui il confronto è fra due calcoli
+concettualmente indipendenti, non fra una formula e una sua riscrittura.
+
+\begin{center}
+\begin{tabular}{lcccc}
+\toprule
+correlatore & $t$ & esatto classico & circuito ($N{=}200$) & $|$residuo$|$\\
+\midrule
+$C_{11}^{yy}$ & $1.3$ & $+0.4521-0.1560i$ & $+0.4522-0.1553i$ & $7.1\times10^{-4}$\\
+$C_{33}^{yy}$ & $1.3$ & $+0.1727-0.0062i$ & $+0.1727-0.0069i$ & $6.2\times10^{-4}$\\
+$C_{13}^{yy}$ & $2.7$ & $+0.0140-0.0132i$ & $+0.0131-0.0127i$ & $1.1\times10^{-3}$\\
+$C_{33}^{xz}$ & $2.7$ & $0.0000+0.0000i$ & $+0.0011+0.0000i$ & $1.1\times10^{-3}$\\
+$C_{12}^{yy}$ & $2.7$ & $-0.3574+0.4338i$ & $-0.3565+0.4337i$ & $9.6\times10^{-4}$\\
+$C_{21}^{yy}$ & $2.7$ & $-0.3574+0.4338i$ & $-0.3564+0.4338i$ & $9.9\times10^{-4}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Tre verifiche qualitativamente distinte, tutte superate:
+
+\begin{enumerate}[leftmargin=*]
+\item \textbf{Accordo generale}: tutti i correlatori testati concordano col riferimento classico
+entro $|$residuo$|\sim10^{-4}$--$10^{-3}$, coerente con l'errore di Trotter atteso a $N=200$
+(Fig.~\ref{fig:trotter}).
+\item \textbf{Zero strutturale del sito 3}, $C_{33}^{xz}$: confermato \emph{via circuito}, non solo
+classicamente --- residuo $\sim10^{-3}$, compatibile con solo Trotter, nessun segnale sistematico
+(Fig.~\ref{fig:sito3}).
+\item \textbf{Relazione di simmetria} $C_{12}^{yy}(t)=C_{21}^{yy}(t)$ ($\eta_y\eta_y=+1$):
+confermata via circuito, entrambe le permutazioni concordano fra loro e con l'esatto entro
+l'errore di Trotter.
+\end{enumerate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{fig_validazione_trimero.png}
+\caption{Validazione continua: $C_{11}^{yy}(t)$, parte reale (sinistra) e immaginaria (destra).
+Linea continua: calcolo classico esatto. Punti: circuito quantistico ($N{=}200$). Accordo su tutto
+l'intervallo esplorato, per entrambe le componenti.}
+\end{figure}
+
+\begin{noveltybox}[Nessun bug trovato in questa fase]
+A differenza del dimero, dove l'implementazione del circuito aveva rivelato due bug reali
+(coniugato complesso mancante nella formula di riferimento, mappa sito$\leftrightarrow$qubit
+invertita) solo dopo lo scan sistematico delle combinazioni, qui l'analisi di simmetria è stata
+derivata e verificata numericamente \textbf{prima} di scrivere una riga di circuito\\
+(\texttt{simmetrie\_correlatori\_trimero\_anello.tex}). Tutti i residui osservati in
+questa validazione sono quantitativamente spiegabili come solo errore di Trotter: nessuna
+discrepanza sistematica residua da investigare.
+\end{noveltybox}
+
+\subsection{Scan sistematico delle 81 combinazioni, via circuito effettivo}
+\label{sec:scan81}
+
+I sei casi sopra bastano a validare la logica del circuito, ma sono una scelta a mano. Lo scan
+classico (solo algebra, \texttt{scipy.linalg.expm}) delle $81$ combinazioni $(i,j,\alpha,\beta)$ era
+già stato fatto in \texttt{simmetrie\_correlatori\_trimero\_anello.tex}; qui si rimisura
+\textbf{tutto} passando per il circuito quantistico vero e proprio (statevector \emph{e} shot
+finiti), allo stesso $t=1.3$, $N=200$, punto di lavoro confermato.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.75\textwidth]{fig_scan81_trimero.png}
+\caption{$|C_{ij}^{\alpha\beta}(t{=}1.3)|$ per tutte le $81$ combinazioni, misurato dal circuito
+(statevector, $N{=}200$). Righe e colonne raggruppate per sito ($1,2,3$), separatori bianchi fra i
+blocchi. I quattro riquadri rossi sono gli zeri strutturali del Corollario del sito~3
+(Sez.~\ref{sec:caso3}): cadono esattamente dove previsto, dentro il blocco $(3,3)$.}
+\label{fig:scan81}
+\end{figure}
+
+\paragraph{I quattro zeri strutturali, confermati su tutte le 81.} Il Corollario del sito fisso
+(Sez.~\ref{sec:caso3}) prevede \emph{esattamente} quattro correlatori identicamente nulli per ogni
+$t$: $C_{33}^{xz},C_{33}^{zx},C_{33}^{yz},C_{33}^{zy}$. Lo scan via circuito conferma che sono
+\emph{proprio questi quattro, né uno di più né uno di meno}: il massimo $|C|$ misurato fra loro è
+$2.6\times10^{-3}$ a statevector (coerente con solo Trotter) e $2.2\times10^{-2}$ a shot finiti
+(coerente con solo rumore statistico) --- nessun quinto zero "accidentale" e nessuno dei quattro
+previsti che risulti in realtà non nullo.
+
+\paragraph{Gli errori restano piccoli su tutte le 81, non solo sui sei casi già visti.}
+
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+ & media sulle 81 & massimo sulle 81\\
+\midrule
+errore di Trotter (statevector vs esatto) & $8.8\times10^{-4}$ & $2.6\times10^{-3}$\\
+errore statistico (shot vs statevector, $8192$ shot) & $1.4\times10^{-2}$ & $3.7\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Entrambe le medie sono coerenti, in ordine di grandezza, con i valori già misurati sui casi singoli
+di Sez.~\ref{sec:shotnoise} ($7.1\times10^{-4}$ di Trotter, soglia statistica $1.1\times10^{-2}$):
+lo scan completo non rivela alcun caso patologico isolato in cui uno dei due errori esploda.
+
+\paragraph{Il correlatore più \emph{intenso}: un risultato non previsto dalla sola simmetria.} Il
+riquadro giallo brillante di Fig.~\ref{fig:scan81} è $C_{33}^{zz}(t{=}1.3)$, con $|C|=0.9995$ ---
+l'autocorrelazione $\langle\sigma_3^z(t)\,\sigma_3^z(0)\rangle$ è quasi perfettamente congelata al
+suo valore iniziale. Nessuna delle simmetrie derivate in Sez.~\ref{sec:caso3} impone questo: è un
+fatto \emph{dinamico} specifico del punto di lavoro e dell'istante $t=1.3$, non una conseguenza
+algebrica. Coerente con l'immagine fisica: il termine DM ($D=0.15$) è piccolo rispetto allo scambio
+e al campo, quindi $\sigma_3^z$ è quasi (ma non esattamente) una costante del moto a questo punto.
+Fra i correlatori genuinamente non banali, i più ricchi sono le coppie sito-1/sito-3
+($|C_{31}^{zx}|,|C_{13}^{xz}|\approx0.663$), non le autocorrelazioni del sito 1 già usate come
+esempio principale nel testo.
+
+% =====================================================================
+\section{Riepilogo dei passaggi}
+% =====================================================================
+
+\begin{enumerate}[leftmargin=*]
+\item Il correlatore $C_{ij}^{\alpha\beta}(t)$, $i,j\in\{1,2,3\}$, $\alpha,\beta\in\{x,y,z\}$ ($81$
+combinazioni), è complesso e non hermitiano per $t\neq0$: non misurabile direttamente.
+\item Si aggiunge un'ancilla su un registro ora a \textbf{tre} qubit (dimensione $8$); la
+costruzione dei due rami coerenti (Hadamard, gate controllati/anti-controllati) è identica al
+dimero, indipendente dalla dimensione del registro.
+\item Controlled-$W=\sigma_j^\beta$ sul qubit $Q[j]$ (controllo pieno) prima di $U(t)$;
+$U(t)$ non controllato su tutti e tre i qubit di registro; anti-controlled-$V=\sigma_i^\alpha$ sul
+qubit $Q[i]$ dopo $U(t)$. La struttura $U^\dagger V^\dagger U$ emerge dall'ordine delle operazioni,
+non dalla dimensione del registro.
+\item \textbf{Novità 1 (simmetria)}: il sito 3, punto fisso della simmetria residua
+$U_\text{anello}$, ha correlatori misti ($\eta_\alpha\eta_\beta=-1$) identicamente nulli per ogni
+$t$ --- un tipo di zero impossibile nel dimero.
+\item \textbf{Novità 2 (implementazione)}: $U(t)$ richiede un Trotter a due livelli annidati
+($H_{ex}$ e $H_{DM}$ spezzati ciascuno sui tre bond, oltre al Trotter esterno fra $H_0$ e
+$H_{DM}$) --- conseguenza diretta della chiusura ad anello (tre legami che condividono qubit a due
+a due), non della frustrazione energetica.
+\item L'ancilla legge l'overlap $\langle A|B\rangle=C_{ij}^{\alpha\beta}(t)$ esattamente come nel
+dimero: $\langle\sigma_x^{(a)}\rangle=\mathrm{Re}\,C$, $\langle\sigma_y^{(a)}\rangle=\mathrm{Im}\,C$.
+\item Validato al punto di lavoro confermato ($J{=}1,J'{=}0.4,b{=}b_c{=}2.4,D{=}0.15$): accordo
+generale entro l'errore di Trotter, zero del sito 3 confermato via circuito, relazione di
+simmetria $C_{12}^{yy}=C_{21}^{yy}$ confermata via circuito.
+\item Validato anche a shot finiti (\texttt{AerSimulator}, $8192$ shot): qui l'errore statistico
+domina su quello di Trotter di circa un ordine di grandezza (opposto al regime dimostrativo
+$R_1$ del dimero) --- la stima converge al valore esatto in accordo con la soglia
+$1/\sqrt{N_{\text{shots}}}$.
+\item Scan sistematico di tutte le $81$ combinazioni via circuito effettivo (statevector e shot
+finiti): i quattro zeri strutturali sono \emph{esattamente} quelli previsti (nessuno in più,
+nessuno in meno), gli errori restano piccoli ovunque, e il correlatore più intenso
+($C_{33}^{zz}\approx1$, quasi congelato) è un fatto dinamico non previsto dalla sola simmetria.
+\end{enumerate}
+
+\paragraph{Aperto per il seguito.} Rumore di gate reale (Parte 2 della tesi); derivazione
+principiata (stile $R_1$ del dimero) del punto Trotter dimostrativo $R_0$ del trimero.
+
+\end{document}

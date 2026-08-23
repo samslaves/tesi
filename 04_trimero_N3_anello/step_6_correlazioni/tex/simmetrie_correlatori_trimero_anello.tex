@@ -1,0 +1,575 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{seqsplit}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
+\usepackage{microtype}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposizione}{Proposizione}
+\newtheorem{corollario}{Corollario}
+\newtheorem{osservazione}{Osservazione}
+\newtheorem*{definizione}{Definizione}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Simmetrie residue e annullamento strutturale dei correlatori\\
+dinamici $\langle\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\rangle$\\[2pt]
+\large nel trimero ad anello isoscele con interazione DM (Opzione B)}
+\author{Note preparatorie -- tesi triennale in Fisica (UniPR)\\
+Relatore: Prof.\ Alessandro Chiesa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Mirror, per $N=3$ (trimero ad anello isoscele), dell'analisi di simmetria già svolta per il
+dimero in \texttt{\seqsplit{simmetrie\_correlatori\_dimero.tex}}: prima di implementare il
+circuito con qubit ausiliario (Hadamard test) per le correlazioni dinamiche
+$\langle\psi_0|\sigma_i^\alpha(t)\,\sigma_j^\beta(0)|\psi_0\rangle$, si stabilisce per via
+classica (simmetrie dell'Hamiltoniana e diagonalizzazione esatta) quali combinazioni
+$(i,j,\alpha,\beta)$ sono strutturalmente nulle e quali legate da relazioni esatte. A differenza
+del dimero, la simmetria unitaria residua non si ottiene per semplice estensione: la
+costruzione "ovvia" (ruotare solo i due siti scambiati) fallisce, e la costruzione corretta usa
+il terzo qubit, spettatore dello scambio, in un ruolo non ovvio a priori. Il documento include
+anche il controllo classico completo al punto di lavoro proposto per la fase successiva
+del progetto ($J{=}1,J'{=}0.4,b{=}b_c{=}2.4,D{=}0.15$, Opzione B).
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Inquadramento e obiettivo}
+% =====================================================================
+
+L'Hamiltoniana di riferimento, convenzione Pauli diretta identica a
+\texttt{trimer\_ring\_exact.py} e\\ \texttt{trotter\_trimero\_anello.py} (base $J$ sui
+siti $(1,2)$, lati $J'$ su $(2,3)$ e $(3,1)$; mappa sito$\to$qubit
+site1$\to$q2, site2$\to$q1, site3$\to$q0), è
+
+\begin{align}
+H &= \underbrace{J\,\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2
+  + J'(\boldsymbol\sigma_2\!\cdot\!\boldsymbol\sigma_3+\boldsymbol\sigma_3\!\cdot\!\boldsymbol\sigma_1)}_{H_{\mathrm{ex}}}
+  + \underbrace{b\sum_{i=1}^3 Z_i}_{H_Z}
+  + \underbrace{D\big[J\,T_{12}+J'T_{23}+J'T_{31}\big]}_{H_{\mathrm{DM}}},\notag\\
+&\qquad\qquad T_{ij}\equiv X_iZ_j-Z_iX_j.
+\label{eq:H}
+\end{align}
+($H_{\mathrm{DM}}$ nella forma "Opzione B", unico segno su tutti e tre i legami.)
+
+La forma dell'Opzione B (unico segno su tutti e tre i legami, proporzionale al proprio $J_{ij}$)
+è quella derivata e motivata in \texttt{\seqsplit{analisi\_dm\_trimero\_anello.tex}}: è l'unica,
+fra le disposizioni testate, che apre realmente il gap all'incrocio $C\to A$ (regola di
+non-incrocio di von Neumann--Wigner applicata a $\mathbf S_{12}^2$), ed è quindi l'opzione
+adottata per l'intera fase VQE-con-DM dell'anello.
+
+\textbf{Punto di lavoro.} $J{=}1,\,J'{=}0.4,\,b{=}b_c{=}2.4,\,D{=}0.15$: il ground state VQE
+(\texttt{W-2q.6}, $\mathcal F=1$ esatto, cfr.\ \texttt{\seqsplit{trimero\_anello\_vqe\_dm.tex}})
+a questo punto è lo stato di preparazione candidato per il circuito delle correlazioni,
+mirror di come il "test 2" fu adottato per il dimero (riuso di un punto VQE già stabilito,
+verificato \emph{a posteriori} idoneo alle correlazioni, non cercato ad hoc).
+
+L'osservabile di interesse resta
+
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) \equiv \langle\psi_0|\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,|\psi_0\rangle,
+\qquad \sigma_i^\alpha(t)\equiv e^{iHt}\sigma_i^\alpha e^{-iHt},
+\qquad i,j\in\{1,2,3\},\ \alpha,\beta\in\{x,y,z\},
+\label{eq:corr-def}
+\end{equation}
+con $\hbar=1$. Le combinazioni possibili sono $3\times3\times3\times3=81$ (contro le 36 del
+dimero: $2\times2\times3\times3$).
+
+\textbf{Obiettivo}, identico nella struttura a quello del dimero: stabilire un criterio generale
+per cui una simmetria di $H$ implica l'annullamento (o una relazione esatta) di
+$C_{ij}^{\alpha\beta}(t)$ per \emph{ogni} $t$, e applicarlo esplicitamente
+all'Hamiltoniana~\eqref{eq:H}. La novità rispetto al dimero è strutturale, non di metodo: con
+tre siti anziché due, lo scambio $1\leftrightarrow2$ lascia un sito \emph{fisso} (il sito 3), il
+che produce un tipo di conseguenza (zero di un'\emph{autocorrelazione}, non solo relazioni fra
+correlatori distinti) che nel dimero non poteva presentarsi.
+
+% =====================================================================
+\section{Criterio generale: simmetrie e annullamento strutturale}
+% =====================================================================
+
+Questa sezione è generale (vale per un numero qualunque di qubit, non solo $N=3$) ed è identica,
+nella struttura e nelle dimostrazioni, alla Sezione 2 di
+\texttt{\seqsplit{simmetrie\_correlatori\_dimero.tex}}: viene richiamata qui per rendere il
+documento autosufficiente, senza ripetere le derivazioni parola per parola dove non necessario.
+
+\subsection{Caso unitario}
+
+\begin{proposizione}
+\label{prop:unitaria}
+Sia $U$ unitario con $[U,H]=0$, e $|\psi_0\rangle$ autostato non degenere di $H$, cosicché
+$U|\psi_0\rangle=u_0|\psi_0\rangle$, $|u_0|=1$. Allora per ogni $t$
+\begin{equation}
+C_{AB}(t) \equiv \langle\psi_0|A(t)B(0)|\psi_0\rangle
+= \langle\psi_0|\,\widetilde A(t)\,\widetilde B(0)\,|\psi_0\rangle,
+\qquad \widetilde A\equiv UAU^\dagger,\ \widetilde B\equiv UBU^\dagger.
+\end{equation}
+\end{proposizione}
+\begin{proof}
+Identica a quella del dimero: da $[U,H]=0$ segue $Ue^{-iHt}U^\dagger=e^{-iHt}$ per ogni $t$
+(sviluppo in serie di $H$), quindi $UA(t)U^\dagger=\widetilde A(t)$; inserendo $U^\dagger U=\mathbb
+I$ due volte in $C_{AB}(t)$ e usando $\langle\psi_0|U^\dagger=\overline{u_0}\langle\psi_0|$, si
+ottiene $C_{AB}(t)=|u_0|^2\langle\psi_0|\widetilde A(t)\widetilde B(0)|\psi_0\rangle$, e
+$|u_0|^2=1$ conclude. La dimostrazione non usa in alcun punto il numero di qubit: vale
+verbatim per $N=3$.
+\end{proof}
+
+\begin{corollario}
+\label{cor:zero-unitario}
+Se $\widetilde A=\eta_A A'$, $\widetilde B=\eta_B B'$ con $\eta_A,\eta_B\in\{\pm1\}$ e $A',B'$
+danno luogo allo stesso correlatore $(A,B)$, allora $\eta_A\eta_B=-1\ \Rightarrow\
+C_{AB}(t)\equiv0$ per ogni $t$. Se $A',B'$ individuano una coppia \emph{diversa}, si ottiene
+invece una relazione esatta fra due correlatori distinti.
+\end{corollario}
+
+\subsection{Caso antiunitario}
+
+\begin{definizione}
+$\Theta$ è antiunitario se antilineare, $\Theta(c\ket\phi)=\bar c\,\Theta\ket\phi$, e
+$\langle\Theta\alpha|\Theta\beta\rangle=\overline{\langle\alpha|\beta\rangle}$.
+\end{definizione}
+
+\begin{lemma}[Elemento di matrice sotto $\Theta$]
+\label{lem:matrix-element}
+Per $\Theta$ antiunitario e $X$ lineare, con $\widetilde X\equiv\Theta X\Theta^{-1}$ (lineare):
+$$\langle\alpha|X|\beta\rangle^{*} = \langle\Theta\alpha|\,\widetilde X\,|\Theta\beta\rangle.$$
+\end{lemma}
+\begin{proof}
+Identica al dimero (Lemma 2.2): posto $\ket\gamma=X\ket\beta$,
+$\langle\Theta\alpha|\Theta\gamma\rangle=\overline{\langle\alpha|X|\beta\rangle}$ per
+antiunitarietà, e $\Theta\ket\gamma=\widetilde X\Theta\ket\beta$ per definizione di
+$\widetilde X$.
+\end{proof}
+
+\begin{lemma}[Coniugazione complessa $K$]
+\label{lem:K}
+Sia $K$ la coniugazione complessa nella base computazionale a $N$ qubit,
+$K\big(\sum_n c_n\ket n\big)=\sum_n\bar c_n\ket n$. Allora $K$ è antiunitaria, $K^2=\mathbb I$, e
+per ogni operatore lineare $X$ con matrice reale (risp.\ immaginaria) in quella base,
+$KXK=X$ (risp.\ $KXK=-X$).
+\end{lemma}
+\begin{proof}
+Identica al dimero (Lemma 2.3); non usa il numero di qubit, solo la struttura della base
+computazionale.
+\end{proof}
+
+% =====================================================================
+\section{$S_z^{tot}$ non è conservato per $D\neq0$ (Opzione B)}
+% =====================================================================
+
+\begin{proposizione}
+\label{prop:Sz-rotto}
+$\displaystyle\Big[\sum_{i=1}^3 Z_i,\ H_{\mathrm{DM}}\Big] = 2i\,D\big[J\,(Y_1Z_2-Z_1Y_2)+J'(Y_2Z_3-Z_2Y_3)+J'(Y_3Z_1-Z_3Y_1)\big]\neq0$
+per $D\neq0$.
+\end{proposizione}
+\begin{proof}
+Per ogni legame $(i,j)$, usando $[Z,X]=2iY$ e la commutazione fra siti diversi (stesso calcolo
+del dimero, ora ripetuto tre volte, una per legame):
+$$\big[Z_i+Z_j,\ T_{ij}\big] = \big[Z_i+Z_j,\ X_iZ_j-Z_iX_j\big] = 2i\,(Y_iZ_j-Z_iY_j).$$
+Il terzo sito commuta banalmente con $T_{ij}$ (agisce su qubit diversi), quindi
+$\big[\sum_k Z_k,\,T_{ij}\big]=\big[Z_i+Z_j,\,T_{ij}\big]$ per ciascun legame. Sommando i tre
+legami con i rispettivi coefficienti $DJ,DJ',DJ'$ si ottiene la tesi. Ciascuno dei tre termini
+$Y_iZ_j-Z_iY_j$ è linearmente indipendente dagli altri nell'algebra di Pauli a tre qubit, quindi
+il commutatore è non nullo per ogni $D\neq0$.
+\end{proof}
+
+\begin{sloppypar}
+\begin{osservazione}
+Poiché $[\sum_iZ_i,H_{\mathrm{ex}}]=0$ (lo scambio isotropo conserva sempre $S_z^{tot}$)
+e $[\sum_iZ_i,H_Z]=0$ banalmente, è soltanto il termine DM a rompere la conservazione
+di $M=\langle S_z^{tot}\rangle$. Al punto di lavoro ($D=0.15$) $M$ non è un buon numero
+quantico: niente selection rules basate su $M$.
+\end{osservazione}
+\end{sloppypar}
+
+% =====================================================================
+\section{La simmetria unitaria residua: perché l'estensione ovvia del dimero fallisce}
+\label{sec:simmetria-U}
+% =====================================================================
+
+\subsection{Lo scambio puro non basta (come nel dimero)}
+
+Sotto lo scambio $P_{12}$ (siti $1,2$; il sito $3$ resta fisso), usando l'antisimmetria
+$T_{ji}=-T_{ij}$ (immediata da $T_{ij}=X_iZ_j-Z_iX_j$, scambiando $i,j$ e riordinando i fattori
+che agiscono su siti diversi):
+\begin{equation}
+P_{12}\,T_{12}\,P_{12} = T_{21}=-T_{12},\qquad
+P_{12}\,T_{23}\,P_{12} = T_{13}=-T_{31},\qquad
+P_{12}\,T_{31}\,P_{12} = T_{32}=-T_{23}.
+\end{equation}
+Quindi
+$$P_{12}H_{\mathrm{DM}}P_{12}=D\big[J(-T_{12})+J'(-T_{31})+J'(-T_{23})\big]=-H_{\mathrm{DM}}:$$
+$H_{\mathrm{DM}}$ è dispari sotto scambio puro, esattamente come nel dimero. Serve
+un'operazione aggiuntiva che ripari il segno senza guastare $H_{\mathrm{ex}}+H_Z$ (entrambi pari
+sotto $P_{12}$, per costruzione simmetrica in $J\leftrightarrow J'$).
+
+\subsection{Il tentativo naturale, e perché fallisce}
+\label{sec:tentativo-fallito}
+
+Nel dimero la riparazione era $V\otimes V$ con $V=R_z(\pi)=-iZ$ su \emph{entrambi} i qubit
+(cioè su tutto il sistema). L'estensione più ovvia al trimero sarebbe applicare $V$ solo ai due
+qubit effettivamente scambiati, lasciando il terzo inalterato:
+\begin{equation}
+U_{\mathrm{naive}} \equiv \mathrm{SWAP}_{12}\cdot(V_1\otimes V_2\otimes\mathbb I_3).
+\end{equation}
+Verifichiamo se ripara $T_{23}$ (uno dei due legami laterali). Usando $VXV^\dagger=-X$,
+$VZV^\dagger=Z$ (identico al dimero) e che il fattore $\mathbb I_3$ lascia $\sigma_3^\alpha$
+invariato:
+\begin{align}
+U_{\mathrm{naive}}\,X_2\,U_{\mathrm{naive}}^\dagger &= -X_1, &
+U_{\mathrm{naive}}\,Z_3\,U_{\mathrm{naive}}^\dagger &= Z_3,\\
+U_{\mathrm{naive}}\,Z_2\,U_{\mathrm{naive}}^\dagger &= Z_1, &
+U_{\mathrm{naive}}\,X_3\,U_{\mathrm{naive}}^\dagger &= X_3,
+\end{align}
+(il primo passo di ciascuna coppia usa la relabeling $2\to1$ dello scambio più il segno da $V$;
+il secondo passo usa che sul sito 3 non agisce alcuna rotazione). Quindi
+\begin{equation}
+U_{\mathrm{naive}}\,T_{23}\,U_{\mathrm{naive}}^\dagger
+= (-X_1)(Z_3) - (Z_1)(X_3) = -(X_1Z_3+Z_1X_3).
+\label{eq:fail}
+\end{equation}
+Il risultato \emph{non} è proporzionale a $T_{13}=X_1Z_3-Z_1X_3$ né a nessun altro termine
+presente in $H$: è la combinazione \textbf{simmetrica} $X_1Z_3+Z_1X_3$, linearmente indipendente
+da tutta la base di Pauli usata in~\eqref{eq:H}. Non c'è alcun modo per cui i restanti pezzi di
+$H_{\mathrm{DM}}$ possano cancellare un operatore che non esiste altrove nell'Hamiltoniana:
+$U_{\mathrm{naive}}HU_{\mathrm{naive}}^\dagger\neq H$. Verificato numericamente:
+$\|[U_{\mathrm{naive}},H]\|\sim31$ su parametri casuali (non un piccolo residuo).
+
+\begin{osservazione}
+Il fallimento non è un dettaglio tecnico: dice che nel trimero il terzo sito non può restare
+"spettatore passivo" della simmetria, a differenza di quanto ci si aspetterebbe per analogia
+ingenua con il caso a due soli qubit. Il ruolo del sito 3 va determinato, non assunto.
+\end{osservazione}
+
+\subsection{La costruzione corretta: rotazione su tutti e tre i qubiti}
+
+Si applica $V=R_z(\pi)=-iZ$ anche al sito spettatore:
+\begin{equation}
+\boxed{\;U_{\mathrm{anello}} \equiv \mathrm{SWAP}_{12}\cdot V^{\otimes3}\;}
+\end{equation}
+($\mathrm{SWAP}_{12}$ e $V^{\otimes3}$ commutano: scambiare due fattori identici del prodotto
+tensoriale $V\otimes V\otimes V$ lo lascia invariato).
+
+\begin{lemma}[Azione di $U_{\mathrm{anello}}$ su un operatore di singolo sito]
+\label{lem:U-singolo}
+Per $\alpha\in\{x,y,z\}$, $\eta_x=\eta_y=-1,\eta_z=+1$, e $\pi=(1\,2)$ (trasposizione che fissa
+il sito 3):
+\begin{equation}
+U_{\mathrm{anello}}\,\sigma_i^\alpha\,U_{\mathrm{anello}}^\dagger = \eta_\alpha\,\sigma_{\pi(i)}^\alpha,
+\qquad i=1,2,3.
+\end{equation}
+\end{lemma}
+\begin{proof}
+Scrivendo $U_{\mathrm{anello}}=\mathrm{SWAP}_{12}\cdot V^{\otimes3}$ (fattori commutanti):
+$$U_{\mathrm{anello}}\,\sigma_i^\alpha\,U_{\mathrm{anello}}^\dagger
+= \mathrm{SWAP}_{12}\big(V^{\otimes3}\sigma_i^\alpha V^{\otimes3\dagger}\big)\mathrm{SWAP}_{12}
+= \mathrm{SWAP}_{12}\big(\eta_\alpha\sigma_i^\alpha\big)\mathrm{SWAP}_{12}
+= \eta_\alpha\,\sigma_{\pi(i)}^\alpha,$$
+dove il passaggio centrale usa che $V$ agisce identicamente e indipendentemente su ciascun sito
+(quindi $V^{\otimes3}\sigma_i^\alpha V^{\otimes3\dagger}=\eta_\alpha\sigma_i^\alpha$, stesso
+conto del dimero ripetuto sito per sito), e l'ultimo passaggio usa la definizione di
+$\mathrm{SWAP}_{12}$ come relabeling $i\to\pi(i)$. Cruciale: la formula vale
+\emph{uniformemente} anche per $i=3$ ($\pi(3)=3$), col fattore $\eta_\alpha$ comunque presente
+--- è esattamente il pezzo mancante nel tentativo fallito di
+Sez.~\ref{sec:tentativo-fallito}.
+\end{proof}
+
+\begin{proposizione}[$U_{\mathrm{anello}}$ è una simmetria esatta di $H$, per ogni $J,J',b,D$]
+\label{prop:U-simmetria}
+$[U_{\mathrm{anello}},H]=0$.
+\end{proposizione}
+\begin{proof}
+\emph{Scambio isotropo.} Per ciascuna coppia $(i,j)$ e componente $\alpha$, usando il
+Lemma~\ref{lem:U-singolo} e $\eta_\alpha^2=1$ sempre:
+$$U(\sigma_i^\alpha\sigma_j^\alpha)U^\dagger=(\eta_\alpha\sigma_{\pi(i)}^\alpha)(\eta_\alpha\sigma_{\pi(j)}^\alpha)=\sigma_{\pi(i)}^\alpha\sigma_{\pi(j)}^\alpha.$$
+Sommando su $\alpha$: il bond $(i,j)$ va nel bond $(\pi(i),\pi(j))$, invariato in valore
+(prodotto scalare $\boldsymbol\sigma_i\cdot\boldsymbol\sigma_j$ simmetrico nei due argomenti).
+Applicato a $H_{\mathrm{ex}}=J\,\text{bond}(1,2)+J'\,\text{bond}(2,3)+J'\,\text{bond}(3,1)$: il
+bond $(1,2)\to(2,1)=(1,2)$ (invariato), $(2,3)\to(1,3)=(3,1)$ e $(3,1)\to(3,2)=(2,3)$ --- i due
+bond laterali si scambiano fra loro, ma hanno lo \emph{stesso} coefficiente $J'$ in Opzione
+isoscele: $UH_{\mathrm{ex}}U^\dagger=H_{\mathrm{ex}}$.
+
+\emph{Zeeman.} $U\big(\sum_iZ_i\big)U^\dagger=\eta_z\sum_i\sigma_{\pi(i)}^z=\sum_iZ_i$
+($\eta_z=1$, $\pi$ è una permutazione dell'insieme $\{1,2,3\}$): $UH_ZU^\dagger=H_Z$.
+
+\emph{DM (bond base, identico al dimero).} $U T_{12}U^\dagger
+=(U X_1U^\dagger)(UZ_2U^\dagger)-(UZ_1U^\dagger)(UX_2U^\dagger)
+=(\eta_x\sigma_2^x)(\eta_z\sigma_1^z)-(\eta_z\sigma_2^z)(\eta_x\sigma_1^x)
+=\eta_x\eta_z(Z_1X_2-X_1Z_2)=-\eta_x\eta_z\,T_{12}$. Con $\eta_x\eta_z=-1$:
+$UT_{12}U^\dagger=T_{12}$, invariato (non dipende da $V_3$, come nel dimero).
+
+\emph{DM (bond laterali, il passaggio nuovo).} Usando ora anche $U\sigma_3^\alpha U^\dagger=\eta_\alpha\sigma_3^\alpha$:
+\begin{align}
+UT_{23}U^\dagger &= (\eta_x\sigma_1^x)(\eta_z\sigma_3^z)-(\eta_z\sigma_1^z)(\eta_x\sigma_3^x)
+=\eta_x\eta_z\,(X_1Z_3-Z_1X_3)=\eta_x\eta_z\,T_{13}=-\eta_x\eta_z\,T_{31},\\
+UT_{31}U^\dagger &= (\eta_x\sigma_3^x)(\eta_z\sigma_2^z)-(\eta_z\sigma_3^z)(\eta_x\sigma_2^x)
+=\eta_x\eta_z\,(X_3Z_2-Z_3X_2)=\eta_x\eta_z\,T_{32}=-\eta_x\eta_z\,T_{23}.
+\end{align}
+Con $\eta_x\eta_z=-1$: $UT_{23}U^\dagger=T_{31}$ e $UT_{31}U^\dagger=T_{23}$ --- i due termini DM
+laterali si \textbf{scambiano esattamente fra loro} (non finiscono in un operatore estraneo,
+come accadeva nel tentativo fallito~\eqref{eq:fail}, proprio perché ora anche il fattore
+$\eta_z$ del sito 3 contribuisce al segno). Poiché in Opzione B hanno lo stesso coefficiente
+$DJ'$:
+$$U\big(DJ'T_{23}+DJ'T_{31}\big)U^\dagger = DJ'T_{31}+DJ'T_{23} = DJ'T_{23}+DJ'T_{31}.$$
+Sommando col bond base (invariato): $UH_{\mathrm{DM}}U^\dagger=H_{\mathrm{DM}}$. I tre pezzi di
+$H$ sono ciascuno separatamente invariante: $[U_{\mathrm{anello}},H]=0$.
+\end{proof}
+
+Verificato numericamente: $\|[U_{\mathrm{anello}},H]\|=0$ a precisione macchina su 20 punti
+casuali $(J,J',b,D)$.
+
+\begin{proposizione}[Ordine di $U_{\mathrm{anello}}$]
+\label{prop:U2}
+$U_{\mathrm{anello}}^2=-\mathbb I$ (non è un'involuzione).
+\end{proposizione}
+\begin{proof}
+$\mathrm{SWAP}_{12}^2=\mathbb I$. $V^2=(-iZ)^2=-Z^2=-\mathbb I_2$ per un singolo qubit, quindi
+$(V^{\otimes3})^2=(V^2)^{\otimes3}=(-\mathbb I_2)^{\otimes3}=(-1)^3\mathbb I_8=-\mathbb I_8$.
+Poiché $\mathrm{SWAP}_{12}$ e $V^{\otimes3}$ commutano,
+$U_{\mathrm{anello}}^2=\mathrm{SWAP}_{12}^2\,(V^{\otimes3})^2=-\mathbb I_8$.
+\end{proof}
+
+\begin{osservazione}
+Differenza qualitativa dal dimero, dove $U^2=\mathbb I$ (due soli fattori $V$, $(-1)^2=+1$): qui
+$(-1)^3=-1$ per il terzo fattore. $U_{\mathrm{anello}}$ non è hermitiano e i suoi autovalori sono
+$\pm i$, non $\pm1$. Questo \textbf{non} invalida la Proposizione~\ref{prop:unitaria}: la
+dimostrazione usa solo $|u_0|=1$, soddisfatta da $u_0=\pm i$ esattamente come da $u_0=\pm1$. La
+differenza è quindi innocua per tutte le conseguenze sui correlatori derivate sotto.
+\end{osservazione}
+
+\subsection{Conseguenze sui correlatori}
+
+Applicando la Proposizione~\ref{prop:unitaria} con $A=\sigma_i^\alpha,B=\sigma_j^\beta$ e il
+Lemma~\ref{lem:U-singolo}:
+
+\begin{corollario}[Relazioni indotte da $U_{\mathrm{anello}}$]
+\label{cor:U-correlatori}
+Per ogni $t$ e ogni $\alpha,\beta\in\{x,y,z\}$:
+\begin{align}
+C_{11}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\,C_{22}^{\alpha\beta}(t),
+&
+C_{12}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\,C_{21}^{\alpha\beta}(t),\\
+C_{13}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\,C_{23}^{\alpha\beta}(t),
+&
+C_{31}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\,C_{32}^{\alpha\beta}(t),\\
+C_{33}^{\alpha\beta}(t) &= \eta_\alpha\eta_\beta\,C_{33}^{\alpha\beta}(t). & &
+\end{align}
+\end{corollario}
+\begin{proof}
+Applicazione diretta della Proposizione~\ref{prop:unitaria}, sostituendo $\pi(1)=2,\pi(2)=1,\pi(3)=3$
+caso per caso, esattamente come nel dimero (Corollario 4.5 di
+\texttt{\seqsplit{simmetrie\_correlatori\_dimero.tex}}) ma con $\pi$ esteso al terzo sito.
+\end{proof}
+
+\begin{corollario}[Zero rigoroso per \emph{ogni} $t$: novità di $N=3$]
+\label{cor:zero-sito3}
+Se $\eta_\alpha\eta_\beta=-1$ (esattamente una fra $\alpha,\beta$ è $z$, l'altra $x$ o $y$),
+allora
+$$C_{33}^{xz}(t)=C_{33}^{zx}(t)=C_{33}^{yz}(t)=C_{33}^{zy}(t)\equiv0\qquad\forall t.$$
+\end{corollario}
+\begin{proof}
+Segue immediatamente dall'ultima relazione del Corollario~\ref{cor:U-correlatori}: essendo
+$i=j=3=\pi(3)$, la relazione lega $C_{33}^{\alpha\beta}(t)$ a \emph{se stesso}, non a un altro
+correlatore. Con $\eta_\alpha\eta_\beta=-1$ si ottiene $C_{33}^{\alpha\beta}(t)=-C_{33}^{\alpha\beta}(t)$,
+cioè $2C_{33}^{\alpha\beta}(t)=0$ per ogni $t$.
+\end{proof}
+
+\begin{osservazione}
+Questo tipo di zero (per ogni $t$, non solo $t=0$) non poteva presentarsi nel dimero: là lo
+scambio muoveva sempre \emph{entrambi} i siti, non c'era mai un punto fisso su cui una relazione
+di simmetria potesse ricadere su se stessa. È una conseguenza diretta, e non ovvia a priori, dei
+tre siti dell'anello rispetto ai due del dimero.
+\end{osservazione}
+
+% =====================================================================
+\section{Time-reversal $K$: $H$ è reale (identico nella struttura al dimero)}
+% =====================================================================
+
+\begin{proposizione}
+\label{prop:H-reale}
+$H$ è rappresentata da una matrice reale simmetrica in base computazionale, per ogni
+$J,J',b,D\in\mathbb R$: $KHK=H$.
+\end{proposizione}
+\begin{proof}
+Ogni addendo di $H_{\mathrm{ex}}$ è reale (stesso argomento del dimero, $X\otimes X$,
+$Y\otimes Y$, $Z\otimes Z$ tutti reali), $H_Z$ è reale, e ciascun $T_{ij}=X_iZ_j-Z_iX_j$ è
+prodotto di matrici reali, quindi reale. Somma di matrici reali con coefficienti reali: $H$ è
+reale, e simmetrica perché hermitiana e reale. L'argomento non usa il numero di siti.
+\end{proof}
+Verificato numericamente: $\max|\mathrm{Im}\,H|=0$ su 20 punti casuali.
+
+Il Lemma~\ref{lem:K-tempo} e la Proposizione~\ref{prop:K-correlatore} del dimero (dimostrati
+usando solo $KHK=H$, il Lemma~\ref{lem:matrix-element}, e il Lemma~\ref{lem:K}, mai la struttura
+a due soli qubit) si applicano \textbf{senza alcuna modifica} a $N=3$:
+
+\begin{lemma}
+\label{lem:K-tempo}
+$Ke^{-iHt}K=e^{iHt}$.
+\end{lemma}
+
+\begin{proposizione}
+\label{prop:K-correlatore}
+Con $|\psi_0\rangle$ reale (lecito: $H$ reale simmetrica non degenere al punto di lavoro,
+verificato sotto), per ogni $i,j,\alpha,\beta,t$:
+\begin{equation}
+\boxed{\;\overline{C_{ij}^{\alpha\beta}(t)} = \eta_\alpha\eta_\beta\,C_{ij}^{\alpha\beta}(-t)\;}
+\end{equation}
+\end{proposizione}
+
+\begin{corollario}[Zero a $t=0$, per ogni coppia di siti $i\neq j$]
+\label{cor:zero-t0}
+Se $i\neq j$ ed esattamente una fra $\alpha,\beta$ è $y$, allora $C_{ij}^{\alpha\beta}(0)=0$.
+\end{corollario}
+\begin{proof}
+Identica al dimero: per $i\neq j$, $\sigma_i^\alpha,\sigma_j^\beta$ commutano (siti diversi),
+$C_{ij}^{\alpha\beta}(0)$ è reale; la Proposizione~\ref{prop:K-correlatore} a $t=0$ impone
+$\overline{C(0)}=\eta_\alpha\eta_\beta C(0)$, che con $\eta_\alpha\eta_\beta=-1$ forza $C(0)$
+puramente immaginario. Reale e immaginario puro $\Rightarrow$ nullo. Il conteggio delle
+combinazioni cambia rispetto al dimero: ci sono ora $\binom{3}{2}\times2=6$ coppie ordinate
+$(i,j)$ con $i\neq j$ (contro l'unica coppia $(1,2)/(2,1)$ del dimero), ciascuna con $4$
+combinazioni di componenti a una sola $y$: $24$ zeri a $t=0$ in totale (verificati sotto).
+\end{proof}
+
+% =====================================================================
+\section{Verifica di consistenza: $\Theta'=U_{\mathrm{anello}}K$}
+% =====================================================================
+
+\begin{proposizione}
+$\Theta'\equiv U_{\mathrm{anello}}K$ è antiunitaria, $\Theta'H\Theta'^{-1}=H$, e induce un puro
+scambio di siti senza segno: $\Theta'\sigma_i^\alpha\Theta'^{-1}=\sigma_{\pi(i)}^\alpha$.
+\end{proposizione}
+\begin{proof}
+$\Theta'H\Theta'^{-1}=U(KHK)U^{-1}=UHU^{-1}=H$ da Prop.~\ref{prop:H-reale} e
+\ref{prop:U-simmetria}. Sugli operatori:
+$\Theta'\sigma_i^\alpha\Theta'^{-1}=U(K\sigma_i^\alpha K)U^{-1}=U(\eta_\alpha\sigma_i^\alpha)U^{-1}
+=\eta_\alpha\cdot\eta_\alpha\sigma_{\pi(i)}^\alpha=\sigma_{\pi(i)}^\alpha$ (uso $\eta_\alpha^2=1$).
+\end{proof}
+Ripetendo la dimostrazione di Prop.~\ref{prop:K-correlatore} con $\Theta'$:
+$\overline{C_{ij}^{\alpha\beta}(t)}=C_{\pi(i)\pi(j)}^{\alpha\beta}(-t)$ per ogni $t$. Per
+$i=j=3$ ($\pi(3)=3$): $\overline{C_{33}^{\alpha\beta}(t)}=C_{33}^{\alpha\beta}(-t)$, \emph{senza}
+il fattore $\eta_\alpha\eta_\beta$. Confrontando con la relazione diretta via $K$
+(Prop.~\ref{prop:K-correlatore}, $\overline{C_{33}^{\alpha\beta}(t)}=\eta_\alpha\eta_\beta
+C_{33}^{\alpha\beta}(-t)$): le due coincidono se e solo se $\eta_\alpha\eta_\beta C_{33}^{\alpha\beta}(-t)=C_{33}^{\alpha\beta}(-t)$,
+cioè se $\eta_\alpha\eta_\beta=+1$ oppure $C_{33}^{\alpha\beta}(-t)=0$. Per le quattro
+combinazioni con $\eta_\alpha\eta_\beta=-1$ questo \textbf{ri-deriva}, per una via del tutto
+indipendente, lo zero-per-ogni-$t$ del Corollario~\ref{cor:zero-sito3}: buon controllo
+incrociato, nessun errore di segno nelle due derivazioni.
+
+% =====================================================================
+\section{Il controllo classico esatto in autobase}
+% =====================================================================
+
+\begin{proposizione}[Criterio esatto]
+Con $H=\sum_{k=0}^7 E_k\ket k\bra k$, $\ket0\equiv\ket{\psi_0}$:
+\begin{equation}
+C_{ij}^{\alpha\beta}(t)=\sum_{k=0}^7 e^{i(E_0-E_k)t}\,a_k b_k,
+\qquad a_k\equiv\langle\psi_0|\sigma_i^\alpha|k\rangle,\ \ b_k\equiv\langle k|\sigma_j^\beta|\psi_0\rangle,
+\end{equation}
+e $C_{ij}^{\alpha\beta}(t)\equiv0$ per ogni $t$ se e solo se $a_kb_k=0$ per ogni $k$.
+\end{proposizione}
+\begin{proof}
+Identica al dimero (proiettando su $\sum_k\ket k\bra k=\mathbb I_8$); le $8$ funzioni
+$t\mapsto e^{i(E_0-E_k)t}$ sono linearmente indipendenti se lo spettro è non degenere
+(verificato al punto di lavoro, Sez.~\ref{sec:numerico}).
+\end{proof}
+
+Con $N=3$ ci sono $3\times3=9$ coppie di siti ordinate e $9$ coppie di componenti: $81$
+combinazioni totali, ridotte a $5$ classi indipendenti dal Corollario~\ref{cor:U-correlatori}
+--- $(1,1)\!\sim\!(2,2)$, $(1,2)\!\sim\!(2,1)$, $(1,3)\!\sim\!(2,3)$, $(3,1)\!\sim\!(3,2)$,
+$(3,3)$ (autoconiugata) --- contro le $2$ classi del dimero: il vantaggio relativo di calcolo si
+riduce con $N$ (ci sono più siti "distinti" per l'orbita di $\pi$), ma resta comunque un
+dimezzamento sulle coppie coinvolgenti i siti $1,2$.
+
+% =====================================================================
+\section{Risultati numerici al punto di lavoro}
+\label{sec:numerico}
+% =====================================================================
+
+Punto: $J=1,\,J'=0.4,\,b=b_c=2.4,\,D=0.15$, Opzione B. Diagonalizzazione esatta $8\times8$
+(NumPy), fase di $\ket{\psi_0}$ fissata reale.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore \\
+\midrule
+$E_0$ & $-5.534370$ \\
+$E_1-E_0$ (gap, fondamentale non degenere) & $0.254700$ \\
+$\max|\mathrm{Im}\,\psi_0|$ & $0$ (a precisione macchina) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il gap è coerente con $g_{\min}\approx0.25$ già riportato in
+\texttt{\seqsplit{analisi\_dm\_trimero\_anello.tex}} per $D\approx0.148$--$0.15$ (piccola
+differenza per il valore esatto di $D$ e per $b=2.4$ non essendo esattamente il minimo assoluto
+del gap, spostato a $b\approx2.4017$).
+
+\textbf{Verifica delle predizioni di simmetria.} Le quattro combinazioni del
+Corollario~\ref{cor:zero-sito3} risultano nulle a precisione macchina
+($\max_k|a_kb_k|\sim10^{-17}$). Le $24$ combinazioni del Corollario~\ref{cor:zero-t0} risultano
+tutte esattamente zero a $t=0$.
+
+\textbf{Scan completo delle 81 combinazioni.} Risultato: \textbf{esattamente 4 combinazioni
+nulle per ogni $t$} -- le quattro predette (nessuna coincidenza numerica ulteriore, non spiegata
+da simmetria, è stata trovata). Le restanti $77$ non sono banali; una selezione:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\resizebox{\textwidth}{!}{%
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Correlatore & $|a_kb_k|_{\max}$ & modi rilevanti ($>5\%$ del max) & note \\
+\midrule
+$C_{11}^{yy},C_{12}^{yy},C_{21}^{yy},C_{22}^{yy}$ & $\approx0.498$ & $6$ su $7$ & più ricchi trovati \\
+$C_{33}^{yy}$ & $0.515$ & $3$ & sito 3, ricco ma meno multimodale \\
+$C_{33}^{xy},C_{33}^{yx}$ & $0.502$ & $3$ & \\
+$C_{33}^{xx}$ & $0.489$ & $3$ & \\
+$C_{13}^{zy},C_{23}^{zy}$ (e simmetrici) & $\approx0.355$ & $3$ & \\
+$C_{33}^{zz}$ & $0.0005$ & $2$ & piccolo, non protetto da simmetria \\
+\bottomrule
+\end{tabular}}
+\end{center}
+
+% =====================================================================
+\section{Sintesi e prossimo passo}
+% =====================================================================
+
+\begin{itemize}
+\item La riparazione della simmetria di scambio rotta dal DM (Opzione B) richiede la rotazione
+$R_z(\pi)$ su \textbf{tutti e tre} i qubiti, non solo sui due scambiati --- un'estensione non
+banale del meccanismo già visto nel dimero, verificata sia analiticamente
+(Sez.~\ref{sec:simmetria-U}) sia numericamente.
+\item Il sito fisso dello scambio (sito 3) produce un tipo di zero strutturale
+(autocorrelazione, per ogni $t$) assente nel dimero: $C_{33}^{xz},C_{33}^{zx},C_{33}^{yz},C_{33}^{zy}\equiv0$.
+\item La simmetria di time-reversal $K$ e i suoi zeri a $t=0$ si generalizzano da $N=2$ a $N=3$
+senza alcuna modifica alla dimostrazione.
+\item Al punto di lavoro proposto ($J{=}1,J'{=}0.4,b{=}2.4,D{=}0.15$): fondamentale non
+degenere, esattamente le 4 combinazioni predette sono nulle per ogni $t$, e diverse
+combinazioni non nulle sono genuinamente ricche (multi-modali). Il punto è confermato per la
+fase successiva.
+\item \textbf{Prossimo passo:} disegno del circuito Hadamard test a $4$ qubit (3 di registro +
+1 ancilla), mirror di \texttt{\seqsplit{circuito\_correlatori\_spiegato.tex}}, con $U(t)$
+costruito da \texttt{\seqsplit{trotter\_trimero\_anello.py}} e stato di preparazione
+\texttt{W-2q.6} da \texttt{\seqsplit{trimero\_anello\_vqe\_dm.tex}}.
+\end{itemize}
+
+\end{document}

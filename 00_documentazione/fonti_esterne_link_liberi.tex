@@ -1,0 +1,83 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue}
+
+\geometry{margin=2.7cm}
+
+\title{Fonti esterne citate nella tesi\\
+\large Link di accesso libero}
+\author{}
+\date{}
+
+\begin{document}
+
+\maketitle
+
+\noindent\textbf{Nota.} Questo documento raccoglie, con link diretto, tutte le fonti esterne citate finora nella tesi (relazioni su dimero, correlazioni dinamiche, VQE del trimero ad anello, nota di teoria sul rumore) che sono \emph{liberamente scaricabili} — open access di editore, preprint su arXiv, dispense o documentazione online. Le fonti che invece richiedono un abbonamento istituzionale (libri di testo, alcune riviste storiche) non sono elencate qui: per quelle serve l'accesso da rete di Ateneo (UniPR) o l'OPAC del Sistema Bibliotecario di Ateneo.
+
+\section{Calcolo quantistico e modello fisico}
+
+\begin{itemize}[leftmargin=1.3em]
+\item M.\ Crippa, D.\ Aschieri, A.\ Chiesa, et al., \emph{Simulating Static and Dynamic Properties of Magnetic Molecules with Prototype Quantum Computers}, Magnetochemistry \textbf{7}, 117 (2021) — riferimento concettuale generale del progetto (rivista open access MDPI).\\
+\url{https://www.mdpi.com/2312-7481/7/8/117}
+
+\item P.\ Krantz, M.\ Kjaergaard, F.\ Yan, T.\ P.\ Orlando, S.\ Gustavsson, W.\ D.\ Oliver, \emph{A Quantum Engineer's Guide to Superconducting Qubits}, Applied Physics Reviews \textbf{6}, 021318 (2019) — usato per le definizioni operative di $T_1$, $T_2$ nella nota sul rumore.\\
+\url{https://arxiv.org/abs/1904.06560}
+\end{itemize}
+
+\section{Algebra lineare numerica}
+
+\begin{itemize}[leftmargin=1.3em]
+\item G.\ H.\ Golub, C.\ F.\ Van Loan, \emph{Matrix Computations}, 4\textsuperscript{a} ed., Johns Hopkins University Press (2013), \S 5.1 (\emph{Householder and Givens Transformations}) — definizione della rotazione di Givens usata per il blocco RBS. Testo non open access; pagina dell'editore (per verificare l'edizione e reperirlo in biblioteca):\\
+\url{https://www.press.jhu.edu/books/title/10678/matrix-computations}
+\end{itemize}
+
+\section{Simulazione Hamiltoniana e formula di Trotter--Suzuki}
+
+\begin{itemize}[leftmargin=1.3em]
+\item H.\ F.\ Trotter, \emph{On the product of semi-groups of operators}, Proc.\ Am.\ Math.\ Soc.\ \textbf{10}, 545--551 (1959) — copia liberamente leggibile (mirror Semantic Scholar):\\
+\url{https://scispace.com/pdf/on-the-product-of-semi-groups-of-operators-51astcwss6.pdf}
+
+\item A.\ M.\ Childs, Y.\ Su, M.\ C.\ Tran, N.\ Wiebe, S.\ Zhu, \emph{Theory of Trotter Error with Commutator Scaling}, Phys.\ Rev.\ X \textbf{11}, 011020 (2021) — rivista open access (APS); usato per la stima dell'errore di Trotter del dimero.\\
+\url{https://arxiv.org/pdf/1912.08854} \quad (preprint arXiv:1912.08854)
+\end{itemize}
+
+\section{Circuiti a due qubit (decomposizione, costo in gate)}
+
+\begin{itemize}[leftmargin=1.3em]
+\item F.\ Vatan, C.\ Williams, \emph{Optimal Quantum Circuits for General Two-Qubit Gates}, Phys.\ Rev.\ A \textbf{69}, 032315 (2004) — 3 CNOT sufficienti e necessari nel caso generico.\\
+\url{https://arxiv.org/abs/quant-ph/0308006}
+
+\item G.\ Vidal, C.\ M.\ Dawson, \emph{A Universal Quantum Circuit for Two-Qubit Transformations With Three CNOT Gates}, Phys.\ Rev.\ A \textbf{69}, 010301 (2004) — stesso risultato, costruzione indipendente.\\
+\url{https://arxiv.org/abs/quant-ph/0307177}
+
+\item Y.\ Makhlin, \emph{Nonlocal Properties of Two-Qubit Gates and Mixed States and Optimization of Quantum Computations}, Quantum Inf.\ Process.\ \textbf{1}, 243 (2002) — invarianti locali (coordinate di Weyl).\\
+\url{https://arxiv.org/abs/quant-ph/0002045}
+
+\item J.\ Zhang, J.\ Vala, S.\ Sastry, K.\ B.\ Whaley, \emph{Geometric theory of nonlocal two-qubit operations}, Phys.\ Rev.\ A \textbf{67}, 042313 (2003) — collega gli invarianti di Makhlin alla decomposizione di Cartan.\\
+\url{https://arxiv.org/pdf/quant-ph/0403136}
+\end{itemize}
+
+\section{Documentazione e dispense}
+
+\begin{itemize}[leftmargin=1.3em]
+\item M.\ Moore, \emph{General Study of Two-Level Systems} (dispense del corso, Michigan State University) — formula del modello di Rabi usata per il dimero.\\
+\url{https://web.pa.msu.edu/people/mmoore/Lect7_RabiModel.pdf}
+
+\item IBM Quantum, \emph{Get started with primitives} (documentazione Qiskit) — primitive Estimator/Sampler usate nel codice.\\
+\url{https://docs.quantum.ibm.com/guides/get-started-with-primitives}
+\end{itemize}
+
+\bigskip
+\noindent\textbf{Fonti citate ma non liberamente scaricabili} (servono accesso istituzionale UniPR): M.\ A.\ Nielsen, I.\ L.\ Chuang, \emph{Quantum Computation and Quantum Information}, 10\textsuperscript{th} Anniversary Ed., Cambridge University Press (2010); G.\ H.\ Golub, C.\ F.\ Van Loan, \emph{Matrix Computations}, 4\textsuperscript{a} ed.\ (2013) — libro completo; M.\ Suzuki, Commun.\ Math.\ Phys.\ \textbf{51}, 183 (1976); S.\ Lloyd, Science \textbf{273}, 1073 (1996); X.\ G.\ Wen, F.\ Wilczek, A.\ Zee, Phys.\ Rev.\ B \textbf{39}, 11413 (1989); M.\ W.\ Coffey, R.\ Deiotte, T.\ Semi, Phys.\ Rev.\ A \textbf{77}, 066301 (2008).
+
+\end{document}

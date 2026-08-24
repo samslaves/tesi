@@ -1,0 +1,95 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\geometry{margin=2.7cm}
+
+\title{Perché $C_{33}^{zz}(t)$ è un buon punto di partenza per la Parte 2\\
+\large Note personali di preparazione su $T_1$, $T_2$ e formalismo aperto}
+\author{}
+\date{}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\begin{document}
+
+\maketitle
+
+\noindent\textbf{Nota.} Questo documento raccoglie una spiegazione che mi sono procurato studiando da solo l'argomento (non ancora trattato a lezione né dal relatore), come preparazione personale in vista della Parte 2 (sistema aperto, rumore). Non è materiale verificato dal relatore: lo tengo qui come riferimento di lavoro, da riprendere e correggere quando affronteremo davvero il formalismo dell'operatore densità. Nella relazione sulle correlazioni ho riportato solo la conclusione operativa (\emph{$C_{33}^{zz}$ sembra il candidato migliore per iniziare, perché nel caso ideale è quasi costante}), lasciando la domanda aperta al relatore.
+
+\tableofcontents
+
+\section{Il problema: cosa cambia passando a un sistema aperto}
+
+In tutta la Parte 1 lo stato del sistema è un vettore $\ket{\psi(t)}$ che evolve unitariamente, $\ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}$. Quando il sistema interagisce con un ambiente esterno (rumore), questa descrizione non basta più: lo stato diventa in generale uno stato \emph{misto}, descritto da un operatore densità $\rho(t)$, e l'evoluzione (nell'approssimazione Markoviana, cioè trascurando la memoria dell'ambiente) è tipicamente governata da un'equazione di Lindblad (o GKSL):
+
+\begin{equation}
+\dot\rho = -i[H,\rho] + \sum_k \gamma_k\left(L_k\rho L_k^\dagger - \tfrac12\{L_k^\dagger L_k,\rho\}\right),
+\end{equation}
+
+dove i $L_k$ sono gli \emph{operatori di Lindblad} (o operatori di salto) che descrivono i canali di rumore, e $\gamma_k\ge0$ i rispettivi tassi. Per un singolo qubit, i due canali standard sono il rilassamento di ampiezza e il dephasing puro, descritti rispettivamente dai tempi $T_1$ e $T_2$ (Nielsen \& Chuang, Cap.~8; Krantz et al., Sez.~IV).
+
+\section{$T_1$: rilassamento energetico}
+
+Il canale di \emph{amplitude damping} descrive il decadimento spontaneo del qubit dallo stato eccitato $\ket{1}$ verso il fondamentale $\ket{0}$ (analogo dell'emissione spontanea in ottica quantistica). L'operatore di Lindblad è
+
+\begin{equation}
+L_1 = \sqrt{\gamma_1}\,\sigma^- = \sqrt{\gamma_1}\begin{pmatrix}0&0\\1&0\end{pmatrix}, \qquad \gamma_1 = \frac{1}{T_1}.
+\end{equation}
+
+L'effetto su un singolo qubit isolato (senza Hamiltoniana, solo rumore) è che la popolazione dello stato eccitato decade esponenzialmente:
+
+\begin{equation}
+\langle\sigma^z(t)\rangle \;\longrightarrow\; \langle\sigma^z\rangle_{\text{eq}} + \left(\langle\sigma^z(0)\rangle-\langle\sigma^z\rangle_{\text{eq}}\right)e^{-t/T_1}.
+\end{equation}
+
+$T_1$ è quindi il tempo caratteristico con cui la \emph{popolazione} (componente diagonale di $\rho$, cioè $\langle\sigma^z\rangle$) rilassa verso l'equilibrio.
+
+\section{$T_2$: decoerenza (dephasing)}
+
+Il canale di \emph{pure dephasing} descrive invece la perdita di fase relativa fra $\ket{0}$ e $\ket{1}$, senza scambio di energia. L'operatore di Lindblad è
+
+\begin{equation}
+L_\phi = \sqrt{\gamma_\phi}\,\sigma^z, \qquad \frac{1}{T_2} = \frac{1}{2T_1}+\frac{1}{T_\phi},
+\end{equation}
+
+dove $T_\phi$ è il tempo di dephasing puro e il fattore $1/(2T_1)$ tiene conto del fatto che anche il rilassamento contribuisce a distruggere la coerenza. Vale sempre $T_2\le 2T_1$. L'effetto è che le \emph{coerenze} (elementi fuori diagonale di $\rho$, cioè $\langle\sigma^x\rangle,\langle\sigma^y\rangle$) decadono con legge $e^{-t/T_2}$, indipendentemente da eventuali oscillazioni coerenti sovrapposte dovute a $H$.
+
+\section{Perché $C_{33}^{zz}$ è il candidato più pulito}
+\label{sec:motivazione}
+
+Nel caso ideale (Parte 1, nessun rumore) ho già mostrato che:
+\begin{itemize}
+\item $C_{33}^{zz}(t)$ resta sempre entro l'intervallo $[0.9985,\,1.0000]$ per tutto l'intervallo $t\in[0,10]$ esaminato — un'oscillazione di appena $0.0015$;
+\item lo spettro conferma perché: un solo canale ($k=0$, il termine costante) porta il $99.9\%$ del peso $|a_kb_k|$, tutti gli altri sette canali oscillanti sono numericamente trascurabili;
+\item fisicamente, questo succede perché al punto di lavoro scelto il termine DM (l'unico che potrebbe far evolvere $\sigma_3^z$ in modo non banale) è piccolo rispetto a scambio e campo Zeeman: $\sigma_3^z$ è quasi un buon numero quantico.
+\end{itemize}
+
+Quando si introduce il rumore, il segnale osservato è schematicamente il prodotto fra la dinamica ideale e un fattore di decadimento legato a $T_1$/$T_2$:
+
+\begin{equation}
+C_{33}^{zz,\text{rumoroso}}(t) \;\approx\; C_{33}^{zz,\text{ideale}}(t)\cdot f_{\text{rumore}}(t;T_1,T_2).
+\end{equation}
+
+Se la parte ideale fosse già complicata (come $C_{11}^{yy}$, che ha sei canali spettrali comparabili che battono fra loro), il segnale osservato sarebbe la sovrapposizione di due effetti — il battimento coerente intrinseco \emph{e} il decadimento da rumore — difficili da separare senza un modello con più parametri. Con $C_{33}^{zz}$, invece, la parte ideale è già quasi una costante: qualunque deviazione visibile da quella costante, una volta acceso il rumore, non ha praticamente nessuna dinamica coerente competitiva con cui confondersi. È la stessa logica per cui, sperimentalmente, $T_1$ si misura preparando il qubit in $\ket{1}$ e lasciandolo fermo (nessuna dinamica coerente prevista), non durante un'evoluzione complicata.
+
+\section{Punto aperto: $T_1$ o $T_2$?}
+
+Un'osservazione da verificare col relatore prima di darla per buona: $C_{33}^{zz}$ è un'autocorrelazione $zz$, quindi (per l'associazione fatta sopra, $\sigma^z\leftrightarrow$ popolazione) dovrebbe essere sensibile principalmente a $T_1$, non a $T_2$ (che agisce sulle coerenze $x,y$). Se l'obiettivo finale è caratterizzare \emph{entrambi} i tempi separatamente, potrebbe convenire cercare, fra le 81 combinazioni già misurate, se esiste un correlatore con una componente $x$ o $y$ che sia comunque "piatto" nel caso ideale — sarebbe l'analogo di $C_{33}^{zz}$ per isolare $T_2$.
+
+\section{Fonti}
+
+\begin{itemize}
+\item M.~A.~Nielsen, I.~L.~Chuang, \emph{Quantum Computation and Quantum Information}, 10th Anniversary Edition, Cambridge University Press (2010) — Cap.~8 (operatore densità, canali quantistici, formalismo di Lindblad).
+\item P.~Krantz, M.~Kjaergaard, F.~Yan, T.~P.~Orlando, S.~Gustavsson, W.~D.~Oliver, \emph{A Quantum Engineer's Guide to Superconducting Qubits}, Applied Physics Reviews \textbf{6}, 021318 (2019) — Sez.~IV (definizioni operative di $T_1$, $T_2$, $T_2^*$ su qubit reali).
+\end{itemize}
+
+\end{document}

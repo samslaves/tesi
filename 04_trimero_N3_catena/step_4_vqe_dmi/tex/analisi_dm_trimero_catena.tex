@@ -1,0 +1,211 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{booktabs}
+\usepackage{geometry}
+\geometry{margin=2.6cm}
+\usepackage{xcolor}
+\usepackage{fancyhdr}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\vs}[1]{\mathbf{s}_{#1}}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small Trimero a catena aperta — analisi del termine DM}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+\title{\bfseries Il termine DM sulla catena aperta:\\
+perché apre il gap pur avendo la stessa struttura dell'Opzione A dell'anello}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ \small Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Questo documento risponde al punto 1 della Fase 5 per la catena aperta: la struttura
+del termine DM è già nota ($D_{12}=-D_{23}\equiv D$, unica compatibile con la
+riflessione $P_{13}$ — si veda \texttt{teoria\_trimero\_catena\_aperta.pdf}), qui va
+solo \emph{quantificata}. Il risultato non è un mirror banale dell'anello: il DM della
+catena conserva $S_{13}^2$ esattamente, la stessa struttura dell'Opzione A
+dell'anello — che non apriva \emph{mai} il gap. Sulla catena il gap si apre invece
+linearmente, $g_\text{min}(D)=2\sqrt6\,D$. La spiegazione è la stessa regola di
+simmetria usata per l'anello, applicata al caso complementare.
+\end{abstract}
+
+\section{Il punto di partenza}
+
+Nella teoria esatta della catena (decomposizione di Kambe rispetto alla coppia
+\emph{non legata} $(1,3)$), l'Hamiltoniana
+\[
+H_0 = J(\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2+\boldsymbol\sigma_2\!\cdot\!\boldsymbol\sigma_3)
++ b\sum_{i=1}^3 Z_i
+\]
+si risolve in forma chiusa in tre multipletti: $A'$ ($S_{13}{=}1,S{=}\tfrac32$, $E_A=2J$),
+$B'$ ($S_{13}{=}1,S{=}\tfrac12$, $E_B=-4J$), $C'$ ($S_{13}{=}0,S{=}\tfrac12$, $E_C=0$).
+Per $J>0$ il fondamentale a basso campo è \emph{sempre} $B'$ (mai serve confrontare
+con $C'$: $E_B<E_C$ indipendentemente da $J$), con incrocio vero a $b_c=3J$ verso
+$A'$ — dimostrato esatto (gap nullo, non anticrossing) perché $H_0$ è diagonale nei
+numeri quantici $(S_{13},S,M)$.
+
+\textbf{La domanda di questo documento.} Il termine DM compatibile con $P_{13}$,
+\[
+H_{DM} = D\,(X_1Z_2-Z_1X_2) - D\,(X_2Z_3-Z_2X_3),
+\]
+apre questo incrocio? La struttura è nota da subito (\texttt{trimer\_chain\_exact.py},
+self-test DM): $[P_{13},H_{DM}]=0$ e, conseguenza più profonda,
+$[S_{13}^2,H_{DM}]=0$ esattamente. Quest'ultimo fatto è precisamente la struttura
+dell'\textbf{Opzione A} dell'anello — quella che \emph{non apre mai} il gap
+(\texttt{analisi\_dm\_trimero\_anello.tex}). Un mirror ingenuo concluderebbe che
+anche qui il gap resta chiuso. È falso, e il motivo è istruttivo.
+
+\section{Elemento di matrice all'incrocio}
+
+L'incrocio a $b_c=3J$ è fra $\ket{A',M{=}-\tfrac32}=\ket{111}$ ed
+$\ket{B',M{=}-\tfrac12}=\tfrac{1}{\sqrt6}(\ket{011}+\ket{110})-\sqrt{\tfrac23}\ket{101}$.
+Applicando $H_{DM}$ a $\ket{111}$:
+\[
+H_{DM}\ket{111} = D\big({-}\ket{011}+2\ket{101}-\ket{110}\big),
+\]
+da cui, proiettando su $\ket{B',-\tfrac12}$:
+\[
+\big\langle B',{-}\tfrac12\big|H_{DM}\big|A',{-}\tfrac32\big\rangle = -\sqrt6\,D.
+\]
+Verificato numericamente contro \texttt{trimer\_chain\_exact.py::kambe\_states()}:
+errore $4.4\times10^{-16}$. In teoria delle perturbazioni degeneri (i due stati sono
+esattamente degeneri a $D=0$, $b=b_c$), questo dà
+\[
+g_\text{min}(D) \simeq 2\,|V| = 2\sqrt6\,D \approx 4.899\,D \qquad (D\ \text{piccolo}).
+\]
+
+\section{Verifica numerica: \texorpdfstring{$g_\text{min}(D)$}{g\_min(D)}}
+\label{sec:gmin-tabella}
+
+Calcolato $g_\text{min}(D)=\min_{b\in[b_c-w,b_c+w]}[E_1(b;D)-E_0(b;D)]$, con la
+stessa metodologia a due cautele già stabilita per l'anello
+(\texttt{analisi\_dm\_trimero\_anello.tex}, sez.\ ``Il controllo corretto'' e sez.\
+``Una seconda trappola''): mai il gap a $b_c$ fisso, mai il minimo su tutto l'asse
+$b$ (a $b=0$ la catena ha la stessa degenerazione di Kramers dell'anello — verificato
+esplicitamente, $[T,H]=0$ a $b=0$ per ogni $D$, $T^2=-\mathbb I$, tre spin-$1/2$).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{cccc}
+\toprule
+$D$ & $g_\text{min}$ & $b$ al minimo & $g_\text{min}/D$ \\
+\midrule
+$0.009$ & $0.044091$ & $3.0000068$ & $4.8990$ \\
+$0.020$ & $0.097979$ & $3.0000333$ & $4.8990$ \\
+$0.050$ & $0.244945$ & $3.0002082$ & $4.8989$ \\
+$0.073$ & $0.357612$ & $3.0004435$ & $4.8988$ \\
+$0.100$ & $0.489864$ & $3.0008314$ & $4.8986$ \\
+$0.148$ & $0.724939$ & $3.0018159$ & $4.8982$ \\
+$0.200$ & $0.979524$ & $3.0033019$ & $4.8976$ \\
+$0.300$ & $1.468777$ & $3.0073414$ & $4.8959$ \\
+$0.500$ & $2.445262$ & $3.0196198$ & $4.8905$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Gap lineare in $D$ con pendenza $2\sqrt6=4.898979$, confermata dalla predizione
+perturbativa. \textbf{Differenza qualitativa dall'anello}: qui il punto critico si
+sposta pochissimo ($b_\text{min}$ da $3.0000068$ a $3.0196$ su tutto il range),
+contro $2.40\to2.43$ (Opzione B) o $2.40\to2.29$ (Opzione A) dell'anello — il DM
+accoppia direttamente i due stati quasi degeneri senza spostare i rami al primo
+ordine.
+
+\section{Perché si apre: la stessa regola, il caso complementare}
+
+La regola di non-incrocio di von Neumann--Wigner (già usata per l'anello): un
+termine che preserva un numero quantico non può aprire un incrocio fra stati che
+quel numero quantico \emph{distingue}. Il punto decisivo è quali stati si
+incrociano:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{3.4cm}p{5.6cm}p{5.6cm}@{}}
+\toprule
+& \textbf{Anello, Opzione A} & \textbf{Catena} \\
+\midrule
+incrocio & $C$ ($S_{12}{=}0$) $\to$ $A$ ($S_{12}{=}1$) & $B'$ ($S_{13}{=}1$) $\to$
+$A'$ ($S_{13}{=}1$) \\
+settori del Casimir conservato & \textbf{diversi} & \textbf{uguali} \\
+elemento di matrice & vincolato a zero per costruzione & \emph{non} vincolato \\
+esito & incrocio vero per ogni $D$ & anticrossing, $g_\text{min}=2\sqrt6\,D$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il DM della catena conserva $S_{13}^2$ esattamente — verificato,
+$\|[H+H_{DM},S_{13}^2]\|=0$ su 20 punti casuali — ma l'incrocio a $b_c$ è
+\emph{intra-settore}: entrambi gli stati hanno $S_{13}=1$. Il Casimir conservato non
+li distingue, quindi non li protegge. Controllo diretto sul fondamentale a $b=b_c$:
+$\langle S_{13}^2\rangle=2.000000$ per entrambi i due livelli più bassi (qualunque
+$D$), mentre $\langle S^2\rangle$ e $\langle M_z\rangle$ sono mescolati.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{ccccc}
+\toprule
+$D$ & $|\langle A'|gs\rangle|^2$ & $|\langle B'|gs\rangle|^2$ & $\langle M_z\rangle$ &
+gap \\
+\midrule
+$0.005$ & $0.499915$ & $0.500085$ & $-0.9999$ & $0.024495$ \\
+$0.150$ & $0.497451$ & $0.502401$ & $-0.9973$ & $0.734742$ \\
+$0.500$ & $0.491583$ & $0.506972$ & $-0.9901$ & $2.445579$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+A $b=b_c$ la miscela è $50/50$ per \emph{qualunque} $D>0$ (i due stati sono
+degeneri a $D=0$): $D$ fissa il gap, non il mescolamento — la rottura di $M$ è
+massimale già a $D$ infinitesimo. Fuori da $b_c$ il fondamentale torna rapidamente
+quasi puro ($|\langle A'|gs\rangle|^2=0.031$ a $b=2.0$, $D=0.15$): $b=b_c$ è il
+punto di massima severità per un ansatz $M$-conservante, ed è per questo il punto
+scelto per la Fase 5 (VQE).
+
+\section{Punto di lavoro adottato}
+
+\[
+\boxed{J=1,\qquad b=b_c=3J=3.0,\qquad D=0.15}
+\]
+
+Stesso $D$ già usato per l'anello (confronto diretto a parità di ampiezza DM, non
+di gap). Gap risultante $0.7347$: ben risolto, fondamentale non degenere, primo
+eccitato isolato ($E_2-E_1=3.63$). Ancora perturbativo: peso del fondamentale sul
+sottospazio degenere di $D=0$ pari a $0.999852$.
+
+\section{Nota metodologica: assunzione presa in autonomia}
+
+Come per il Trotter dell'anello (Opzione B assunta senza conferma esplicita), la
+quantificazione del DM per la catena non era stata richiesta esplicitamente dal
+relatore (si veda \texttt{domande\_relatore.md}) — svolta per coerenza con il lavoro
+già fatto sull'anello e per completare il parallelismo fra le due topologie. Da
+segnalare nel prossimo report.
+
+\section{Conclusioni}
+
+\begin{enumerate}[leftmargin=1.4em]
+\item Il DM della catena apre l'incrocio $B'\to A'$ a $b_c=3J$, con
+$g_\text{min}(D)=2\sqrt6\,D$ verificato su griglia.
+\item L'analogia strutturale con l'Opzione A dell'anello (stesso Casimir
+conservato) è \emph{fuorviante se letta come analogia di esito}: l'anello con
+Opzione A non apre mai il gap, la catena sì, perché l'incrocio è fra stati con lo
+stesso numero quantico $S_{13}$ (o $S_{12}$), non fra settori diversi.
+\item Punto di lavoro $(J,b,D)=(1,3.0,0.15)$ confermato, stessa severità di
+mescolamento dell'anello a $b_c$ ma raggiunta con un solo grado di libertà DM
+anziché due opzioni da confrontare.
+\end{enumerate}
+
+\end{document}

@@ -1,0 +1,245 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{VQE con termine DM — trimero a catena aperta}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ \small Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase VQE \textbf{con} termine DM per il
+trimero a catena aperta (Fase 5) — mirror di \texttt{\seqsplit{trimero\_anello\_vqe\_dm.pdf}},
+con una differenza di struttura dichiarata nel piano operativo: invece di due
+notebook separati (indagine mirata poi confronto sistematico), un unico sweep
+sistematico che include da subito sia RBS-2q sia $W$-2q, $D=0$ e DM — l'ipotesi da
+testare (RBS ha un tetto strutturale sotto DM, $W$ no) era già nota dall'anello, qui
+verificata sui dati della catena, non assunta. Una verifica dedicata a
+$b=b_c$ con molti restart si è resa necessaria durante l'analisi (§3) per
+distinguere un vero tetto strutturale da un artefatto dei 2 restart dello sweep —
+non un secondo notebook esplorativo, uno script mirato di poche righe.
+
+Punto di lavoro DM confermato in \texttt{\seqsplit{analisi\_dm\_trimero\_catena.pdf}}:
+$J=1$, $b=b_c=3.0$, $D=0.15$.
+
+\section*{\texttt{ansatz\_catena.py}}
+
+Le 15 famiglie di ansatz, mirror diretto delle definizioni usate nello sweep
+dell'anello (\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}}),
+adattate ai \textbf{2} bond fisici della catena invece di 3. Conseguenza non
+cosmetica sui conteggi di parametri: la famiglia ``2q esatta'' ha $2+3k$ parametri
+(non $3+3k$: un blocco in meno nel primo giro), la famiglia ``2qC ciclica'' ha $5K$
+parametri per ciclo (non $6K$: 2 blocchi $+$ 3 $Ry$ invece di 3 blocchi $+$ 3 $Ry$).
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{rbs\_block(qc,\ phi,\ q0,\ q1)} — rotazione di Givens reale, 2 CZ + 4 H.
+\item \texttt{w\_block(qc,\ theta,\ q0,\ q1)} — blocco della famiglia iSWAP, 2 CX.
+\item \texttt{ansatz\_A()}, \texttt{ansatz\_D(block)} — i due ansatz generici
+(Ry-CNOT-Ry e Ry-blocco-Ry), 6 e 8 parametri.
+\item \texttt{pma\_1q\_trimer(nparam,\ block)} — $Ry$ su un solo qubit alternato a
+blocchi ciclici sui 2 bond.
+\item \texttt{pma\_2q\_trimer\_exact(nparam,\ block)} — un solo giro di blocchi (2
+par, uno per bond), poi triple di $Ry$ indipendenti.
+\item \texttt{pma\_2q\_trimer\_cyclic(K,\ block)} — $K$ cicli completi di [2 blocchi,
+3 $Ry$], $5K$ parametri.
+\item \texttt{build\_ansatze()} — le 15 varianti effettivamente usate nello sweep.
+\end{itemize}
+
+\textbf{Come si usa.} Libreria: \texttt{from ansatz\_catena import build\_ansatze}.
+Eseguito come script, stampa il conteggio parametri delle 15 varianti (verificato
+manualmente: $2+3k$ e $5K$ come atteso, non copiati per errore dall'anello).
+
+\section*{\texttt{sweep\_catena\_dm.py}}
+
+Sweep sistematico: 15 ansatz $\times$ 10 valori di $b$ (griglia
+$[0.05,\,2b_c]$, 9 punti equispaziati $+\,b_c$ esatto — stessa convenzione della
+griglia $D=0$ già esistente) $\times$ 2 condizioni ($D=0$, DM) $=300$ punti.
+Ottimizzazione COBYLA$\to$L-BFGS-B, 2 restart, energia valutata via
+\texttt{StatevectorEstimator}. Cache incrementale
+(\texttt{\seqsplit{trimer\_chain\_dm\_sweep\_cache.json}}), rilanciabile senza
+ricalcolare.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{run\_vqe(ansatz,\ b,\ D,\ n\_restarts,\ seed)} — VQE su energia
+(COBYLA poi L-BFGS-B), poi fidelity contro il proiettore sul fondamentale
+(\texttt{ground\_state\_projector\_dm} se $D\neq0$, altrimenti la versione senza DM).
+\item \texttt{load\_cache()} / \texttt{save\_cache(cache)} — persistenza JSON, un
+salvataggio per punto (non a blocchi: garantisce nessuna perdita se l'esecuzione
+viene interrotta).
+\end{itemize}
+
+\textbf{Verifiche.} 300/300 punti completati. Integrità controllata: nessuna
+fidelity fuori $[0,1]$; i valori a $D=0$ riproducono \emph{esattamente} (stesse
+cifre) quelli già presenti in \texttt{\seqsplit{trimer\_chain\_ansatz\_sweep\_cache.json}}
+(cache prodotta in una sessione precedente, con nomenclatura \texttt{PMA-*} invece di
+\texttt{RBS-*} ma stessi circuiti) — conferma indipendente di correttezza, non solo
+assenza di errori evidenti.
+
+\textbf{Anomalia trovata e spiegata (non un bug).} 55/300 punti mostrano fidelity
+$\approx0$: tutti confinati a \texttt{RBS-1q.3}, \texttt{RBS-1q.6},
+\texttt{RBS-2q.2} — esattamente le famiglie a bassa espressività già dimostrate
+strutturalmente bloccate nel notebook $D=0$ esistente
+(\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_catena.ipynb}}, § 5.1:
+\texttt{PMA-1q} non raggiunge $\lvert111\rangle$ sulla catena, a differenza dell'anello che
+ha un bond in più). A $D=0$ questo limite era già noto a $b$ generico; qui si
+manifesta anche sotto DM, sugli stessi ansatz, con la stessa causa strutturale
+(numero di eccitazioni conservato dal blocco RBS, insufficiente per un primo giro
+senza $Ry$ indipendenti a valle). Nessuna correzione necessaria: sono esclusi dal
+confronto RBS vs $W$ che segue.
+
+\section*{Risultati: sweep sistematico (2 restart)}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lrrrr}
+\toprule
+ansatz & par & $D0$ min & $DM$ min & $DM$ a $b_c$ \\
+\midrule
+A: Ry-CNOT-Ry & 6 & 0.9661 & 0.9522 & 0.9792 \\
+D: Ry-RBS-Ry  & 8 & 1.0000 & 1.0000 & 1.0000 \\
+RBS-1q.9      & 9 & 0.0000 & 0.0135 & 0.9999 \\
+RBS-2q.5/8, RBS-2qC.K1 & 5/8/5 & 0.8266 & 0.7966 & 0.8989 \\
+RBS-2qC.K2    & 10 & 1.0000 & 1.0000 & 1.0000 \\
+W-1q.6        & 6 & 1.0000 & 0.9986 & 0.9999 \\
+W-1q.9        & 9 & 1.0000 & 0.9925 & 0.9999 \\
+W-2q.5/8, W-2qC.K1 & 5/8/5 & 0.9661 & 0.9541 & 0.9771 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Con soli 2 restart, i valori $DM$ a $b_c$ per le famiglie ``un giro'' (RBS-2q,
+W-2q) sono \textbf{sottostimati}: 0.8989 e 0.9771 non sono i tetti veri (§3). Lo
+sweep sistematico basta per il quadro complessivo su tutta la griglia (dove la
+convergenza in 2 restart è sufficiente lontano da $b_c$), non per il confronto fine
+al punto critico.
+
+\section*{Indagine dedicata a \texorpdfstring{$b_c$}{b\_c} (60--80 restart)}
+
+Script \texttt{indagine\_catena\_bc.py}, mirror di
+\texttt{\seqsplit{analisi\_espressivita\_PMA\_anello.ipynb}} ma senza la parte
+grafica/interattiva (non richiesta: il piano prevedeva un solo sweep, questo è un
+supplemento mirato, non un secondo notebook). Fidelity ottimizzata direttamente
+(non l'energia), 60 restart, verificata stabile su 3 seed indipendenti per i casi
+dubbi.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lrr}
+\toprule
+ansatz & par & fidelity (60+ restart) \\
+\midrule
+RBS-2q.5 / RBS-2q.8 / RBS-2qC.K1 & 5 / 8 / 5 & $0.9626275828$ \\
+RBS-2qC.K2 & 10 & $1.0000000000$ \\
+W-2q.5 / W-2q.8 / W-2qC.K1 & 5 / 8 / 5 & $0.9936951715$ \\
+W-2qC.K2 & 10 & $1.0000000000$ \\
+W-1q.6 & 6 & $0.9999042461$ \\
+W-1q.9 & 9 & $0.9999340062$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Risultato centrale, verificato (non assunto dall'anello).} Sull'anello, un
+solo giro di blocchi $W$ (\texttt{W-2q.6}) bastava per $\mathcal F=1$ esatto sotto
+DM. \textbf{Sulla catena no}: né RBS né $W$ raggiungono l'esatto con un solo giro —
+entrambi hanno un tetto strutturale vero (identico per le tre varianti di
+parametrizzazione di ciascuna famiglia, segno che è un limite di sottospazio
+raggiungibile, non di ottimizzazione). La gerarchia $W>$RBS sotto DM si conferma in
+termini relativi ($0.9937>0.9626$), ma \textbf{servono due giri completi} (famiglia
+``2qC.K2'', 10 parametri) per l'esatto su entrambe le famiglie. \texttt{W-1q.6/.9}
+hanno un tetto separato, molto vicino a 1 ma non esatto — confermato su 3 seed
+indipendenti (differenza $<10^{-10}$ fra i seed), quindi un vero limite, non un
+mancato restart.
+
+\textbf{Perché la differenza dall'anello è plausibile.} La catena ha un bond in
+meno: un singolo giro di blocchi entanglanti ha meno potere espressivo per
+qubit-coppia coinvolta rispetto all'anello, dove il terzo bond (assente qui)
+forniva un canale in più già al primo giro.
+
+\section*{Costo in gate: RBS-2qC.K2 vs W-2qC.K2}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{lrrr}
+\toprule
+ansatz & parametri & gate a 2 qubit & gate totali \\
+\midrule
+RBS-2qC.K2 & 10 & 8 & 39 \\
+W-2qC.K2   & 10 & 8 & 19 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Stesso numero di parametri e di gate a due qubit (entrambi 4 blocchi $\times$ 2
+bond $\times$ 2 giri $/$ 2 bond $=$ 8), ma $W$ usa meno gate a 1 qubit per blocco (0
+Hadamard contro i 4 di RBS): 19 gate totali contro 39. Stessa direzione del
+vantaggio già documentato per l'anello (\texttt{\seqsplit{scelta\_ansatz\_RBS\_vs\_W.pdf}}),
+qui confermata anche nel regime a due giri necessario sulla catena.
+
+\section*{Cosa portarsi dietro}
+
+Il candidato canonico per il seguito (Trotter, correlazioni, Parte 2 rumore) sulla
+catena \textbf{non è} l'analogo diretto di \texttt{W-2q.6} dell'anello — sarebbe
+insufficiente qui (tetto $0.9937$). Il candidato è
+\[
+\boxed{\texttt{W-2qC.K2}\ \text{(10 parametri, 2 giri, }\mathcal F=1\text{ esatto)}}
+\]
+economico in gate quanto atteso dal confronto RBS/$W$ già stabilito, ma con un
+requisito strutturale in più (2 giri, non 1) rispetto al caso dell'anello — punto
+da segnalare esplicitamente nella stesura finale insieme al contributo originale
+RBS vs $W$, come esempio concreto di come la topologia modifichi \emph{quanti} giri
+servono, non solo \emph{quale} blocco conviene.
+
+\section*{\texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_catena\_dm.ipynb}}}
+
+Notebook interattivo, mirror diretto (ma unificato $D0$/DM/RBS/$W$, non due
+notebook separati) di \texttt{\seqsplit{confronto\_ansatz\_entangler\_trimero\_anello.ipynb}}.
+Importa \texttt{ansatz\_catena.py} e \texttt{trimer\_chain\_exact.py} come librerie
+già verificate — non ridefinisce nulla. Contenuto: selettore interattivo dei
+circuiti (menu a tendina, stesso pattern con \texttt{ipywidgets.Dropdown} +
+\texttt{observe} già usato con successo nell'anello — non il pattern
+\texttt{FloatSlider}+\texttt{interact} che aveva dato problemi di rendering nel
+notebook Trotter dell'anello); cella di sweep (rilanciabile, calcola solo i punti
+mancanti); tabelle riassuntive; griglia di grafici fidelity vs $b$ per le famiglie
+con espressività sufficiente.
+
+\textbf{Eseguito per intero in questa sessione} (kernel Jupyter reale, non solo
+sintassi): 20 punti nuovi calcolati (la variante \texttt{W-2qC.K2}, assente dallo
+sweep originale a 300 punti, aggiunta qui), cache portata a 320 punti totali,
+figura \texttt{\seqsplit{confronto\_ansatz\_trimero\_catena\_dm\_grid.png}} generata e
+ispezionata. \textbf{Osservazione minore, non un'anomalia}: a $D=0$ le famiglie
+$W$-2q mostrano una lieve degradazione liscia e monotona sotto $b_c$ ($0.9714\to
+0.9661$ per \texttt{W-2q.8}), tornando a $1.0$ esatto sopra $b_c$ — stessa direzione
+del limite più severo di RBS-2q (plateau $0.8266$), solo più mite; fisicamente
+plausibile (il fondamentale sotto $b_c$ è il blocco $B'$ non banale), non
+influenza le conclusioni.
+
+\section*{\texttt{\seqsplit{indagine\_bc\_trimero\_catena.ipynb}}}
+
+Notebook interattivo per la verifica dedicata a $b_c$ (§ precedente), con una
+cella finale di ricalcolo live (\texttt{Dropdown} ansatz + \texttt{IntSlider}
+restart + \texttt{IntText} seed + pulsante ``Ricalcola'', pattern
+\texttt{Button.on\_click}, non \texttt{interact\_manual} — stessa cautela già presa
+per l'anello). La tabella di riferimento nel notebook usa 15 restart (per tempi di
+esecuzione ragionevoli in un contesto interattivo), dichiarato esplicitamente nel
+testo; \textbf{riproduce esattamente} (stesse 10 cifre) i valori a 60-80 restart di
+\texttt{indagine\_catena\_bc.py} — conferma indipendente che il tetto non dipende
+dal numero di restart oltre una soglia bassa.
+
+\textbf{Eseguito per intero in questa sessione}: zero errori, tutti gli output
+presenti e ispezionati.
+
+\end{document}

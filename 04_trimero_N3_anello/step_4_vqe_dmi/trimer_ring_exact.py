@@ -29,7 +29,7 @@ il VQE (vqe_trimer_ring.py), come gia' fatto per il dimero.
 
 Termine DM (Dzyaloshinskii-Moriya): due forme candidate disponibili
 (trimer_hamiltonian_dm, dm_term, dm_min_gap) -- vedi la sezione dedicata
-piu' sotto e analisi_dm_trimero.pdf per la derivazione completa. Non ancora
+piu' sotto e analisi_dm_trimero_anello.tex per la derivazione completa. Non ancora
 usate nel resto del progetto: in attesa di conferma dal relatore su quale
 opzione adottare per una trattazione quantitativa.
 """
@@ -241,7 +241,7 @@ def ground_state_projector(J, Jp, b, tol=1e-9):
 # ----------------------------------------------------------------------
 #
 # Due forme candidate per D_ij(X_i Z_j - Z_i X_j), verificate rispetto alla
-# simmetria di scambio 1<->2 (vedi analisi_dm_trimero.pdf per la derivazione
+# simmetria di scambio 1<->2 (vedi analisi_dm_trimero_anello.tex per la derivazione
 # completa, inclusa la ricerca errata iniziale e la sua correzione):
 #
 #   Opzione A: nessun DM sul legame di base (D_12=0), segno OPPOSTO sui due
@@ -287,9 +287,26 @@ def trimer_hamiltonian_dm(J, Jp, b, mode, D):
 
 
 def dm_min_gap(J, Jp, mode, D, search_half_width=None):
-    """Gap VERO fra i due autovalori piu' bassi: minimo su tutto b, non a
-    b_c fisso (il punto di incrocio si sposta quando il DM e' acceso --
-    vedi l'errore metodologico documentato in analisi_dm_trimero.pdf, sez. 4).
+    """Gap VERO fra i due autovalori piu' bassi: minimo su un INTORNO di b_c.
+
+    Due errori metodologici da evitare, entrambi documentati in
+    analisi_dm_trimero_anello.tex:
+
+    1. NON calcolare il gap a b_c fisso: il punto di incrocio si sposta
+       quando il DM e' acceso, e un gap positivo misurato nel punto
+       sbagliato non dice nulla sull'apertura reale (sez. 4).
+
+    2. NON estendere la ricerca a tutto l'asse b, in particolare fino a
+       b=0: a campo nullo H e' invariante per inversione temporale
+       (scambio e DM sono entrambi T-pari; solo lo Zeeman e' T-dispari) e
+       con un numero DISPARI di spin-1/2 il teorema di Kramers impone che
+       ogni livello sia almeno doppiamente degenere. Il minimo cadrebbe
+       sempre a b=0 con valore zero, per QUALUNQUE opzione DM, annullando
+       la distinzione A/B (sez. 5).
+
+    La finestra [b_c - w, b_c + w] con w = max(1, 0.6|b_c|) risolve
+    entrambi i problemi. Vale per ogni sistema a spin totale semi-intero,
+    quindi anche per la catena aperta.
     """
     from scipy.optimize import minimize_scalar
 
@@ -314,6 +331,20 @@ def exact_sweep_dm(b_values, J, Jp, mode, D):
     il VQE quando il DM e' acceso (exact_sweep resta la forma chiusa pura,
     D=0, e non va toccata).
 
+    CORREZIONE (sessione Fase 5 catena aperta): <Mz> e gli altri valori di
+    aspettazione sono ora mediati sul sottospazio degenere quando presente,
+    come gia' fatto in exact_sweep (D=0) e in entrambe le exact_sweep di
+    trimer_chain_exact.py -- qui NON lo erano, bug latente. A b=0 il
+    fondamentale e' un doppietto di Kramers per QUALUNQUE D (scambio e DM
+    sono entrambi T-pari, spin totale semi-intero -- vedi
+    analisi_dm_trimero_anello.tex, sez. "Una seconda trappola"): un singolo
+    autovettore di np.linalg.eigh e' quindi una scelta di base arbitraria
+    all'interno del doppietto, e <Mz> su quella scelta non riflette il
+    limite fisico (atteso 0 a b=0). Verificato che il bug non ha mai
+    influenzato risultati consegnati: l'unico chiamante che tocca campi
+    diversi da gs_energy e' inesistente nel progetto (vedi log_decisioni.md
+    per la tracciabilita' completa della verifica).
+
     NOTA: con mode="B" (o comunque quando S12^2 non e' piu' conservato),
     gs_S12sq NON e' un numero quantico buono -- e' comunque riportato come
     valore di aspettazione, utile per vedere quanto il fondamentale vero si
@@ -329,13 +360,17 @@ def exact_sweep_dm(b_values, J, Jp, mode, D):
     for b in b_values:
         H = trimer_hamiltonian_dm(J, Jp, b, mode, D).to_matrix()
         w, v = np.linalg.eigh(H)
-        g = v[:, 0]
+        degenerate = np.abs(w - w[0]) < 1e-9
+        V0 = v[:, degenerate]
+        deg = V0.shape[1]
+        P0 = V0 @ V0.conj().T
+        g = v[:, 0]  # un rappresentante, riportato per compatibilita'/ispezione
         energies.append(w)
         gs_energy.append(w[0])
         gs_state.append(g)
-        gs_mz.append(np.real(g.conj() @ Mz @ g))
-        gs_S12sq.append(np.real(g.conj() @ S12sq @ g))
-        gs_Stotsq.append(np.real(g.conj() @ Stotsq @ g))
+        gs_mz.append(np.real(np.trace(P0 @ Mz)) / deg)
+        gs_S12sq.append(np.real(np.trace(P0 @ S12sq)) / deg)
+        gs_Stotsq.append(np.real(np.trace(P0 @ Stotsq)) / deg)
 
     return {
         "b": np.asarray(b_values),
@@ -360,7 +395,7 @@ def ground_state_projector_dm(J, Jp, b, mode, D, tol=1e-9):
 def _self_test_dm():
     """Verifica le proprieta' di simmetria e il comportamento del gap per
     entrambe le opzioni di DM, agli stessi valori gia' controllati a mano
-    in analisi_dm_trimero.pdf (cross-check indipendente qui nel modulo)."""
+    in analisi_dm_trimero_anello.tex (cross-check indipendente qui nel modulo)."""
     print("=" * 70)
     print("[self-test DM 1] simmetria di scambio P12")
 
@@ -417,6 +452,19 @@ def _self_test_dm():
         err_E = abs(E0 - res["gs_energy"][i])
         assert err_E < 1e-10, f"energia proiettore/sweep incoerente a b={b}"
     print(f"    coerenza energia proiettore <-> sweep: OK su {len(b_test)} punti")
+
+    print("[self-test DM 6] <Mz>(b=0) con DM acceso: media sul sottospazio degenere")
+    print("                  (correzione applicata in questa sessione)")
+    for mode in ["A", "B"]:
+        for D_test in [0.0, 0.15, 0.5, 1.3]:
+            res0 = exact_sweep_dm(np.array([0.0]), J, Jp, mode, D_test)
+            mz0 = res0["gs_mz"][0]
+            print(f"    mode={mode} D={D_test:.2f}: <Mz>(b=0) = {mz0:+.10f}"
+                  f"  (atteso 0: doppietto di Kramers, nessuna direzione di M privilegiata)")
+            assert abs(mz0) < 1e-9, \
+                f"<Mz>(b=0) dovrebbe essere 0 per Kramers, trovato {mz0}"
+    print("    -> prima della correzione, questo test avrebbe fallito in modo")
+    print("       intermittente (dipendente dalla base restituita da eigh)")
 
     print("=" * 70)
     print("[self-test DM] TUTTI I TEST SUPERATI")

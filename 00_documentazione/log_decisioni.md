@@ -1814,3 +1814,674 @@ con "≈0.0015" per non essere scambiato per un pedice.
 Entrambi i file rigenerati, riconvertiti in PDF/JPEG e verificati
 visivamente pagina per pagina (corsivo/pedice/apice ora corretti su tutte
 le formule, tabella inclusa) prima di essere riconsegnati via SendUserFile.
+
+## Aggiornamento — narrativa L-BFGS-B nella relazione VQE trimero anello: giustificazione numerica, letteratura, separazione tesi/riferimento personale
+
+Su richiesta di Samuele, ripresa la menzione di L-BFGS-B in
+`relazione_vqe_trimero_anello.docx` (già presente come nome nudo
+dell'ottimizzatore) per motivarne l'uso in modo onesto: non solo
+espandere l'acronimo, ma raccontare *cosa mancava*, *come la ricerca ha
+portato alla soluzione*, e dichiarare esplicitamente l'uso di un
+assistente AI per l'implementazione — mostrando comunque contezza del
+problema fisico sottostante, verificato *prima* di cercare una soluzione.
+
+### La domanda fisica: perché un residuo $\sim10^{-5}$ non è trascurabile
+
+Richiesta esplicita di Samuele: una giustificazione numerica di come il
+residuo di energia lasciato da COBYLA da solo ($\Delta E\sim10^{-5}$,
+già documentato in `vqe_ground_state_test2.ipynb` per il dimero)
+si propaghi come errore sulle osservabili a valle (i correlatori), non
+solo un'affermazione qualitativa.
+
+**Derivazione (bound spettrale + argomento di stazionarietà).** Per uno
+stato variazionale $|\psi(\theta)\rangle=c_0|0\rangle+\sum_{n\geq1}c_n|n\rangle$
+con fidelity $F=|c_0|^2$, il bound spettrale esatto è
+$1-F\leq\Delta E/\Delta$, con $\Delta E=E(\theta)-E_0$ il residuo di
+energia e $\Delta=E_1-E_0$ il gap al primo eccitato. Ponendo
+$\varepsilon=\sqrt{1-F}$: l'errore sull'**energia** è $O(\varepsilon^2)$
+(quadratico, per la stazionarietà variazionale — il gradiente dell'energia
+si annulla al vero ground state), ma l'errore su un'osservabile
+**generica** (come un correlatore di spin) è $O(\varepsilon)$ (lineare,
+nessuna protezione da stazionarietà) — un residuo di energia "piccolo" può
+quindi corrispondere a un errore molto più grande su qualunque altra
+osservabile, che scala come la sua radice quadrata.
+
+**Applicazione numerica al punto di lavoro** ($J=1,J'=0.4,b=b_c=2.4,D=0.15$,
+Opzione B): gap vero $\Delta=0.2547$ (verificato indipendentemente in due
+notebook del progetto — `correlazioni_trimero_anello_simmetria.ipynb` e
+`correlazioni_trimero_anello_esplorazione.ipynb` — e derivabile anche da
+`simmetrie_correlatori_trimero_anello.tex`). Con un residuo tipico
+$\Delta E\approx10^{-5}$ lasciato da COBYLA da solo:
+$1-F\leq4\times10^{-5}$, $\varepsilon\approx6\times10^{-3}$ — **tre ordini
+di grandezza più grande** di $\Delta E$ stesso, e circa **4 volte più
+grande** dell'ampiezza di oscillazione reale dell'autocorrelazione
+$C_{33}^{zz}$ (circa 0.0015, dalla relazione sulle correlazioni): un
+residuo di quella taglia coprirebbe completamente quel segnale fisico.
+
+### Letteratura consultata per L-BFGS-B
+
+- Byrd, Lu, Nocedal, Zhu (1995), *SIAM J. Sci. Comput.* 16(5), 1190–1208 —
+  versione pubblicata di riferimento, **a pagamento**
+  (epubs.siam.org/doi/10.1137/0916069).
+- Zhu, Byrd, Lu, Nocedal (1997), *ACM TOMS* 23(4), 550–560 ("Algorithm
+  778") — **a pagamento** (dl.acm.org/doi/10.1145/279232.279236).
+- Un **preprint tecnico del 1994** (Argonne National Laboratory/
+  Northwestern University), **liberamente leggibile** tramite un mirror
+  Scispace — attenzione: ha **solo tre autori** (Byrd, Lu, Nocedal; Zhu si
+  è aggiunto solo nella versione pubblicata del 1995/1997), quindi va
+  citato come preprint preliminare, non come sostituto dell'articolo
+  pubblicato.
+- Pagina ufficiale del software L-BFGS-B di Nocedal: stesse referenze,
+  nessun PDF libero, solo codice sorgente.
+
+Distinzione dichiarata esplicitamente nel materiale di riferimento
+personale (vedi sotto): il preprint gratuito e l'articolo pubblicato non
+sono la stessa cosa (differiscono per autori e stato di revisione), onestà
+bibliografica che vale la pena mantenere nella tesi.
+
+### Decisione: dettagli implementativi fuori dalla tesi, dentro un riferimento personale
+
+Su indicazione di Samuele ("eviterei di parlare di COBYLA, L-BFGS-B e
+anche delle varie cache... sono dettagli implementativi e complicati per
+una triennale"): la derivazione completa (bound spettrale, argomento
+$O(\varepsilon)$ vs $O(\varepsilon^2)$, numeri, letteratura, nota di
+disclosure sull'uso dell'AI, listato della funzione `vqe_multistart` reale)
+è stata spostata in un documento **`.tex` a sé**,
+`lbfgsb_giustificazione_teoria.tex` (compilato, 4 pagine, verificato
+pagina per pagina) — dichiarato esplicitamente come **riferimento
+personale e teoria di lavoro, non parte del testo della tesi**.
+
+`relazione_vqe_trimero_anello.docx` è stato invece **semplificato**: tolta
+ogni menzione di COBYLA, L-BFGS-B, cache o dettagli dell'ottimizzatore;
+resta solo il risultato numerico finale (paragrafo sul multistart da punti
+casuali, poi $E_\text{VQE}=-5.53437001739340$, $E_\text{esatto}
+=-5.53437001739350$, $\Delta E=9.8\times10^{-14}$, $F=0.99999999999961$,
+conclusione sulla robustezza della convergenza) — adatto al livello di una
+triennale, senza perdere il risultato quantitativo.
+
+**Due bug di formattazione trovati e corretti durante la QA visiva** (stesso
+processo screenshot-per-pagina già usato per gli altri report): (1) un
+trattino `~` usato nel testo per "circa" veniva interpretato dal parser
+`parseMath` come delimitatore di pedice, comprimendo tutto il testo fra
+due tilde in un unico pedice minuscolo — sostituito con "≈"/"circa"; (2)
+il simbolo "≲" non è supportato dal font usato nel documento e ne
+corrompeva silenziosamente il rendering (carattere e apice successivo
+scomparsi) — sostituito con "≤" (già verificato renderizzare correttamente
+altrove nello stesso documento).
+
+### Nota sull'uso di un assistente AI (disclosure onesta)
+
+Narrativa concordata con Samuele: prima ha derivato e verificato *lui
+stesso* la propagazione dell'errore (il calcolo sopra, con i numeri del
+proprio punto di lavoro), **poi** ha chiesto a un assistente AI se
+esistesse una soluzione già pronta per il problema individuato — non il
+contrario. L'implementazione dello stage L-BFGS-B (già presente nel
+codice funzionante) è stata fatta implementare all'AI, ma la comprensione
+del *perché* serva è di Samuele, verificabile dal calcolo sopra prima di
+qualunque ricerca di soluzione. Disclosure di questo tipo inclusa nel
+`.tex` di riferimento personale (non nella tesi, per lo stesso motivo di
+livello sopra citato).
+
+**File prodotti:** `lbfgsb_giustificazione_teoria.tex` (+ pdf compilato,
+riferimento personale, non allegato alla tesi), `relazione_vqe_trimero_anello.docx`
+(aggiornato/semplificato).
+
+**Aperto per il seguito:** invariato rispetto a sopra.
+
+## Aggiornamento — esplorazione interattiva "video e foto" del correlatore (trimero anello): due notebook + tool HTML standalone
+
+Su richiesta di Samuele ("sarebbe molto interessante poter simulare il
+video e la relativa foto: scelta con widgets della correlazione, scelta
+del tempo t e vedere a lato la heatmap corrispondente... prova i widgets
+come fatto per il dimero"), aggiunta un'esplorazione interattiva che lega
+la curva $C_{ij}^{\alpha\beta}(t)$ nel tempo (il "video") alla heatmap
+$9\times9$ a $t$ fissato (la "foto") già presenti separatamente nei
+notebook del trimero anello (Sez. 4 e Sez. 3). Lavoro in due parti: prima
+dentro i notebook Jupyter esistenti (via `ipywidgets`), poi — su richiesta
+successiva di Samuele — anche come pagina HTML standalone indipendente da
+Jupyter.
+
+### Parte 1 — cella interattiva nei due notebook Jupyter
+
+Aggiunta una nuova Sez. 5bis ("Video e foto insieme, interattivo") in
+**entrambi** i notebook della fase (confermato via `AskUserQuestion`:
+"Entrambi"): `circuito_correlazioni_trimero_anello_tutte.ipynb`
+(preparazione esatta) e `circuito_correlazioni_trimero_anello_vqe.ipynb`
+(preparazione VQE reale), inserita fra la Sez. 5 (selettore manuale) e la
+Sez. 6 (analisi).
+
+**Schema:** menu a tendina per le 81 combinazioni + slider per $t$, via
+`ipywidgets.interactive_output` — schema **diverso** dai tre già
+documentati come falliti in questo stesso progetto
+(`FloatSlider`+`interact`, `FloatSlider`+`interact_manual`,
+`Dropdown`+`interact`, bug noto dell'estensione VS Code
+`jupyter-ipywidget-renderer`/`ipywidgetsKernel`), ripreso invece dal
+pattern più difensivo già usato per il dimero in
+`vqe_ground_state_test2.ipynb` (try/except sull'import, messaggio di
+fallback). **Nessuna garanzia** che eviti lo stesso bug, mai confermato
+risolto lato estensione — per questo la cella mostra sempre anche una
+figura statica di esempio, e resta disponibile il fallback manuale
+`_disegna_video_foto(combo_label, t)` per chiamata diretta. La heatmap si
+ricalcola dal vivo con la formula **classica esatta** (`classical_exact`,
+veloce), non con il circuito (troppo lento per seguire lo slider in tempo
+reale).
+
+**Validazione end-to-end con dati reali** (non stub), per entrambi i
+notebook: eseguita l'intera pipeline in background (multi-minuto, incluso
+il rilancio dell'ottimizzazione VQE per la seconda variante — fidelity
+$\approx1$) e verificato che la nuova cella gira senza eccezioni e
+produce output corretto (curve piatte sugli zeri strutturali, cella
+$C_{33}^{zz}$ correttamente evidenziata). Entrambi i notebook aggiornati
+salvati nel Project.
+
+### Parte 2 — tool HTML standalone (`correlazioni_trimero_esplorazione.html`)
+
+Samuele ha chiesto, in una richiesta successiva, di "mettere quella
+esplorazione in un html" — una versione autonoma, non dipendente da
+Jupyter/VS Code, per aggirare del tutto il rischio del bug `ipywidgets`
+sopra. Confermato via `AskUserQuestion` di includere **entrambe** le
+preparazioni (esatta e VQE) con un interruttore, non solo una.
+
+**Design tecnico centrale:** la heatmap ("foto") non usa dati
+precalcolati su una griglia fissa di $t$, ma **ricalcola dal vivo, nel
+browser**, la formula classica esatta — un porting da zero in JavaScript
+della piccola algebra lineare $8\times8$ complessa (prodotto di Kronecker
+delle matrici di Pauli $2\times2$, evoluzione temporale via
+autodecomposizione precalcolata in Python, $U(t)=V\,\mathrm{diag}
+(e^{-iEt})\,V^\dagger$, embeddata come JSON). **Verificato** il porting
+JS contro `classical_exact` di Python su più casi di test (incluso uno
+zero strutturale e l'autocorrelazione quasi congelata): concordano a
+precisione di macchina ($\sim10^{-15}$). La curva "video" è quindi anche
+lei ricalcolata dal vivo per $t$ arbitrario, non su una griglia fissa;
+solo i punti **misurati dal circuito reale** (Trotter, $N=100$, 16 punti
+di $t$, per entrambe le preparazioni) restano precalcolati e sovrapposti
+come riferimento, dato che simulare l'intero circuito quantistico nel
+browser non sarebbe praticabile.
+
+**Pipeline dati** (`compute_data.py`, $\sim15$ minuti di esecuzione):
+ottimizzazione VQE (stesso schema a 12 restart + polish già validato) +
+tutte le 81 correlazioni $\times$ 16 punti di $t$ $\times$ 2 preparazioni
+via circuito reale, serializzate in `trimero_explore_data.json`
+($\sim120$ KB) ed embeddate nella pagina.
+
+**Design visivo** (seguendo le skill `artifact-design`/`dataviz` del
+prodotto): palette dedicata (teal/ruggine per Re/Im, validata
+CVD-sicura con lo script di validazione della skill dataviz — la coppia
+teal/magenta usata nelle figure matplotlib esistenti falliva il check di
+separazione per deuteranopia, ΔE 3.2 contro soglia 8; sostituita con
+teal/ruggine, ΔE 11.0/9.3 a seconda del canale), accento oro "da
+strumento" condiviso fra i controlli e l'evidenziazione della selezione
+in heatmap, rampa sequenziale blu per il colore della heatmap, coppia
+tipografica Newsreader/IBM Plex Sans/IBM Plex Mono, temi chiaro e scuro
+entrambi progettati esplicitamente (non un'inversione automatica).
+
+**Pubblicazione:** pagina pubblicata come Cowork Artifact (link
+persistente, aggiornabile) e — dopo che Samuele ha segnalato di non avere
+modo di scaricarla dall'artifact — consegnata anche come file `.html`
+standalone via allegato, per garantire un download diretto indipendente
+dall'artifact.
+
+**Tre correzioni su segnalazione di Samuele, dopo la prima consegna:**
+1. aggiunta l'ordinata (tacche numeriche + griglia orizzontale) al
+   grafico "video", che prima mostrava solo l'asse dei tempi;
+2. spostata la legenda della heatmap a lato invece che sotto, con
+   l'aggiunta di una barra del gradiente colore (0→1) esplicita;
+3. l'interruttore stato-esatto/VQE **funzionava già correttamente**, ma
+   non c'era modo di vederlo: lo scarto fra le due preparazioni
+   ($10^{-6}$–$10^{-7}$ per ogni correlatore) è troppo piccolo per
+   spostare visibilmente la curva alla scala del grafico — è esattamente
+   il punto fisico che il tool vuole dimostrare. Aggiunto un indicatore
+   numerico dal vivo accanto all'interruttore (scarto massimo fra le due
+   preparazioni per il correlatore scelto) così l'effetto del click resta
+   verificabile quantitativamente anche quando non è visibile a occhio.
+
+Entrambe le versioni (artifact e file scaricabile) rigenerate e risincronizzate
+dopo le correzioni; verificate con screenshot automatizzati (Playwright) in
+tema chiaro, scuro e a schermo stretto. Verificato anche, su richiesta
+esplicita di Samuele prima di un possibile invio al relatore, che il file
+non contenga alcun riferimento a "Claude"/"Anthropic"/tag di generazione
+(controllo testuale su tutto il sorgente, nessuna occorrenza).
+
+**File prodotti:** `correlazioni_trimero_esplorazione.html` (pagina
+autonoma), `compute_data.py` (script di generazione dati, riusabile se il
+punto di lavoro cambia), `trimero_explore_data.json` (dati serializzati).
+Non salvati nel Project (file binari/derivati o non testuali secondo la
+convenzione già in uso per questo tipo di output).
+
+**Aperto per il seguito:** invariato rispetto a sopra (derivazione
+principiata del punto Trotter $R_0$; rumore di gate reale, Parte 2; Fase 5
+VQE con DM per la catena aperta).
+
+## Aggiornamento — convenzione $J$ uniforme per la catena: già documentata, propagazione al DM da documentare
+
+**Controllo fatto all'apertura della sessione catena/Fase 5.** Verificato che la
+scelta di un **singolo $J$ uniforme** sui due legami della catena (contro
+$(J,J')$ dell'anello isoscele) è già motivata in documentazione, non è una
+convenzione implicita. Riferimenti puntuali, per non riscrivere quanto esiste:
+
+- `teoria_trimero_catena_aperta.tex`, sez. Hamiltoniana (righe ~93–95):
+  distinzione esplicita caso uniforme / caso generale $J_{12},J_{23}$.
+- Idem, sez. "Simmetria di riflessione": Proposizione $J_{12}=J_{23}\Rightarrow
+  [P_{13},H]=0$ con dimostrazione termine per termine e verifica numerica
+  $8\times8$ nei due casi. Osservazione chiave: nella catena i due termini di
+  scambio si scambiano *fra loro* sotto $P_{13}$ (nell'anello $P_{12}$ fissava
+  la base e scambiava i laterali), quindi è proprio l'uguaglianza dei due
+  coefficienti a rendere la somma invariante.
+- Idem, righe ~176–183: il livello più profondo — con $J_{12}\neq J_{23}$ si può
+  ancora raccogliere $\mathbf s_2\cdot(J_{12}\mathbf s_1+J_{23}\mathbf s_3)$, ma
+  $J_{12}\mathbf s_1+J_{23}\mathbf s_3$ **non è un operatore di momento angolare
+  con Casimir ben definito**: non si rompe solo una simmetria, viene a mancare
+  l'oggetto su cui si costruisce la decomposizione di Kambe.
+- Idem, sez. "Il caso non uniforme": $\|P_{13}HP_{13}^\dagger-H\|=0.8$ a
+  $(J_{12},J_{23},b)=(0.9,0.5,0.4)$; nessuna forma chiusa, analogo diretto dello
+  scaleno per l'anello, rimandato a fase successiva come da proposta al relatore.
+- Idem, sez. "Campo critico", tabella comparativa: parametri liberi $(J,J')$ e
+  mappa di fase 2D per l'anello, solo $J$ (segno) per la catena; $b_c=3J'$ vs $3J$.
+- `trimero_catena_verifiche.tex`: test corrispondente, incluso
+  `H_chain_nonuniform(J12, J23, b)` — verifica che $P_{13}$ **si rompa** nel caso
+  non uniforme, non solo che valga in quello uniforme.
+
+**Conclusione:** nessuna aggiunta necessaria ai `.tex` esistenti su questo punto.
+
+### Cosa invece NON è ancora documentato: propagazione al termine DM
+
+Il termine DM della catena eredita la stessa uniformità. La struttura
+$D_{12}=-D_{23}\equiv D$ (unica compatibile con $P_{13}$, già verificata nei
+self-test DM di `trimer_chain_exact.py`) ha **un solo modulo**, non due
+indipendenti. Conseguenza operativa per la Fase 5 e per il Trotter:
+
+> Il punto di lavoro della catena vive in **due** parametri $(b,D)$ a $J$ fissato,
+> contro i **quattro** $(J,J',b,D)$ del punto $R_0$ dell'anello. Lo scan del
+> punto di lavoro è quindi strutturalmente più semplice, non solo più rapido.
+
+Da inserire in `analisi_dm_trimero_catena.tex` quando verrà scritto (Fase 5,
+punto 3), non nei documenti di teoria esistenti — è una conseguenza della
+struttura DM, non della teoria a $D=0$.
+
+### Affermazione scartata (non documentare)
+
+In discussione era emersa l'idea che "aggiungere un $J'$ alla catena non
+aprirebbe comunque una vera mappa di fase come nell'anello, per assenza di
+frustrazione". **Non verificata, non presente in alcun `.tex`, non da citare.**
+L'argomento per assenza di frustrazione è plausibile ma non è una dimostrazione;
+se e quando si aprirà il caso non uniforme, va verificato numericamente, non
+assunto. Registrato qui solo per evitare che rientri per inerzia in un documento.
+
+### Nota minore di igiene del codice
+
+`trimer_chain_exact.py`, `_self_test_dm()` (righe ~441–449): variabile locale
+`Jp = 1.0`. Non è un secondo accoppiamento — è un nome ereditato per copia dal
+file dell'anello, dove `Jp` indicava davvero $J'$. Funzionalmente innocuo,
+potenzialmente fuorviante a distanza di tempo. Da rinominare (`J_test`) alla
+prossima modifica del file per la Fase 5.
+
+## Aggiornamento — correzione di due file dell'anello: trappola di Kramers a $b=0$
+
+**Origine.** Aprendo la Fase 5 della catena si è applicata alla lettera la ricetta
+metodologica scritta in `analisi_dm_trimero_anello.tex` («minimo assoluto del gap su
+tutto l'asse $b$») e si è ottenuto $g_\text{min}=0$ per ogni $D$, apparentemente
+«il DM della catena non apre l'incrocio» — conclusione **falsa**. Il minimo cadeva
+sempre a $b=0$.
+
+**Diagnosi: teorema di Kramers.** A $b=0$ l'Hamiltoniana è invariante per inversione
+temporale $T=(i\sigma_y)^{\otimes3}K$: scambio e DM sono entrambi $T$-pari (bilineari
+in operatori di spin, ciascuno $T$-dispari), solo lo Zeeman è $T$-dispari. Con un
+numero **dispari** di spin-$1/2$ lo spin totale è semi-intero, $T^2=-\mathbb{I}$, e
+Kramers impone che ogni livello sia almeno doppiamente degenere a campo nullo. Quella
+degenerazione **non è apribile da alcun DM**, per costruzione. Vale per entrambe le
+topologie.
+
+**Verifica numerica** (script `verifica_kramers.py`, prodotto in sessione):
+$\|U_TU_T^\dagger-\mathbb{I}\|=0$; $\|T^2+\mathbb{I}\|=0$; $\|THT^{-1}-H\|=0$ esatto a
+$b=0$ per anello (Opz. A e B) e catena, per $D=0,\,0.15,\,0.5,\,1.3$; $=14.4$ a
+$b=2.4$ e $=3.0$ a $b=0.5$; scarto nei quattro doppietti a $b=0$ $\leq2.7\times10^{-15}$;
+$|\langle\psi|T\psi\rangle|=0$ sui livelli $0,2,4,6$ (partner di Kramers ortogonale).
+
+### ✅ I RISULTATI DELL'ANELLO SONO CORRETTI — nessun erratum
+
+Punto verificato esplicitamente prima di toccare qualunque cosa, perché condizionava
+la validità di quanto già comunicato al relatore. La tabella $g_\text{min}(D)$
+pubblicata è stata **riprodotta da zero** rieseguendo `dm_min_gap`:
+
+| $D$ | $g_\text{min}$ B ricalc. | pubbl. | $b$ ricalc. | pubbl. |
+|---|---|---|---|---|
+| 0.009 | 0.015273 | 0.0149 | 2.4000 | 2.4000 |
+| 0.073 | 0.123857 | 0.1240 | 2.4017 | 2.4017 |
+| 0.148 | 0.250930 | 0.2511 | 2.4068 | 2.4068 |
+| 0.300 | 0.507215 | 0.5072 | 2.4275 | 2.4275 |
+
+Opzione A ricalcolata: $10^{-8}$–$10^{-9}$, cioè zero a precisione numerica, come
+pubblicato. Gap al punto di lavoro delle correlazioni: $0.254700$ ricalcolato contro
+$0.2547$ nel log. **Nessun numero cambia, nessuna conclusione si ritira.**
+
+Motivo per cui i risultati si sono salvati: `dm_min_gap` **nel codice** ha sempre
+usato una finestra $[b_c-w,b_c+w]$ con $w=\max(1,0.6|b_c|)=1.44$, cioè $[0.96,3.84]$,
+che esclude $b=0$. Era la **prosa** a descrivere una ricetta diversa da quella
+eseguita. Controfattuale calcolato: applicando la ricetta come scritta su $[0,6]$,
+entrambe le opzioni danno $\sim10^{-15}$ a $b=0$ — la distinzione A/B, cioè l'intero
+risultato del documento, sarebbe evaporata.
+
+Corroborazione indiretta: la catena, dove lo stesso Casimir è conservato ma
+l'incrocio è **intra-settore**, dà l'esito opposto ($g_\text{min}=2\sqrt6\,D$). Due
+topologie che si comportano in modo opposto nel modo previsto dalla regola di
+von Neumann–Wigner rafforzano la conclusione dell'anello invece di incrinarla.
+
+### 🔄 FILE MODIFICATI — DA SOSTITUIRE SUL PC E RICARICARE NEL PROGETTO
+
+Modifiche prodotte in sessione, **solo sorgenti `.tex`, nessun PDF** (convenzione in
+uso). Impronte per il controllo al prossimo caricamento:
+
+| file | MD5 vecchio | MD5 nuovo | righe |
+|---|---|---|---|
+| `analisi_dm_trimero_anello.tex` | `79fca3a43146937bc495cd086d2885a7` | `ff4fbb64513ee2c3bfd51334f37821d9` | 281 → 400 |
+| `trimer_ring_exact.py` | `e87dbbb4fb05f62f03e14f3e3cd3da27` | `ddb1fdf193d09f5f1bb46f4849dbc66e` | 565 → 582 |
+
+> ⚠️ **Controllo da fare all'inizio della prossima sessione**: verificare con
+> `md5sum` che i file presenti nel Project abbiano gli MD5 **nuovi**. Se compaiono
+> ancora quelli vecchi, il caricamento non è avvenuto e la trappola di Kramers è
+> ancora nella documentazione.
+
+**Cosa è cambiato in `analisi_dm_trimero_anello.tex`** (+128 righe, −9; nessun
+numero, nessuna conclusione, nessuna figura toccata):
+1. Titolo sottosezione: «minimizzare il gap su tutto $b$» → «in un intorno di $b_c$».
+2. Formula di $g_\text{min}$: esplicitato il dominio $\mathcal I=[b_c-w,b_c+w]$ e
+   dichiarata la semiampiezza effettivamente usata dal codice.
+3. **Nuova sottosezione** «Una seconda trappola: la degenerazione di Kramers a campo
+   nullo» (`\label{sec:kramers}`): controfattuale, derivazione di $T$, tabella di
+   verifica numerica, nota di generalità a qualunque numero dispari di spin-$1/2$, e
+   nota storica sulla scoperta.
+4. Conclusioni, punto 3: aggiunta la clausola sull'esclusione di $b=0$, con la
+   simmetria fra le due trappole (una misura il gap dove non è più critico, l'altra
+   dove è protetto da un'altra simmetria).
+5. Preambolo: aggiunto `amsthm` + `\newtheorem*{osservazionekramers}`.
+
+**Cosa è cambiato in `trimer_ring_exact.py`** (+23 righe, −6; nessuna modifica
+funzionale, solo commenti):
+1. Docstring di `dm_min_gap` riscritta: elenca **entrambi** gli errori da evitare
+   (gap a $b_c$ fisso; estensione fino a $b=0$) con la ragione fisica del secondo.
+2. Quattro riferimenti al nome file obsoleto `analisi_dm_trimero.pdf` →
+   `analisi_dm_trimero_anello.tex`.
+
+**Validazione delle modifiche:**
+- `.tex` compilato due passate con `pdflatex`: **zero errori**, zero riferimenti
+  indefiniti, 7 pagine. I tre `Underfull` residui sono alle righe 137–141, cioè nel
+  testo preesistente, non nella parte aggiunta. Un `Overfull` introdotto dalla nuova
+  tabella è stato corretto (tabella ristretta, nota spostata nel corpo). Il PDF è
+  stato generato solo come controllo di sintassi e **non è stato consegnato**.
+- `.py`: `_self_test()` e `_self_test_dm()` rieseguiti dopo la patch, tutti superati
+  (incluso `[self-test DM 3]`, che dà ancora $2.26\times10^{-8}$ per A e $0.2543$ per B).
+- `diff` riga per riga: le uniche righe rimosse/sostituite sono le 9 (`.tex`) e 6
+  (`.py`) previste. Nessun contenuto perso.
+- Terminatori CRLF e codifica UTF-8 preservati come negli originali.
+
+### Nota metodologica per il seguito
+
+`Kramers` non compariva da nessuna parte nel progetto prima di ora (controllato con
+`grep` su tutti i `.tex`, `.py`, `.md`). L'esclusione di $b=0$ va ora considerata
+parte della ricetta standard per qualunque ricerca di gap minimo in funzione del
+campo su questi sistemi, catena inclusa.
+
+## Aggiornamento — chiusura dei file della catena: funzioni DM aggiunte, documentazione riallineata
+
+Prima di avviare lo sweep sistematico della Fase 5 (catena), chiusi i tre file che
+risultavano indietro rispetto al modulo dell'anello o contenevano affermazioni
+superate/errate.
+
+### 🔄 FILE MODIFICATI — DA SOSTITUIRE SUL PC E RICARICARE NEL PROJECT
+
+| file | MD5 vecchio | MD5 nuovo | righe |
+|---|---|---|---|
+| `trimer_chain_exact.py` | `4cf0e7dfc62d83251d4f3d90d726a4f8` | `ceec77022572c418a83f2dcadff8ba76` | 510 → 652 |
+| `trimero_catena_exact.tex` | `a0798de9ab4549737197c66766ebf484` | `48c8fd06f35b78c28463f1b2482b1415` | 172 → 199 |
+
+> ⚠️ Stesso controllo di sempre a inizio prossima sessione: verificare che i due file
+> nel Project abbiano gli MD5 **nuovi**.
+
+### `trimer_chain_exact.py` (+155/−13 righe)
+
+1. **Tre funzioni nuove**, mirror di `trimer_ring_exact.py` ma con una correzione
+   deliberata: `exact_sweep_dm(b_values, J, D)`, `ground_state_projector_dm(J, b, D,
+   tol)`, `dm_min_gap(J, D, search_half_width)`.
+   - `dm_min_gap` usa la stessa finestra $[b_c-w,b_c+w]$, $w=\max(1,0.6|b_c|)$,
+     dell'anello — con la doppia motivazione ormai documentata (gap a $b_c$ fisso /
+     Kramers a $b=0$) scritta per esteso nella docstring.
+   - `exact_sweep_dm` **non è un mirror letterale** di quella dell'anello: include la
+     media sul sottospazio degenere già usata in `exact_sweep` (D=0) di questo
+     stesso file, che quella dell'anello non ha (vedi bug segnalato sotto).
+2. **Due nuovi self-test** in `_self_test_dm()`: coerenza `exact_sweep_dm` ↔
+   `ground_state_projector_dm` (mirror del self-test 5 dell'anello); linearità di
+   $g_\text{min}(D)$ con pendenza $2\sqrt6\approx4.899$ (verifica diretta del
+   risultato del checkpoint 1). Tredici self-test totali, tutti superati a
+   precisione macchina dopo la patch.
+3. **Rename** `Jp`→`J_test` nel self-test DM (mai stato un secondo accoppiamento,
+   solo un nome ereditato per copia dall'anello — segnalato in precedenza).
+4. **Intestazione della sezione DM riscritta**: da "STRUTTURA DISPONIBILE, NON
+   USATA" a stato aggiornato, con la clausola esplicita che l'analogia con
+   l'Opzione A dell'anello è *strutturale* (conserva $S_{13}^2$) ma *non di esito*
+   (l'anello con A non apre mai il gap, qui il gap si apre, perché l'incrocio è
+   intra-settore $S_{13}=1\to1$) — per evitare che un lettore futuro deduca la
+   conclusione sbagliata dal solo nome "Opzione A".
+
+**Validazione:** modulo rieseguito per intero dopo la patch — 8 self-test base + 5
+self-test DM, tutti superati; sintassi Python verificata (`ast.parse`); `diff`
+riga per riga conferma che le uniche 13 righe toccate sono le previste (intestazione
++ rename); CRLF preservato.
+
+### `trimero_catena_exact.tex` (+35/−8 righe)
+
+**Non è un aggiornamento di stato, è la correzione di un'affermazione falsa.** Il
+paragrafo "Verifiche" affermava che il modulo includeva già *"il self-test
+aggiuntivo di coerenza fra `exact_sweep_dm` e `ground_state_projector_dm`"* — quelle
+due funzioni **non esistevano nel file** a inizio Fase 5 (solo `dm_term` e
+`trimer_hamiltonian_dm`, etichettate esplicitamente "struttura disponibile, non
+usata"). Il paragrafo è stato riscritto per dichiarare la correzione esplicitamente,
+non solo per aggiornare silenziosamente il contenuto. L'elenco delle funzioni
+interne è stato esteso con le tre funzioni nuove, inclusa la stessa clausola di
+cautela sull'Opzione A (struttura sì, esito no).
+
+**Validazione:** compilato due passate con `pdflatex`, zero errori, 4 pagine. Un
+`Overfull` introdotto dalla nuova voce `dm_min_gap` (nome file lungo in `\texttt`
+senza punti di sillababilità) è stato isolato con `\sloppy` locale al solo item
+incriminato. Restano due `Overfull` (14.3pt, 18.5pt) **preesistenti nel documento
+originale** (righe 107–110 e 126–132 prima della patch, stessa causa — nomi file
+lunghi in `\texttt`): non nell'ambito di questa sessione, non toccati. Il PDF è
+stato generato solo come controllo di sintassi, non consegnato.
+
+### 🐛 Bug latente segnalato in `trimer_ring_exact.py` — NON corretto (fuori ambito)
+
+Nello scrivere `exact_sweep_dm` per la catena, confrontando con la versione
+dell'anello, confermato che `exact_sweep_dm` **dell'anello** non ha la correzione di
+media sul sottospazio degenere presente invece nel suo stesso `exact_sweep` (D=0) e
+in entrambe le `exact_sweep` della catena. Poiché a $b=0$ il fondamentale è un
+doppietto di Kramers per *qualunque* $D$ (verificato ieri), `exact_sweep_dm`
+dell'anello restituisce oggi un $\langle M_z\rangle$ dipendente dalla scelta
+arbitraria di `numpy.linalg.eigh` in quel punto, anziché il valore fisico (atteso
+0). **Non corretto in questa sessione**: era fuori dall'ambito concordato (solo file
+della catena). Da correggere quando/se si riapre `trimer_ring_exact.py`.
+
+## Aggiornamento — corretto il bug latente in `trimer_ring_exact.py::exact_sweep_dm`
+
+Bug segnalato in precedenza (media sul sottospazio degenere assente in
+`exact_sweep_dm`, presente invece in `exact_sweep` e in entrambe le `exact_sweep` di
+`trimer_chain_exact.py`) ora corretto, su richiesta esplicita.
+
+### 🔄 FILE MODIFICATO — DA SOSTITUIRE SUL PC E RICARICARE NEL PROJECT
+
+| file | MD5 (versione con sole correzioni Kramers) | MD5 (con anche questa correzione) | righe |
+|---|---|---|---|
+| `trimer_ring_exact.py` | `ddb1fdf193d09f5f1bb46f4849dbc66e` | `60f3ebbfb8ff001151a7cc8434315275` | 582 → 613 |
+
+> ⚠️ Questa è la **terza** versione di `trimer_ring_exact.py` prodotta in sessione
+> (originale → correzione Kramers → correzione bug degenere). Al prossimo
+> caricamento verificare che il Project abbia l'MD5 `60f3eb…5275`, non uno dei due
+> precedenti.
+
+### Cosa comportava il bug (richiesta esplicita di Samuele, verificata prima di
+### correggere — vedi aggiornamento precedente)
+
+Tracciati tutti i 15 file del progetto che importano da `trimer_ring_exact.py`.
+Nessuno passa mai per $b=0$ attraverso `exact_sweep_dm` con lettura di `gs_mz`:
+Trotter e correlazioni importano solo `trimer_hamiltonian(_dm)` (nessun contatto);
+l'unico notebook che chiama `exact_sweep_dm`
+(`confronto_ansatz_entangler_trimero_anello.ipynb`) legge solo `gs_energy` (non
+affetta) su una griglia che parte da $b=0.05$; la fidelity nello stesso notebook usa
+`ground_state_projector_dm`, funzione diversa e già corretta per costruzione.
+**Nessun risultato consegnato al relatore era interessato.**
+
+### Correzione applicata
+
+`exact_sweep_dm` ora media $\langle M_z\rangle$, $\langle S_{12}^2\rangle$,
+$\langle S^2\rangle$ sul sottospazio degenere (proiettore $V_0V_0^\dagger$/degenerazione),
+esattamente come già fatto in `exact_sweep` — non un mirror indipendente, la stessa
+logica copiata dalla funzione gemella dello stesso file.
+
+**Controprova che il bug fosse reale** (calcolata prima di correggere, per non
+correggere un problema immaginario): a $b=0$, $D=0.15$, il singolo autovettore
+`v[:,0]` restituito da `eigh` dava $\langle M_z\rangle=-0.5$ (Opzione A) o $+0.484$
+(Opzione B) — non zero, e dipendente arbitrariamente dalla base interna scelta da
+`numpy.linalg.eigh`, non dalla fisica.
+
+**Nuovo self-test DM 6**, aggiunto per non lasciare la correzione silenziosa:
+verifica $\langle M_z\rangle(b{=}0)=0$ per Opzione A/B e $D=0,0.15,0.5,1.3$ — quello
+che, senza la correzione, sarebbe fallito in modo intermittente a seconda
+dell'implementazione di `eigh`. Tutti gli altri self-test (5 base + 6 DM, 14 totali)
+rieseguiti e superati a precisione macchina dopo la correzione.
+
+**Validazione:** `diff` contro la versione precedentemente consegnata conferma che
+le uniche 4 righe toccate sono quelle del corpo di `exact_sweep_dm` (`g = v[:,0]` e
+le tre append), come previsto; sintassi Python verificata; CRLF preservato.
+
+## Aggiornamento — Fase 5 (catena), punti 1-2 completati: sweep sistematico + scoperta W-2qC.K2
+
+### Punto 1 (quantificazione DM): confermato, checkpoint 1 chiuso in sessione precedente
+
+Elemento di matrice $\langle B',-\tfrac12|H_{DM}|A',-\tfrac32\rangle=-\sqrt6\,D$
+verificato ($4.4\times10^{-16}$); $g_\text{min}(D)=2\sqrt6\,D$ confermato su
+griglia; punto di lavoro $(J,b,D)=(1,\,3.0,\,0.15)$ confermato da Samuele.
+Formalizzato in `analisi_dm_trimero_catena.tex` (nuovo, vedi sotto).
+
+### Punto 2 (sweep sistematico): completato — 300/300 punti, con una scoperta non
+### assunta dall'anello
+
+**File prodotti** (nessuno preesistente nel Project, tutti nuovi):
+
+| file | contenuto |
+|---|---|
+| `ansatz_catena.py` | 15 famiglie di ansatz, mirror dell'anello adattato a 2 bond (conteggi $2+3k$ e $5K$, non $3+3k$/$6K$) |
+| `sweep_catena_dm.py` | sweep sistematico: 15 ansatz × 10 $b$ × 2 condizioni (D0/DM) = 300 punti, cache incrementale |
+| `trimer_chain_dm_sweep_cache.json` | i 300 risultati (energia, fidelity, parametri, degenerazione) |
+| `indagine_catena_bc.py` | verifica dedicata a $b_c$ con 60-80 restart — non un secondo notebook, uno script mirato |
+| `analisi_dm_trimero_catena.tex` | punto 1: derivazione, tabella $g_\text{min}(D)$, confronto con Opzione A dell'anello |
+| `trimero_catena_vqe_dm.tex` | punto 2: catalogazione sweep, risultato W-2qC.K2, costo in gate |
+
+**Validazione dei 300 punti:** nessuna fidelity fuori $[0,1]$; i valori a $D=0$
+riproducono esattamente (stesse cifre) la cache preesistente
+`trimer_chain_ansatz_sweep_cache.json` (nomenclatura `PMA-*`, stessi circuiti) —
+conferma indipendente. Un'apparente anomalia (55/300 punti a fidelity $\approx0$)
+risultata essere il limite strutturale **già noto e documentato** nel notebook
+$D=0$ esistente (`PMA-1q` non raggiunge $\lvert111\rangle$ sulla catena, 2 bond
+contro 3 — § 5.1 di `confronto_ansatz_entangler_trimero_catena.ipynb`): nessun bug,
+confinata esattamente alle famiglie a bassa espressività già segnalate.
+
+### 🔍 Scoperta: sulla catena servono DUE giri di blocchi per l'esatto, non uno
+
+**Non un mirror dell'anello — verificato, non assunto, come da piano.** Sull'anello
+un solo giro di $W$ (`W-2q.6`) bastava per $\mathcal F=1$ esatto sotto DM
+(`analisi_espressivita_PMA_anello.ipynb`). Sulla catena, verificato con 60-80
+restart su 3 seed indipendenti (stabile a $<10^{-10}$):
+
+| famiglia | 1 giro | 2 giri (K2, 10 par) |
+|---|---:|---:|
+| RBS-2q | $0.9626275828$ | $1.0000000000$ |
+| W-2q | $0.9936951715$ | $1.0000000000$ |
+| W-1q.6 / .9 | $0.9999042461$ / $0.9999340062$ (tetto separato) | — |
+
+La gerarchia $W>$RBS sotto DM si conferma in termini relativi, ma **né RBS né $W$
+raggiungono l'esatto con un solo giro sulla catena** — serve `*-2qC.K2` (10
+parametri, 2 giri completi) per entrambe le famiglie. Candidato canonico proposto:
+**`W-2qC.K2`** (10 par, 8 gate a 2 qubit, 19 gate totali contro 39 di
+`RBS-2qC.K2` a parità di parametri e gate a 2 qubit) — non l'analogo diretto di
+`W-2q.6` dell'anello, che qui sarebbe insufficiente (tetto $0.9937$).
+
+**Precisazione trovata sul risultato già comunicato dell'anello (nessun errore, solo
+lettura più precisa).** Verificato che il notebook dedicato dell'anello
+(`analisi_espressivita_PMA_anello.ipynb`, 20-60 restart) non ha mai testato
+`RBS-2qC.K2`/`W-2qC.K2` (solo `.6`, `.9`, `K1` — varianti "un giro + Ry extra").
+Controllato nello sweep sistematico dell'anello (`trimer_ansatz_sweep_cache_v2.json`):
+`RBS-2qC.K2` vi raggiunge $\mathcal F=1$ esatto sotto DM, su tutta la griglia. La
+frase nel log "RBS-2q ha un tetto strutturale vero... indipendentemente dal numero
+di parametri" resta corretta per la famiglia effettivamente testata (un giro, $Ry$
+extra non aiutano), ma va letta come tale — non come "per qualunque architettura
+RBS". **Nessuna azione correttiva sui file dell'anello**: il risultato comunicato al
+relatore resta valido, è solo la portata della frase a essere più stretta di quanto
+una lettura letterale suggerirebbe. Segnalato qui per completezza, non richiede
+modifica ai file già consegnati.
+
+### Validazione LaTeX
+
+Entrambi i `.tex` compilati due passate: **zero errori**. Un errore mio
+(`\ket{...}` non definito in `trimero_catena_vqe_dm.tex`, che non carica lo stesso
+preambolo di `analisi_dm_trimero_catena.tex`) corretto prima della consegna.
+`analisi_dm_trimero_catena.tex`: 3 pagine, un `Overfull` di 4pt e un `Underfull`
+sotto soglia — trascurabili, stessa tolleranza dei documenti già accettati.
+`trimero_catena_vqe_dm.tex`: 3 pagine, zero overfull/underfull. PDF generati solo
+come controllo di sintassi, non consegnati (convenzione: solo `.tex`).
+
+### Prossimo passo
+
+Punto 3 della Fase 5 tecnicamente già assorbito nei due documenti appena prodotti
+(non serve un terzo file separato). Filone Fase 5 catena chiuso. Prossimo: Trotter
+per la catena (derivazione da zero per la topologia a due bond, come da piano).
+
+## Aggiornamento — due notebook interattivi per la Fase 5 (catena), con RBS e W
+
+Su richiesta, prodotti due notebook con celle interattive (ipywidgets) che
+rieseguono i calcoli localmente, in aggiunta agli script già consegnati (non in
+sostituzione). Entrambi **eseguiti per intero in questa sessione** con un kernel
+Jupyter reale (non solo verificati a livello di sintassi) — installato l'ambiente
+necessario (`nbformat`, `nbclient`, `ipykernel`, `ipywidgets`) per poterlo fare.
+
+### File consegnati
+
+| file | contenuto |
+|---|---|
+| `confronto_ansatz_entangler_trimero_catena_dm.ipynb` | sweep sistematico interattivo: selettore circuiti, cella di sweep rilanciabile, tabelle, griglia di grafici fidelity vs $b$ |
+| `indagine_bc_trimero_catena.ipynb` | verifica dedicata a $b_c$ con ricalcolo live (Dropdown ansatz + slider restart + pulsante) |
+| `confronto_ansatz_trimero_catena_dm_grid.png` | figura generata dal primo notebook |
+| `trimer_chain_dm_sweep_cache.json` | aggiornata a 320 punti (era 300: aggiunta `W-2qC.K2`, mancante dallo sweep originale) |
+| `trimero_catena_vqe_dm.tex` | aggiornato con le due nuove sezioni di catalogazione |
+
+### Pattern widget usato: Dropdown+observe, non FloatSlider+interact
+
+Deliberatamente lo stesso pattern già validato con successo nell'anello
+(`analisi_espressivita_PMA_anello.ipynb`: `ipywidgets.Dropdown` + `.observe()` +
+`widgets.Output()`), non il pattern `FloatSlider`+`interact`/`interact_manual` che
+aveva dato problemi di rendering in VS Code nel notebook Trotter dell'anello
+(bug noto dell'estensione, documentato in precedenza nel log). Per il ricalcolo
+live nel secondo notebook, `Button.on_click` invece di `interact_manual`, stessa
+cautela.
+
+### Esecuzione: due iterazioni per il timeout
+
+Il tentativo iniziale (60 restart × 10 ansatz nella cella di riferimento del
+secondo notebook) andava oltre il tempo disponibile per l'esecuzione automatica.
+Ridotto a 15 restart, con dichiarazione esplicita nel testo del notebook (non un
+silenzioso downgrade): la cella confrontata dà risultati **identici a 10 cifre
+decimali** ai valori a 60-80 restart già in `indagine_catena_bc.py` — conferma
+indipendente che il tetto trovato è vero, non dipendente dal numero di restart
+oltre una soglia bassa.
+
+### Verifica degli output dopo l'esecuzione
+
+Ispezionati tutti gli output cella per cella: zero errori in entrambi i notebook;
+i 15 restart riproducono esattamente $0.9626275828$ (RBS, 1 giro), $1.0$ (RBS/W,
+2 giri, K2), $0.9936951715$ (W, 1 giro), $0.9999042461$/$0.9999340062$ (W-1q.6/.9)
+— stessi valori del run a 60-80 restart eseguito in precedenza. Figura del primo
+notebook (2080×910, ispezionata visivamente): otto pannelli, RBS-2qC.K2 e
+W-2qC.K2 piatti a $1.0$ su tutta la griglia, coerenti con la tabella.
+
+**Osservazione minore trovata durante l'ispezione, non un'anomalia**: a $D=0$ le
+famiglie $W$-2q mostrano una lieve degradazione liscia e monotona sotto $b_c$
+($0.9714\to0.9661$ per `W-2q.8`), non rumore — stessa direzione del limite più
+severo di RBS-2q ma più mite. Segnalata nel `.tex` aggiornato, non richiede
+correzione né cambia le conclusioni.

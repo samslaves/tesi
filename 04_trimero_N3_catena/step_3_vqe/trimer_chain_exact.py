@@ -258,17 +258,26 @@ def ground_state_projector(J, b, tol=1e-9):
 
 
 # ----------------------------------------------------------------------
-# Termine DM (Dzyaloshinskii-Moriya) -- STRUTTURA DISPONIBILE, NON USATA
+# Termine DM (Dzyaloshinskii-Moriya) -- Fase 5, quantificato
 # ----------------------------------------------------------------------
 #
-# Unica combinazione compatibile con P13 (analoga all'Opzione A
-# dell'anello, ma qui e' l'UNICA scelta possibile, non una fra due):
-# D12 = -D23 = D'. Nessun bond (3,1) esiste, quindi nessuna combinazione
-# "tipo Opzione B" e' nemmeno definibile per questa topologia.
+# Unica combinazione compatibile con P13 (STRUTTURALMENTE analoga
+# all'Opzione A dell'anello -- conserva S13^2 esattamente -- ma qui e'
+# l'UNICA scelta possibile, non una fra due): D12 = -D23 = D'. Nessun
+# bond (3,1) esiste, quindi nessuna combinazione "tipo Opzione B" e'
+# nemmeno definibile per questa topologia.
 #
-# NON richiesta dal relatore per la catena allo stato attuale (il
-# relatore ha chiesto teoria+VQE, non ancora DM -- vedi
-# domande_relatore.md). Funzioni disponibili ma non usate altrove.
+# ATTENZIONE: l'analogia con l'Opzione A dell'anello e' SOLO strutturale,
+# non di esito. Sull'anello, l'Opzione A non apre MAI il gap (l'incrocio
+# e' C -> A, settori S12 DIVERSI, protetti da von Neumann-Wigner). Qui il
+# gap SI APRE (g_min = 2*sqrt(6)*D, verificato), perche' l'incrocio della
+# catena e' B -> A: ENTRAMBI con S13=1, stesso settore. Il Casimir
+# conservato non li distingue, quindi non li protegge. Vedi
+# analisi_dm_trimero_catena.tex per la derivazione completa.
+#
+# Assunto in autonomia (non richiesto esplicitamente dal relatore per la
+# catena finora -- vedi domande_relatore.md), per coerenza con il lavoro
+# gia' fatto sull'anello. Da segnalare nel prossimo report.
 
 def dm_term(i, j, D):
     """D*(X_i Z_j - Z_i X_j), stessa forma gia' validata per dimero e anello."""
@@ -288,6 +297,117 @@ def trimer_hamiltonian_dm(J, b, D):
     if D == 0:
         return H
     return H + dm_term(1, 2, D) + dm_term(2, 3, -D)
+
+
+def exact_sweep_dm(b_values, J, D):
+    """Come exact_sweep, ma con H_dm al posto di H (D12=-D23=D).
+
+    Serve come benchmark per il VQE quando il DM e' acceso (exact_sweep
+    resta la forma chiusa pura, D=0, e non va toccata).
+
+    A differenza del mirror diretto in trimer_ring_exact.py, <Mz> (e gli
+    altri valori di aspettazione) sono mediati sul sottospazio degenere
+    quando presente -- stessa correzione gia' applicata in exact_sweep
+    (D=0) di questo file: a b=0 il fondamentale e' un doppietto di
+    Kramers per QUALUNQUE D (scambio e DM sono entrambi T-pari), quindi
+    un singolo autovettore di np.linalg.eigh sarebbe una scelta di base
+    arbitraria all'interno del doppietto.
+
+    NOTA: con D!=0, S13^2 non e' piu' un numero quantico buono in senso
+    stretto (S13^2 resta conservato dal DM, ma l'incrocio B->A mescola
+    stati con lo STESSO S13^2 -- vedi commento sopra dm_term) -- gs_S13sq
+    resta comunque un valore di aspettativa utile per vedere quanto il
+    fondamentale vero si allontana dal carattere di blocco puro.
+    """
+    Mz = magnetization_operator().to_matrix()
+    S13sq = S13_squared_operator().to_matrix()
+    Stotsq = S_total_squared_operator().to_matrix()
+
+    energies, gs_energy, gs_state = [], [], []
+    gs_mz, gs_S13sq, gs_Stotsq = [], [], []
+
+    for b in b_values:
+        H = trimer_hamiltonian_dm(J, b, D).to_matrix()
+        w, v = np.linalg.eigh(H)
+        degenerate = np.abs(w - w[0]) < 1e-9
+        V0 = v[:, degenerate]
+        deg = V0.shape[1]
+        P0 = V0 @ V0.conj().T
+        g = v[:, 0]  # un rappresentante, riportato per compatibilita'/ispezione
+        energies.append(w)
+        gs_energy.append(w[0])
+        gs_state.append(g)
+        gs_mz.append(np.real(np.trace(P0 @ Mz)) / deg)
+        gs_S13sq.append(np.real(np.trace(P0 @ S13sq)) / deg)
+        gs_Stotsq.append(np.real(np.trace(P0 @ Stotsq)) / deg)
+
+    return {
+        "b": np.asarray(b_values),
+        "energies": np.asarray(energies),
+        "gs_energy": np.asarray(gs_energy),
+        "gs_state": np.asarray(gs_state),
+        "gs_mz": np.asarray(gs_mz),
+        "gs_S13sq": np.asarray(gs_S13sq),
+        "gs_Stotsq": np.asarray(gs_Stotsq),
+    }
+
+
+def ground_state_projector_dm(J, b, D, tol=1e-9):
+    """Come ground_state_projector, ma con H_dm al posto di H."""
+    H = trimer_hamiltonian_dm(J, b, D).to_matrix()
+    w, v = np.linalg.eigh(H)
+    degenerate = np.abs(w - w[0]) < tol
+    V0 = v[:, degenerate]
+    return V0 @ V0.conj().T, w[0], int(degenerate.sum())
+
+
+def dm_min_gap(J, D, search_half_width=None):
+    """Gap VERO fra i due autovalori piu' bassi: minimo su un INTORNO di b_c.
+
+    Due errori metodologici da evitare, entrambi documentati per l'anello
+    in analisi_dm_trimero_anello.tex (sez. "Il controllo corretto" e sez.
+    "Una seconda trappola") e verificati esplicitamente anche per la
+    catena in analisi_dm_trimero_catena.tex:
+
+    1. NON calcolare il gap a b_c fisso: il punto di incrocio si sposta
+       quando il DM e' acceso (qui pero' di pochissimo, vedi nota sotto),
+       e un gap positivo misurato nel punto sbagliato non dice nulla
+       sull'apertura reale.
+
+    2. NON estendere la ricerca a tutto l'asse b, in particolare fino a
+       b=0: a campo nullo H e' invariante per inversione temporale
+       (scambio e DM sono entrambi T-pari; solo lo Zeeman e' T-dispari) e
+       con un numero DISPARI di spin-1/2 il teorema di Kramers impone che
+       ogni livello sia almeno doppiamente degenere. Il minimo cadrebbe
+       sempre a b=0 con valore zero, per QUALUNQUE D, mascherando
+       completamente l'apertura del gap all'incrocio.
+
+    Nota specifica alla catena: qui il punto critico si sposta molto meno
+    che nell'anello (b_min va da 3.0000007 a 3.0196 per D fino a 0.5,
+    contro 2.40->2.43 dell'anello Opzione B), perche' il DM accoppia
+    direttamente i due stati quasi-degeneri senza spostare al primo
+    ordine i rami stessi -- verificato numericamente in
+    analisi_dm_trimero_catena.tex.
+    """
+    from scipy.optimize import minimize_scalar
+
+    bc = critical_field(J)
+    if bc is None:
+        raise ValueError("critical_field(J) e' None per J<=0: nessun incrocio")
+    if search_half_width is None:
+        search_half_width = max(1.0, abs(bc) * 0.6)
+
+    def gap_func(b):
+        H = trimer_hamiltonian_dm(J, b, D).to_matrix()
+        w = np.linalg.eigvalsh(H)
+        return w[1] - w[0]
+
+    res = minimize_scalar(
+        gap_func, bounds=(max(0.0, bc - search_half_width), bc + search_half_width),
+        method="bounded", options={"xatol": 1e-12},
+    )
+    return res.fun, res.x
+
 
 
 # ----------------------------------------------------------------------
@@ -425,7 +545,7 @@ def _self_test_dm():
     print("=" * 70)
     print("[self-test DM 1] simmetria P13 del termine DM")
     P13 = _P13_matrix()
-    J, D = 1.0, 0.15
+    J_test, D = 1.0, 0.15
 
     H_sym = dm_term(1, 2, D).to_matrix() + dm_term(2, 3, -D).to_matrix()
     H_asym = dm_term(1, 2, D).to_matrix() + dm_term(2, 3, D).to_matrix()  # D12=D23, rompe P13
@@ -438,17 +558,39 @@ def _self_test_dm():
 
     print("[self-test DM 2] conservazione di S13^2 con DM simmetrico")
     S13sq = S13_squared_operator().to_matrix()
-    Jp, bp = 1.0, 2.4
-    H0 = trimer_hamiltonian(Jp, bp).to_matrix()
+    bp = 2.4
+    H0 = trimer_hamiltonian(J_test, bp).to_matrix()
     comm_S13 = np.linalg.norm((H0 + H_sym) @ S13sq - S13sq @ (H0 + H_sym))
     print(f"    ||[H+H_DM,S13^2]|| = {comm_S13:.3e}  (atteso ~0)")
     assert comm_S13 < 1e-10
 
     print("[self-test DM 3] D=0 ripristina l'Hamiltoniana base")
-    diff = (trimer_hamiltonian_dm(Jp, 1.5, 0.0).to_matrix()
-            - trimer_hamiltonian(Jp, 1.5).to_matrix())
+    diff = (trimer_hamiltonian_dm(J_test, 1.5, 0.0).to_matrix()
+            - trimer_hamiltonian(J_test, 1.5).to_matrix())
     print(f"    max|H_dm(D=0) - H_base| = {np.max(np.abs(diff)):.3e}")
     assert np.max(np.abs(diff)) < 1e-14
+
+    print("[self-test DM 4] exact_sweep_dm e ground_state_projector_dm coerenti")
+    max_err_coerenza = 0.0
+    for b_test, D_test in [(1.0, 0.1), (3.0, 0.15), (3.0, 0.5)]:
+        res = exact_sweep_dm(np.array([b_test]), J_test, D_test)
+        _, E0_proj, deg = ground_state_projector_dm(J_test, b_test, D_test)
+        max_err_coeranza_b = abs(res["gs_energy"][0] - E0_proj)
+        max_err_coerenza = max(max_err_coeranza_b, max_err_coeranza_b)
+        print(f"    (b,D)=({b_test},{D_test}): E0 sweep={res['gs_energy'][0]:.10f}  "
+              f"E0 projector={E0_proj:.10f}  deg={deg}  "
+              f"|diff|={max_err_coeranza_b:.3e}")
+    assert max_err_coeranza_b < 1e-10, "sweep e projector devono dare la stessa energia"
+
+    print("[self-test DM 5] dm_min_gap: gap lineare in D, pendenza 2*sqrt(6)")
+    attesa = 2 * np.sqrt(6)
+    for D_test in [0.009, 0.05, 0.148]:
+        gm, bm = dm_min_gap(J_test, D_test)
+        ratio = gm / D_test
+        print(f"    D={D_test:.3f}: g_min={gm:.6f}  b_min={bm:.6f}  "
+              f"g_min/D={ratio:.4f}  (atteso ~{attesa:.4f})")
+        assert abs(ratio - attesa) / attesa < 0.01, \
+            "pendenza g_min/D deve avvicinarsi a 2*sqrt(6) per D piccolo"
 
     print("=" * 70)
     print("[self-test DM] TUTTI I TEST SUPERATI")

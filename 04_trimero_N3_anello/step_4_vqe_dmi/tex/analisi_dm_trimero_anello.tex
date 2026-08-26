@@ -10,6 +10,9 @@
 \usepackage{xcolor}
 \usepackage{fancyhdr}
 \usepackage{enumitem}
+\usepackage{amsthm}
+\theoremstyle{remark}
+\newtheorem*{osservazionekramers}{Osservazione}
 
 \newcommand{\ket}[1]{\lvert #1\rangle}
 \newcommand{\vs}[1]{\mathbf{s}_{#1}}
@@ -175,15 +178,24 @@ in un punto che non è più il vero punto critico non dice nulla sull'apertura
 dell'incrocio — dice solo che le due curve, spostato il punto di confronto, non sono
 più esattamente sovrapposte lì.
 
-\subsection{Il controllo corretto: minimizzare il gap su tutto $b$}
+\subsection{Il controllo corretto: minimizzare il gap in un intorno di $b_c$}
 
-Il controllo corretto è cercare, per ciascun valore del parametro DM, il \emph{minimo
-assoluto} del gap su tutto l'asse $b$ (non il valore a $b=2.4$ fisso), usando
-un'ottimizzazione numerica di precisione:
+Il controllo corretto è cercare, per ciascun valore del parametro DM, il \emph{minimo}
+del gap al variare di $b$ (non il valore a $b=2.4$ fisso), usando un'ottimizzazione
+numerica di precisione:
 \[
-g_\text{min}(D) = \min_b\ \big[E_1(b;D) - E_0(b;D)\big].
+g_\text{min}(D) = \min_{b\,\in\,\mathcal{I}}\ \big[E_1(b;D) - E_0(b;D)\big],
+\qquad \mathcal{I} = [\,b_c - w,\ b_c + w\,],
 \]
+dove $\mathcal{I}$ è un intorno del campo critico e non l'intero asse $b$. La
+restrizione \textbf{non} è una comodità numerica: è necessaria, e il motivo —
+insieme a cosa succede se la si dimentica — è l'oggetto della
+sez.~\ref{sec:kramers}. Nel codice (\texttt{dm\_min\_gap} in
+\texttt{trimer\_ring\_exact.py}) la semiampiezza è
+$w=\max(1,\,0.6\,|b_c|)=1.44$, cioè $\mathcal{I}=[0.96,\,3.84]$; i valori della
+tabella qui sotto sono stati calcolati così.
 
+\label{sec:gmin-tabella}
 \begin{center}
 \renewcommand{\arraystretch}{1.3}
 \begin{tabular}{ccccc}
@@ -216,6 +228,108 @@ parametro DM — la curva verde (Opzione A) resta a zero, la rossa (Opzione B) c
 linearmente. In basso a destra: zoom sul punto critico di ciascuna opzione — le curve
 verdi si toccano, le rosse si respingono visibilmente.}
 \end{center}
+
+\subsection{Una seconda trappola: la degenerazione di Kramers a campo nullo}
+\label{sec:kramers}
+
+La prescrizione ``minimo su tutto l'asse $b$'', presa alla lettera, è
+\emph{sbagliata} — e in un modo che distrugge la conclusione di questo documento
+invece di indebolirla soltanto. Applicandola su $b\in[0,6]$ si ottiene:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{ccccc}
+\toprule
+parametro & Opzione A: $\min_{[0,6]}$ & a $b=$ & Opzione B: $\min_{[0,6]}$ & a $b=$ \\
+\midrule
+$0.009$ & $1.8\times10^{-15}$ & $0.000$ & $1.8\times10^{-15}$ & $0.000$ \\
+$0.148$ & $0.0$               & $0.000$ & $4.4\times10^{-16}$ & $0.000$ \\
+$0.300$ & $2.2\times10^{-15}$ & $0.000$ & $0.0$               & $0.000$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent
+Entrambe le opzioni darebbero gap \emph{esattamente nullo}: la distinzione fra A e
+B — cioè il risultato centrale del documento — sparirebbe del tutto. Il minimo
+non cade mai vicino a $b_c$: cade sempre a $b=0$.
+
+\subsubsection*{Perché: il teorema di Kramers}
+
+A $b=0$ l'Hamiltoniana è invariante per inversione temporale. L'operatore di
+inversione temporale per tre spin-$1/2$ è antiunitario,
+\[
+T = (i\sigma_y)^{\otimes 3}\,K,
+\]
+con $K$ la coniugazione complessa in base computazionale. Sotto $T$ gli operatori
+di spin sono \emph{dispari}, $T\,\mathbf s_i\,T^{-1}=-\mathbf s_i$, quindi:
+\begin{itemize}[leftmargin=1.4em]
+\item lo scambio $\mathbf s_i\!\cdot\!\mathbf s_j$ è \textbf{pari} (due fattori
+dispari);
+\item il termine DM $\vec D_{ij}\!\cdot\!(\mathbf s_i\times\mathbf s_j)$ è
+anch'esso \textbf{pari}, per la stessa ragione — \emph{qualunque} sia
+$\vec D_{ij}$, e quindi sia per l'Opzione A sia per l'Opzione B;
+\item il termine Zeeman $b\sum_i s_i^z$ è \textbf{dispari}.
+\end{itemize}
+Dunque $[T,H]=0$ se e solo se $b=0$. Poiché il numero di spin-$1/2$ è dispari, lo
+spin totale è semi-intero e $T^2=-\mathbb{I}$: il teorema di Kramers impone allora
+che \emph{ogni} livello sia almeno doppiamente degenere a campo nullo. Il partner
+$T\ket\psi$ ha la stessa energia di $\ket\psi$ ed è a esso ortogonale.
+
+\begin{osservazionekramers}
+Questa degenerazione non ha nulla a che vedere con l'incrocio a $b_c$ e
+\textbf{non è apribile da alcun termine DM}, per quanto intenso: il DM è $T$-pari
+per costruzione. Misurarla e chiamarla ``gap vero'' è un errore categoriale — si
+sta misurando una degenerazione protetta da una simmetria diversa, in un punto
+del diagramma che non c'entra con la fisica dell'incrocio.
+\end{osservazionekramers}
+
+\subsubsection*{Verifica numerica}
+
+Costruito $T$ esplicitamente come matrice $8\times8$ e verificato (le righe a
+$b=0$ sono state controllate per $D=0,\,0.15,\,0.5,\,1.3$, con risultato
+identico in tutti i casi):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\small
+\begin{tabular}{@{}lcl@{}}
+\toprule
+controllo & risultato & atteso \\
+\midrule
+$\|U_T U_T^\dagger-\mathbb{I}\|$ & $0.0$ & $0$ (unitaria) \\
+$\|T^2+\mathbb{I}\|$ & $0.0$ & $0$: $T^2=-\mathbb{I}$, spin semi-intero \\
+$\|THT^{-1}-H\|$ a $b=0$, Opz.\ A & $0.0$ & $0$: $T$-pari, $\forall D$ \\
+$\|THT^{-1}-H\|$ a $b=0$, Opz.\ B & $0.0$ & $0$: $T$-pari, $\forall D$ \\
+$\|THT^{-1}-H\|$ a $b=2.4$, $D=0.15$ & $14.4$ & $\neq0$: Zeeman $T$-dispari \\
+$\|THT^{-1}-H\|$ a $b=0.5$, $D=0$ & $3.0$ & $\neq0$ \\
+scarto nei 4 doppietti a $b=0$ & $\leq2.7{\times}10^{-15}$ & $0$ (Kramers) \\
+$|\langle\psi|T\psi\rangle|$, livelli $0,2,4,6$ & $0.0$ & $0$: partner ortogonale \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsubsection*{Generalità}
+
+L'argomento non usa nulla della topologia ad anello: vale per \emph{qualunque}
+numero dispari di spin-$1/2$ con scambio, DM e campo. In particolare vale
+identicamente per la catena aperta, dove è stato riverificato con gli stessi
+controlli (stessi valori a precisione macchina). Ogni volta che si cerca un gap
+minimo in funzione del campo su un sistema a spin semi-intero, il punto $b=0$ va
+escluso per costruzione.
+
+\begin{osservazionekramers}
+\textbf{Nota storica sulla stesura.} I numeri della tabella di
+sez.~\ref{sec:gmin-tabella} sono sempre stati corretti, perché il codice
+(\texttt{dm\_min\_gap}) ha sempre usato una finestra attorno a $b_c$. Era la
+\emph{prosa} a descrivere una ricetta diversa da quella effettivamente eseguita.
+L'incoerenza è emersa quando la ricetta scritta è stata riapplicata alla catena
+aperta, dove il modulo non disponeva ancora di una funzione con finestra: il
+risultato è stato $g_\text{min}=0$ per ogni $D$, apparentemente ``il DM non apre
+l'incrocio'', conclusione falsa. Il caso è tenuto qui perché è il secondo errore
+metodologico di questo stesso documento e ha la stessa forma del primo: un
+numero calcolato nel punto sbagliato del diagramma.
+\end{osservazionekramers}
 
 \section{Perché succede: la regola di non-incrocio}
 
@@ -268,10 +382,15 @@ una ragione di simmetria esatta, non per una coincidenza numerica.
 \item Il prezzo dell'Opzione B è la perdita completa della struttura a blocchi:
 serve la diagonalizzazione $8\times8$ piena, non c'è più alcuna riduzione algebrica
 disponibile.
-\item Il controllo del gap va sempre fatto cercando il minimo assoluto su tutto
-l'intervallo di campo, mai a un valore di campo fissato a priori — il punto critico
-può spostarsi, e un valore di gap positivo calcolato nel punto sbagliato è privo di
-significato fisico.
+\item Il controllo del gap va sempre fatto cercando il minimo \emph{in un intorno
+del campo critico}, mai a un valore di campo fissato a priori — il punto critico può
+spostarsi, e un valore di gap positivo calcolato nel punto sbagliato è privo di
+significato fisico. L'intorno, però, non va allargato fino a $b=0$: lì la
+degenerazione di Kramers (sez.~\ref{sec:kramers}) impone gap nullo per costruzione,
+per qualunque forma e intensità del DM, e includerla annullerebbe la distinzione fra
+le due opzioni. Le due trappole sono simmetriche: la prima misura il gap in un punto
+che non è più critico, la seconda in un punto dove il gap è protetto da un'altra
+simmetria.
 \item La spiegazione ultima è la regola di non-incrocio di von Neumann--Wigner
 applicata a $\mathbf S_{12}^2$: un termine che preserva un numero quantico non può mai
 aprire un incrocio fra stati che quel numero quantico distingue, indipendentemente

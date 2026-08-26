@@ -45,12 +45,19 @@ fondamentale a basso campo è \textbf{sempre} il blocco $B$ (mai serve scegliere
 $B$ e $C$ come nell'anello, dato che $E_B=-4J<E_C=0$ indipendentemente da $J$): una
 semplificazione reale rispetto all'anello, non solo una topologia più povera.
 
-\textbf{Verifiche.} Otto self-test base più tre self-test DM, identici nello schema a
-quelli dell'anello. Rieseguiti in questa sessione (versione più recente, caricata con
-le funzioni DM già integrate): tutti superati a precisione macchina, incluso il
-self-test aggiuntivo di coerenza fra \texttt{exact\_sweep\_dm} e
-\texttt{ground\_state\_projector\_dm} (assente nella prima versione del file
-disponibile a inizio sessione, poi sostituita da quella più recente e corretta).
+\textbf{Verifiche.} Otto self-test base più cinque self-test DM. \textbf{Correzione
+rispetto alla versione precedente di questo documento}: qui si affermava erroneamente
+che il self-test di coerenza fra \texttt{exact\_sweep\_dm} e
+\texttt{ground\_state\_projector\_dm} fosse già presente — non lo era, le due funzioni
+non esistevano affatto nel modulo a inizio Fase 5 (il file conteneva solo
+\texttt{dm\_term} e \texttt{trimer\_hamiltonian\_dm}, esplicitamente etichettate
+``struttura disponibile, non usata''). Le due funzioni, più \texttt{dm\_min\_gap}
+(mirror di quella dell'anello, con la stessa finestra $[b_c-w,b_c+w]$ per evitare sia
+il gap a $b_c$ fisso sia la degenerazione di Kramers a $b=0$ — si veda
+\texttt{analisi\_dm\_trimero\_anello.tex}, sez.\ Kramers), sono state aggiunte in
+questa fase. I due self-test aggiuntivi (coerenza sweep/projector; linearità
+$g_\text{min}(D)=2\sqrt6\,D$) sono stati eseguiti per la prima volta ora, non
+``rieseguiti'': tutti e tredici i self-test sono superati a precisione macchina.
 
 \textbf{Conclusione.} Stesso livello di maturità e affidabilità del modulo
 dell'anello.
@@ -81,11 +88,31 @@ forma già validata per dimero e anello.
 \item \texttt{trimer\_hamiltonian\_dm(J,\ b,\ D)} — l'Hamiltoniana con il termine
 DM simmetrico sotto $P_{13}$ ($D_{12}=-D_{23}=D$ — unica opzione simmetrica, per
 costruzione, a differenza dell'anello dove esistono due opzioni A/B da confrontare).
+\textbf{Attenzione}: l'analogia strutturale con l'Opzione A dell'anello (entrambe
+conservano $S_{13}^2$/$S_{12}^2$ esattamente) \emph{non} implica lo stesso esito —
+l'Opzione A dell'anello non apre mai il gap (incrocio $C\to A$, settori $S_{12}$
+diversi), mentre qui il gap si apre (incrocio $B\to A$, \emph{stesso} settore
+$S_{13}=1$): si veda \texttt{analisi\_dm\_trimero\_catena.tex}.
+\item \texttt{exact\_sweep\_dm(b\_values,\ J,\ D)} — come \texttt{exact\_sweep} ma con
+$H_\text{DM}$ acceso; media sul sottospazio degenere per $\langle M_z\rangle$ e gli
+altri valori di aspettazione (necessaria: a $b=0$ il fondamentale è un doppietto di
+Kramers per \emph{qualunque} $D$, si veda oltre).
+\item \texttt{ground\_state\_projector\_dm(J,\ b,\ D,\ tol)} — come
+\texttt{ground\_state\_projector} ma con $H_\text{DM}$ acceso.
+\item {\sloppy\texttt{dm\_min\_gap(J,\ D,\ search\_half\_width)} — il gap vero
+$g_\text{min}(D)=\min_{b\in[b_c-w,b_c+w]}[E_1(b;D)-E_0(b;D)]$ (formula ristretta a un
+intorno di $b_c$, non a tutto l'asse $b$), per evitare sia l'artefatto del gap a
+$b_c$ fisso sia la degenerazione di Kramers a $b=0$: a $b=0$ e per qualunque $D$ si
+avrebbe $g_\text{min}=0$, mascherando l'intero effetto — si veda
+\texttt{analisi\_dm\_trimero\_anello.tex}, sez.\ ``Una seconda trappola''.\par}
 \item \texttt{\_P13\_matrix()} — la matrice $8\times8$ dello scambio dei qubit 1 e
 3 (registro fisico, Famiglia 1).
 \item \texttt{\_self\_test()} — gli otto self-test base.
-\item \texttt{\_self\_test\_dm()} — verifica la simmetria $P_{13}$ del termine DM
-simmetrico e la sua rottura nel caso non simmetrico.
+\item \texttt{\_self\_test\_dm()} — cinque self-test: simmetria $P_{13}$ del termine
+DM e sua rottura nel caso non simmetrico; conservazione di $S_{13}^2$; $D=0$
+ripristina l'Hamiltoniana base; coerenza fra \texttt{exact\_sweep\_dm} e
+\texttt{ground\_state\_projector\_dm}; linearità di $g_\text{min}(D)$ con pendenza
+$2\sqrt6\approx4.899$.
 \end{itemize}
 
 \textbf{Come si usa.} Come libreria: \texttt{from trimer\_chain\_exact import

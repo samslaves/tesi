@@ -2741,3 +2741,243 @@ il file). Non è un errore da correggere al prossimo controllo MD5.
 l'MD5 di riferimento per `quantum_simulation_trimero_catena_trotter.ipynb`
 nel Project è `46e4edf398d009b591dd0108253ad548` (output puliti), non
 `de616b6c63ae0f9e810dde256d60cc6b`.
+
+## Aggiornamento — Correlatori dinamici per la catena aperta: mirror completo dell'anello
+
+Ultimo filone aperto per chiudere $N=3$ (vedi aggiornamento precedente). Prodotti in
+sessione tutti i file mirror della fase già chiusa per l'anello. **Non ancora
+caricati nel Project**: MD5 e righe qui sotto sono calcolati sui file come
+prodotti in sessione, da verificare di nuovo una volta caricati.
+
+### Teoria: `simmetrie_correlatori_trimero_catena.tex`
+
+| file | MD5 | righe |
+|---|---|---|
+| `simmetrie_correlatori_trimero_catena.tex` | `fc083dbdbe71a60f67671e1ed1698d9a` | 508 |
+
+Derivata da zero, non ricopiata dall'anello. Simmetria residua $P_{13}$ (riflessione
+siti 1,3, sito 2 fisso): a differenza di $U_\text{anello}=\mathrm{SWAP}_{12}\cdot
+(R_z(\pi))^{\otimes3}$, qui basta lo **scambio puro**, $\lambda_\alpha\equiv+1$ per
+ogni $\alpha$ — verificato $\|[P_{13},H]\|=0$ esatto, rotto nettamente col segno DM
+sbagliato. Conseguenza qualitativa (non solo quantitativa): $P_{13}$ produce **solo
+uguaglianze** fra correlatori ($C_{11}\equiv C_{33}$ etc.), **mai zeri** — il sito
+fisso non è protetto, a differenza del sito 3 dell'anello (4 zeri strutturali).
+Time-reversal: 24 zeri a $t=0$ per $i\neq j$ (stessa dimostrazione dell'anello) + 6
+zeri aggiuntivi per $i=j$ ($C_{ii}^{xz},C_{ii}^{zx}$), argomento distinto
+($\langle\sigma_i^y\rangle=0$ per stato reale). Caso $D=0$: regola di selezione su
+$M$, 36 zeri per ogni $t$, distrutti tutti dal DM.
+
+**Tre giri di audit indipendenti, ciascuno con correzioni reali** (non solo
+conferme):
+1. Errore di conteggio nel corollario delle relazioni $P_{13}$ (72 correlatori in 36
+   coppie, non "36 correlatori accoppiati" come scritto la prima volta) + due lacune:
+   caso $D=0$ mai trattato nella prima stesura (poi aggiunta Sez. 5 con verifica su 5
+   punti casuali, sempre 36/36 esatti) e degenerazione del punto di lavoro a $D=0$
+   mai dichiarata ($b=b_c$ con $D=0$ è level crossing esatto, il DM apre il gap).
+2. Collisione di notazione: $\eta_\alpha$ usato con due significati diversi in due
+   lemmi distinti (parità sotto $K$ vs autovalore sotto $P_{13}$) — rinominato
+   $\lambda_\alpha$ per $P_{13}$, con nota esplicita di disambiguazione.
+3. Claim comparativo verso l'anello **errato**: si affermava che il conteggio zeri
+   a DM acceso "restava 4" anche a $D=0$ per l'anello — falso, verificato che
+   l'anello ha **56** zeri a $D=0$ (36 dalla regola $M$ + 20 dal sito 3), non 4.
+   Quadro corretto: $56\to4$ per l'anello, $36\to0$ per la catena. **Nota per
+   l'anello**: la scoperta dei 56 zeri a $D=0$ (di cui 20 spiegati da $S^2$ totale
+   conservato, verificato $\|[S^2,H]\|=0$ a $D=0$) non tocca alcun risultato già
+   scritto per l'anello (mai testato $D=0$ in quella fase) — lasciata solo annotata
+   in chat, **non** applicata ai documenti dell'anello su richiesta esplicita.
+
+Compilato due volte, zero errori, zero overfull/underfull, 7 pagine, verificate
+visivamente pagina per pagina a ogni giro di correzione.
+
+### Circuito, VQE, validazioni
+
+| file | MD5 | righe |
+|---|---|---|
+| `circuito_correlazioni_trimero_catena.py` | `22ba6618e2c5d0cf49bd731d13fe6724` | 142 |
+| `vqe_w2qC_k2_trimero_catena.py` | `9dcbb0c343187d93fd2631cf1a092727` | 144 |
+| `validate_circuito_correlazioni_catena.py` | `47c64c9c40f6ecdd16e3ad97071f1dfb` | 108 |
+| `validate_vqe_circuito_correlazioni_catena.py` | `c0db95d6115930bd72e336dd90d60371` | 60 |
+| `w2qC_k2_params_vqedm.npz` | `c247ab520c24db2bd4146a8a3e86ecc2` | — |
+| `w2qC_k2_params_S0.npz` | `3890aaf4462686af491a5926a179f44c` | — |
+
+Mirror di `circuito_correlazioni_trimero_anello.py` + `vqe_w2q6_trimero_anello.py`,
+riusando `trotter_trimero_catena.py` come $U(t)$. **A differenza dell'anello**:
+lavorato fin dall'inizio su **due** punti di lavoro (VQE-DM $J{=}1,b_c{=}3.0,D{=}0.15$;
+S0 Trotter $J{=}1,b{=}3.0073414,D{=}0.3$), non uno solo — scelta definitiva ancora da
+concordare col relatore. Ansatz `W-2qC.K2` (10 parametri, 2 cicli) ottimizzato a
+entrambi i punti, 60 restart per cautela (stesso motivo già documentato per $b_c$
+nella fase VQE-DM): $\mathcal F=1.000000000000$ (VQE-DM), $\mathcal F=0.999999999999992$
+(S0).
+
+**Verifica mirata sul mapping sito↔qubit**: con lo stato fondamentale (autostato di
+$P_{13}$) un mapping invertito sarebbe stato invisibile a ogni altro test. Rifatto con
+stato iniziale **casuale, esplicitamente asimmetrico** sotto $P_{13}$
+($\|P_{13}\psi-\psi\|=1.21$), tutte le 81 combinazioni, $N=50\to800$: errore scala
+$O(1/N)$ (rapporto $\to2.00$), nessun bias residuo — mapping corretto anche in
+condizioni che ne avrebbero rivelato l'errore.
+
+Pipeline VQE→correlazioni chiusa: errore massimo $5.9\times10^{-8}$ (VQE-DM) e
+$9.8\times10^{-8}$ (S0), entrambi coerenti con $\sqrt{1-\mathcal F}$.
+
+### Scan81 e shot noise
+
+| file | MD5 | righe |
+|---|---|---|
+| `scan81_trimero_catena.py` | `df25d335cdb90645604222dee892cde3` | 159 |
+| `generate_figure_scan81_catena.py` | `6dd0b29ba12c6193ddd3c1db1dd84b84` | 52 |
+| `validate_shot_noise_trimero_catena.py` | `896e60f105ff4c2c1cf5f16a2db25ddd` | 126 |
+| `generate_figure_shotnoise_catena.py` | `31fb09915ff59462dda8553c4df36673` | 36 |
+
+Mirror di `scan81_trimero_anello.py` + `validate_shot_noise_trimero_anello.py`, con
+argomento da riga di comando (`vqedm`/`s0`) per selezionare il punto — differenza
+strutturale dall'anello, dichiarata nei manuali d'uso. Nessuna delle 81 combinazioni
+collassa a zero in nessuno dei due punti (coerente con la teoria). Rapporto
+statistico/Trotter: $\sim10\times$ a VQE-DM, $\sim115\times$ a S0 (su $C_{11}^{zz}$).
+
+### Quattro notebook, eseguiti per intero
+
+| file | MD5 | righe(nb) |
+|---|---|---|
+| `correlazioni_trimero_catena_simmetria.ipynb` | `f1cf21666ba1a21b916134f70af91a8b` | 530 |
+| `correlazioni_trimero_catena_esplorazione.ipynb` | `4b4bba1a8029a8940470d8978a4f6ffe` | 456 |
+| `circuito_correlazioni_trimero_catena_tutte.ipynb` | `62f6c90578081b7e229f9824c95118c8` | 667 |
+| `circuito_correlazioni_trimero_catena_vqe.ipynb` | `45d73b421cd39f199688ad4007450b09` | 464 |
+
+Eseguiti via `nbclient`, zero errori; tutti i numeri stampati verificati coincidere
+con quelli degli script standalone dove sovrapposti (es. residuo VQE
+$1.89\times10^{-8}$ identico in notebook e script).
+
+**Correzione reale trovata durante l'ispezione** (non alla prima stesura): il terzo
+notebook (`_tutte.ipynb`) plottava solo la parte reale nella griglia $9\times9$
+temporale, senza motivo dichiarato — a differenza del notebook dell'anello, che
+mostra sempre Re e Im. Corretto (Re verde, Im viola, mirror esatto); aggiunta anche
+una verifica esplicita, prima assente, che nessun correlatore della catena sia
+quasi-costante (escursione minima $0.196$, contro $\sim0.0005$ di $C_{33}^{zz}$
+nell'anello) — emersa da una domanda mirata, non dalla prima stesura. Rieseguito
+per intero dopo la correzione.
+
+### Documento pedagogico, figure, manuali, raccolta
+
+| file | MD5 | righe |
+|---|---|---|
+| `circuito_correlazioni_trimero_catena_spiegato.tex` | `5b181f49910d8550e0250eaf8edbc42b` | 518 |
+| `generate_circuit_fig_trimero_catena.py` | `2cdec49468453960ede52ac78ec8df2b` | 57 |
+| `generate_figures_circuito_trimero_catena.py` | `2dcb41442a57a6dd40185ea91d46d783` | 118 |
+| `manuale_uso_correlazioni_trimero_catena_statevector.tex` | `c0e07cc07078edf1fc25e50e9730a053` | 168 |
+| `manuale_uso_correlazioni_trimero_catena_vqe.tex` | `ce5995a44240afec8e9b6095a348dfe4` | 164 |
+| `trimero_catena_correlazioni.tex` | `1c24172add9963cf931197bd6e613bca` | 241 |
+
+Mirror di `circuito_correlazioni_trimero_anello_spiegato.tex` — non copia: Sez. 2
+ribaltata (mostra perché il sito fisso **non** produce zeri, con figura di
+contrasto $C_{22}^{xz}(t)$); Sez. 6 aggiunge una novità assente nell'anello
+(opzione `alternate`, guadagno non monotono in $D$ e $N$, negativo a $N$ piccolo
+con $D\neq0$).
+
+**Due correzioni reali trovate durante la stesura/revisione**:
+1. Tabella "$U$ controllato" lasciata inizialmente come placeholder ("altra
+   quantità, non riportata") — calcolati i valori effettivi
+   ($-0.3965+0.4358i$ a $t=1.3$) invece di lasciare il rattoppo.
+2. `fig_validazione_trimero_catena.png` generata ma **mai inclusa** nel documento
+   (mancava l'`\includegraphics`) — trovato grazie a una domanda diretta
+   ("quali immagini vanno allo stesso livello dei tex?"), corretto inserendola in
+   Sez. 8 dopo la tabella di validazione, come nell'anello.
+
+**Spiegazione aggiunta su richiesta**: perché l'errore di Trotter in
+Fig. 3 non giace sulla retta $1/N$ tratteggiata — la retta è ancorata al primo
+punto ($N=10$), non è l'asintoto vero; fit indipendente
+$\text{errore}\approx a/N+b/N^2$ con $a=4.60\times10^{-2}$, $b=-0.258$: il termine
+subleading (segno negativo) sottrae dall'errore leading-order a $N$ piccolo,
+facendo apparire il punto di ancoraggio più basso del vero asintoto.
+
+Compilato più volte nel corso delle correzioni, zero errori, un solo underfull
+cosmetico residuo (badness 1038, stessa soglia già accettata nei documenti
+dell'anello). 10 pagine, verificate visivamente pagina per pagina a ogni giro.
+
+Manuali d'uso compilati (3 pagine ciascuno): dichiarano esplicitamente la
+differenza strutturale dei due punti di lavoro rispetto all'anello (uno script,
+`validate_circuito_correlazioni_catena.py`, esegue entrambi i punti in automatico;
+altri richiedono l'argomento da riga di comando) — verificata contro il
+comportamento reale di ciascuno script prima di scriverla, non assunta.
+
+### Immagini generate ma non incluse nel documento pedagogico (scelta di scope, non omissione)
+
+`fig_scan81_trimero_catena_S0.png` e `fig_shot_trimero_catena_S0.png`: generate,
+ma il documento mostra solo le figure al punto VQE-DM (i numeri di S0 sono in
+tabella, le figure no). Non ancora deciso se aggiungerle.
+
+### Stato
+
+Fase correlatori dinamici chiusa per **entrambe** le topologie di $N=3$ (anello e
+catena). Unico filone rimasto per l'intero progetto $N=3$: Parte 2 (rumore,
+Kraus/Lindblad, Qiskit Aer). Aperto: scelta definitiva del punto di lavoro per la
+catena (VQE-DM vs S0) col relatore; eventuale aggiunta delle due figure S0 mancanti
+al documento pedagogico.
+
+## Aggiornamento — Due relazioni per il relatore (catena): correlazioni e VQE
+
+Su richiesta esplicita, prodotte le due relazioni per il relatore mirror dirette
+di `relazione_correlazioni_trimero_anello.docx` e `relazione_vqe_trimero_anello.docx`
+(lette entrambe, insieme a `relazione_correlazioni.docx` e
+`relazione_test_parametri.docx`, per fissare formato/font/profondità prima di
+scrivere: Times New Roman, corpo 11pt giustificato, nessuna intestazione, prosa in
+prima persona rivolta al relatore con "Lei", figure con didascalia in corsivo 9.5pt
+centrata, tabelle a bordo singolo con intestazione ombreggiata E8E8E8, chiusura
+sempre su una domanda aperta). Le relazioni sono un genere a parte dalla
+documentazione tecnica (`.tex`) prodotta finora in questa fase — risultati e
+narrazione in prima persona, non derivazione completa; i dettagli restano nei
+documenti tecnici già citati.
+
+**File prodotti** (non ancora caricati nel Project):
+
+| file | note |
+|---|---|
+| `relazione_correlazioni_trimero_catena.docx` | mirror di `relazione_correlazioni_trimero_anello.docx` |
+| `relazione_vqe_trimero_catena.docx` | mirror di `relazione_vqe_trimero_anello.docx` |
+| `generate_figures_relazione_catena.py` | genera le 5 figure della prima relazione |
+
+### `relazione_correlazioni_trimero_catena.docx`
+
+Racconta in prima persona la sequenza già stabilita nella fase tecnica: le 81
+combinazioni (spiegato perché il conteggio non dipende dai legami ma dai siti),
+la scoperta di $P_{13}$ come scambio puro — narrata come "mi aspettavo di dover
+ripetere la costruzione dell'anello (SWAP+$R_z(\pi)$ su tutti e tre), ho trovato
+che basta lo scambio semplice" — con un diagramma schematico a due pannelli
+disegnato appositamente nello stesso stile dei diagrammi SWAP/$R_z$ già usati per
+anello e dimero. Conseguenza opposta sul sito fisso (nessuno zero, non quattro
+come nell'anello), illustrata su $C_{22}^{xz}(t)$ (zero puntuale a $t=0$ per un
+motivo diverso — $\langle\sigma^y\rangle=0$ per stato reale — poi crescita rapida).
+Due heatmap delle 81 combinazioni ($t=1.3$ e $t=2.7$) per escludere che l'assenza
+di zeri sia una coincidenza dell'istante. Chiusura con la domanda già aperta nella
+documentazione tecnica: quale dei due punti di lavoro (VQE-DM o S0) adottare in
+via definitiva.
+
+**Bug trovato e corretto durante la stesura**: la prima versione del generatore
+perdeva silenziosamente tutto il testo nei segmenti corsivo+pedice/apice
+combinati (funzione di estrazione testo incompleta) — pedici e apici sparivano
+del tutto invece di essere semplicemente non formattati. Trovato confrontando il
+rendering con l'atteso, corretto, rigenerato, verificato pagina per pagina (4
+pagine) che ogni formula fosse leggibile.
+
+### `relazione_vqe_trimero_catena.docx`
+
+Riprende i numeri già stabiliti in `trimero_catena_vqe_dm.tex` (non ricalcolati,
+solo verificati e citati): a differenza dell'anello, un solo giro di blocchi $W$
+non basta per la catena (tetto $0.9937$, contro $0.9626$ di RBS a un giro,
+confermato su tre seed indipendenti) — servono due giri completi
+("W-2qC.K2", 10 parametri) per $\mathcal F=1$ esatto, sia con $W$ sia con RBS.
+Confronto costo in gate (19 contro 39 gate totali, stessa direzione già vista
+nell'anello). Circuito dell'ansatz disegnato con i 10 parametri ottimali
+sostituiti (Qiskit, non schema a mano). Risultati di ottimizzazione riportati su
+entrambi i punti di lavoro (VQE-DM $\mathcal F=1.000000000000$; S0
+$\mathcal F=0.999999999999992$). Chiusura con una domanda che riprende
+letteralmente il suggerimento già lasciato in `trimero_catena_vqe_dm.tex`
+("punto da segnalare esplicitamente nella stesura finale"): se raccontare insieme
+al contributo RBS-vs-$W$ anche il fatto che la topologia cambia *quanti giri*
+servono, non solo *quale blocco* conviene.
+
+### Stato
+
+Entrambe le relazioni pronte per l'invio. Nessuna nuova analisi tecnica: solo
+distillazione narrativa di risultati già stabiliti e verificati nelle fasi
+precedenti. Prossimo passo, se confermato dal relatore: adottare un punto di
+lavoro unico per la catena; altrimenti Parte 2 resta l'unico filone aperto.

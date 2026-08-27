@@ -2485,3 +2485,178 @@ famiglie $W$-2q mostrano una lieve degradazione liscia e monotona sotto $b_c$
 ($0.9714\to0.9661$ per `W-2q.8`), non rumore — stessa direzione del limite più
 severo di RBS-2q ma più mite. Segnalata nel `.tex` aggiornato, non richiede
 correzione né cambia le conclusioni.
+
+## Aggiornamento — Trotter per la catena aperta: derivazione dei livelli, note metodologiche
+
+### 📐 Convenzione di norma matriciale — dichiarata esplicitamente
+
+Ovunque nel progetto, `||M||` è la **norma di Frobenius**, cioè
+`numpy.linalg.norm(M)` **senza** argomento `ord`. È la convenzione già in uso di
+fatto in tutti i self-test di `trotter_trimero_anello.py`, `trimer_ring_exact.py` e
+`trimer_chain_exact.py`, ma non era mai stata scritta da nessuna parte: Samuele ha
+dovuto dedurla per tentativi nel riprodurre i valori di questa sessione. Da ora è
+dichiarata in testa a `trotter_trimero_catena.py` e va dichiarata in ogni nuovo
+documento che riporti norme numeriche. I valori riportati nel log **non** sono
+confrontabili con una norma spettrale.
+
+### ⚠️ Nota metodologica — non-sequitur nella docstring di `trotter_trimero_anello.py` (NESSUNA MODIFICA APPLICATA)
+
+La docstring di `trotter_trimero_anello.py` giustifica il Trotter esterno dicendo che
+l'errore è dovuto *solo* a $[S_z^{tot},H_{DM}]\neq0$ perché «$H_{ex}$ non contribuisce
+all'errore esterno, commutando esattamente col campo».
+
+**È un non-sequitur.** $[H_{ex},S_z^{tot}]=0$ e $[H_{ex},H_{DM}]=0$ sono condizioni
+logicamente indipendenti: la prima non implica la seconda. Misura sulla catena a
+$J=1$, $b=0.7$, $D=0.3$ (Frobenius):
+
+| commutatore | norma |
+|---|---|
+| $\|[H_{ex},H_{DM}]\|$ | $10.182338$ |
+| $\|[S_z^{tot},H_{DM}]\|$ | $3.394113$ |
+
+$H_{ex}$ è il contributo **dominante** al mancato annullamento — circa il triplo del
+campo — non trascurabile come la frase suggerisce. Verificato indipendentemente da
+Samuele in chat parallela, con coincidenza esatta delle cifre.
+
+**Stato: nessuna correzione applicata, per decisione esplicita.** Il filone anello è
+chiuso e `trotter_trimero_anello.py` **non è stato toccato**. L'implementazione
+dell'anello resta corretta: applica tre blocchi annidati in sequenza, non uno
+splitting a due blocchi con $H_0$ trattato come esatto contro $H_{DM}$. È soltanto la
+frase esplicativa a essere sbagliata. **Da non ricopiare** nella documentazione della
+catena né altrove.
+
+### Trotter catena — struttura a tre livelli, derivata da zero
+
+**Livello 0 (esatto).** $e^{-i\tau(bS_z^{tot}+H_{ex})} = e^{-i\tau bS_z^{tot}}e^{-i\tau H_{ex}}$
+**perché** $[S_z^{tot},H_{ex}]=0$ — verificato bond per bond, $\|[S_z^{tot},h_{12}]\| =
+\|[S_z^{tot},h_{23}]\| = 0$ esatto. La proprietà si ferma alla coppia (campo, scambio) e
+**non si estende a $H_{DM}$**.
+
+**Livello 1.** Identità esatta (residuo $0.0$, non $10^{-16}$):
+$$[\vec\sigma_1\!\cdot\!\vec\sigma_2,\ \vec\sigma_2\!\cdot\!\vec\sigma_3] = -2i\chi,
+\qquad \chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$$
+Con i bond applicati nell'ordine $(1,2)\to(2,3)$ (ordine del circuito):
+$$e^{-i\tau Jh_{23}}e^{-i\tau Jh_{12}} = \exp\!\big[-i\tau(H_{ex}+\tau J^2\chi)+O(\tau^3)\big]$$
+**Il segno dipende dall'ordine dei bond**: misurato $s=+1.000$ per $(1,2)\to(2,3)$ e
+$s=-1.000$ per l'ordine invertito. Confronto con l'anello (dal log, non riverificato
+qui): stessa forma con $J'^2\to J^2$, ma qui senza cancellazioni — c'è un solo
+commutatore, non tre.
+
+**Livello 2.** $[d_{12},-d_{23}] = -2i\Theta$ con $\Theta = X_1Y_2Z_3 - Z_1Y_2X_3$
+(residuo $0.0$; decomposizione Pauli a due sole label). $\Theta$ è hermitiano e
+**dispari** sotto $P_{13}$. **Non** è proporzionale a $\chi$: livelli 1 e 2 generano
+strutture d'errore indipendenti, il livello 2 non è assorbibile in una ridefinizione
+del livello 1.
+
+### 🔍 Scoperta metodologica — `|000>` è cieco all'errore di livello 1
+
+$|000\rangle$ è autostato di **ogni bond separatamente**: $h_{ij}|00\rangle = +|00\rangle$
+(verificato, $\|h_{12}|000\rangle - |000\rangle\| = 0$). Tutti i fattori Trotter di
+$H_{ex}$ agiscono su di esso come semplici fasi e commutano fra loro. Conseguenza: un
+test di convergenza su $|000\rangle$ a $D=0$ dà infedeltà $\sim10^{-14}$ per
+**qualunque** $N$ — è un test vuoto.
+
+`trotter_trimero_anello.py` usa `PSI0 = |000>` nel suo self-test di convergenza: quel
+test misura quindi il solo errore DM, non il livello 1. **Non corretto** (anello
+chiuso), ma **non replicato**: i self-test della catena usano $|010\rangle$ e uno stato
+random.
+
+### 💡 Alternanza dell'ordine dei bond — risultato originale
+
+Poiché il termine chirale cambia segno con l'ordine dei bond, alternare
+$(1,2)\to(2,3)$ e $(2,3)\to(1,2)$ su passi consecutivi lo cancella al leading order,
+**a parità esatta di gate** (nessun costo aggiuntivo). Misure su stato random, $t=2$:
+
+| regime | fisso | alternato | guadagno a $N=80$ |
+|---|---|---|---|
+| $D=0$ | $O(1/N^2)$, rapporto $\times4.0$ | $O(1/N^4)$, rapporto $\times16.0$ | $34.5\times$, crescente come $N^2$ |
+| $D=0.3$ | $O(1/N^2)$, $\times4.0$ | rapporto degrada $\times9.9\to\times5.1$ | $5.7\times$, in saturazione |
+
+**Lettura onesta**: il guadagno di un ordine intero vale **solo** per il livello 1
+isolato. Con DM acceso l'alternanza cancella il termine chirale ma lascia intatti il
+livello 2 e i termini incrociati $H_{ex}/H_{DM}$ e $S_z^{tot}/H_{DM}$, che restano
+$O(1/N^2)$ e tornano a dominare per $N$ grande. Il guadagno è reale ma parziale e
+satura. Da non spacciare come risultato generale.
+
+Rilevanza per la Parte 2: stesso numero di canali di rumore, meno passi per una data
+accuratezza — vantaggio massimo nel regime a DM debole.
+
+### File prodotto
+
+`trotter_trimero_catena.py` (nuovo). Sette self-test, tutti superati. Convenzioni
+dichiarate in testa, incluse le tre differenze da `trotter_trimero_anello.py`:
+due bond invece di tre, un solo $J$, e soprattutto **$D$ assoluto** ($D_{12}=+D$,
+$D_{23}=-D$) e non scalato per l'accoppiamento del bond come nell'anello
+($D_{ij}=D\cdot J_{ij}$) — usare la convenzione dell'anello qui farebbe divergere
+circuito e benchmark esatto di un fattore $J$.
+
+### Aperto
+
+Le tre domande di verifica poste a Samuele su $\chi$ (valore di attesa nel
+fondamentale esatto; in che senso Trotter «accende» la chiralità; quale osservabile
+usare per diagnosticare l'errore Trotter separandolo dalla decoerenza in Parte 2)
+restano **senza risposta**. La terza è candidata a nota metodologica nella tesi.
+
+## Aggiornamento — Documentazione e notebook Trotter catena (parallelo all'anello)
+
+### File nuovi
+
+| file | MD5 | righe |
+|---|---|---|
+| `trotter_trimero_catena.py` | `d866617bfa1e56327fb20f61f6b13f07` | 336 |
+| `trimero_catena_quantum_simulation.tex` | `3ccb914d8e9d7e7b870655db5169ad00` | 208 |
+| `quantum_simulation_trimero_catena_trotter.ipynb` | `b53cd62809debbf360917c00936eb32f` | — |
+
+`trotter_trimero_catena.py` invariato rispetto alla versione già registrata in
+questa sessione (stesso MD5): nessuna modifica al codice, solo aggiunta di
+documentazione e notebook attorno ad esso.
+
+### Punto di lavoro $S_0$ — trovato per scansione, provvisorio
+
+Stesso criterio dell'anello: cercare più modi spettrali di ampiezza comparabile
+nella decomposizione di Bohr di $\langle S_z^{tot}\rangle(t)$. Scansione attorno al
+campo critico $b_c=3J$ (crossing esatto senza DM, teorema di Kramers): a $b=b_c$
+fisso il rapporto $a_2/a_1\to1$ per ogni $D$ testato, ma il gap vero va cercato sul
+minimo effettivo (funzione `dm_min_gap` di `trimer_chain_exact.py`), non su $b_c$
+fisso — stesso errore metodologico già documentato per l'anello.
+
+**Adottato**: $J=1$, $D=0.3$, $b=3.0073414$ (minimo vero del gap), gap
+$=1.468777$. Due modi dominanti quasi degeneri in ampiezza ($a\approx2.0$, gap
+$0.847$ e $1.469$): $\langle S_z^{tot}\rangle(t)$ mostra un battimento di periodo
+$\approx10.1$, non un singolo coseno. **Provvisorio**, stesso status di $R_0$ per
+l'anello — nessuna conferma del relatore.
+
+### Convergenza a $S_0$ — riconferma su punto fisico, non solo su parametri casuali
+
+Verificata su $|010\rangle$, $t=20$: infedeltà fissa $6.32\times10^{-6}$ a
+$N=8000$ (scaling pulito $O(1/N^2)$); infedeltà alternata $2.51\times10^{-7}$,
+guadagno $25.2\times$ ma rapporto ancora in crescita ($\times5.08$ all'ultimo
+raddoppio, non $\times16$) — conferma su un punto fisico reale, non solo su
+parametri casuali, che l'alternanza satura in presenza di DM (già registrato
+nell'aggiornamento precedente).
+
+### Documentazione compilata e verificata
+
+`trimero_catena_quantum_simulation.tex`: due passate `pdflatex`, un solo overfull
+residuo di $1.4$pt (invisibile, non corretto perché irrilevante). Corretto un
+overfull iniziale di $26$pt (nome di funzione lungo senza `seqsplit`) e uno di
+$7$pt (tabella troppo larga, ridotta con `\small`). **Errore trovato e corretto
+durante la verifica**: tre riferimenti `\ref{sec:...}` a sezioni `\section*`
+(non numerate) restituivano un riferimento vuoto in stampa — sostituiti con
+richiami testuali diretti al titolo della sezione. Verificato pagina per pagina
+(3 pagine): nessun testo sovrapposto a elementi grafici, nessun riferimento
+vuoto residuo.
+
+### Notebook
+
+`quantum_simulation_trimero_catena_trotter.ipynb`: eseguito per intero via
+`jupyter nbconvert --execute`, zero errori. Contiene self-test del modulo,
+ricerca del punto $S_0$, traiettoria esatta, convergenza fisso/alternato,
+disegno del circuito (21 gate nativi per un passo a $S_0$).
+
+### Stato
+
+Fase Trotter per la catena aperta chiusa a un livello di completezza analogo
+all'anello: codice, teoria derivata da zero (non ricopiata), notebook eseguito,
+documentazione compilata e verificata pagina per pagina. Prossimo passo:
+Fase 5 (VQE+DM) per la catena e correlatori dinamici (`domande_relatore.md`).

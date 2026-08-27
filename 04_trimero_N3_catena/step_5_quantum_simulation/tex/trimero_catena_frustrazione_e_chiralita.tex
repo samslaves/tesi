@@ -1,0 +1,262 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Chiralità senza frustrazione nel trimero a catena aperta}
+
+\title{\vspace{-1.5em}\color{inkblue}Perché l'operatore di chiralità compare anche senza ciclo chiuso\\[0.1em]\Large\normalfont\color{softgray}La catena aperta non è frustrata e non ha stati chirali: eppure $\chi$ governa l'errore di Trotter}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Seguito naturale di \texttt{trimero\_anello\_frustrazione\_e\_chiralita.pdf},
+che separava frustrazione energetica e non-commutatività algebrica per
+l'anello. La catena aperta porta la stessa distinzione a un caso limite
+istruttivo: \textbf{qui non c'è né ciclo né frustrazione}, eppure
+l'operatore di chiralità $\chi=\vec\sigma_1\cdot(\vec\sigma_2\times\vec\sigma_3)$
+compare identico nell'errore di Trotter (Sezione~4 di
+\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_teoria.tex}}). Questo
+documento spiega perché non è una contraddizione, e generalizza la
+distinzione già fatta per l'anello.
+
+\section{La catena non è frustrata: nessuna domanda da porsi}
+
+\subsection{Il fatto combinatorio, stavolta banale}
+
+\texttt{\seqsplit{trimer\_chain\_exact.py}} lo dichiara esplicitamente in
+apertura: con soli due legami $(1,2)$ e $(2,3)$ e nessun $(3,1)$, la catena
+non è un ciclo. Per $J>0$ (antiferromagnetico) esiste una configurazione
+che soddisfa \emph{entrambi} i legami simultaneamente (spin alternati
+$\uparrow\downarrow\uparrow$): \textbf{nessuna frustrazione}, per lo stesso
+motivo per cui una catena bipartita non è mai frustrata. La domanda che
+apriva la Sezione~2 del documento dell'anello (esiste una configurazione
+che soddisfi tutti i legami?) qui ha risposta affermativa immediata, non
+richiede la decomposizione di Kambe per essere posta.
+
+\subsection{Conseguenza sullo spettro esatto}
+
+Coerente con l'assenza di frustrazione, lo spettro esatto della catena
+(\texttt{\seqsplit{trimer\_chain\_exact.py}}, decomposizione di Kambe sulla
+coppia non legata $(1,3)$) non ha l'analogo della degenerazione a 4 dimensioni
+dell'anello equilatero: i tre multipletti $A',B',C'$ hanno energie
+$E_{A'}=2J$, $E_{B'}=-4J$, $E_{C'}=0$, distinte per ogni $J\neq0$ -- nessun
+punto di coincidenza accidentale da cui potrebbe emergere una fisica
+chirale nel senso di Wen--Wilczek--Zee (rottura spontanea di parità e
+inversione temporale in un sottospazio degenere). \textbf{La domanda "il
+fondamentale è chirale o reale?" non si pone nemmeno}: non c'è degenerazione
+in cui porla.
+
+\section{Eppure $\chi$ compare identico nell'errore di Trotter}
+
+\subsection{L'identità è puramente algebrica, non geometrica}
+
+L'identità derivata in
+\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_teoria.tex}} (Sezione~4),
+\begin{equation}
+[\vec\sigma_1\cdot\vec\sigma_2,\,\vec\sigma_2\cdot\vec\sigma_3] = -2i\,\chi,
+\end{equation}
+è un fatto sugli operatori di Pauli dei qubit 1,2,3 quando due legami
+condividono il qubit 2 -- \textbf{esattamente la stessa identità dell'anello},
+derivata con lo stesso calcolo, parola per parola. Non contiene alcuna
+informazione sulla topologia del sistema (se esista o meno un terzo legame
+$(3,1)$): è vera per due operatori $\vec\sigma_1\!\cdot\!\vec\sigma_2$ e
+$\vec\sigma_2\!\cdot\!\vec\sigma_3$ presi da soli, indipendentemente da
+cos'altro c'è nell'Hamiltoniana.
+
+\begin{keyeq}
+\centering
+L'operatore di chiralità $\chi$ nasce dalla condivisione di un qubit fra
+due legami di scambio, punto. Non richiede un ciclo chiuso, non richiede
+frustrazione, non richiede degenerazione: la catena aperta -- priva di
+tutte e tre -- lo mostra nella stessa forma esatta dell'anello.
+\end{keyeq}
+
+\subsection{Generalizzazione della distinzione già fatta per l'anello}
+
+Il documento dell'anello separava due domande: frustrazione (sullo stato
+fondamentale) e non-commutatività (sugli operatori). La catena mostra che
+la seconda è \emph{più} generale di quanto quel documento potesse
+suggerire: non solo non richiede l'equilatero ($J=J'$), come già stabilito
+là, ma non richiede nemmeno l'esistenza di un ciclo. Le due proprietà sono
+completamente indipendenti l'una dall'altra, non solo distinte:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{4.6cm}p{5.1cm}p{5.1cm}@{}}
+\toprule
+& \textbf{Anello (isoscele)} & \textbf{Catena aperta} \\
+\midrule
+Ciclo chiuso & sì (3 legami) & no (2 legami) \\
+Frustrazione & sì (ciclo dispari, $J,J'{>}0$) & no (bipartita) \\
+Degenerazione accidentale & solo all'equilatero $J{=}J'$ & mai, per nessun $J$ \\
+Stati chirali possibili & sì, ma solo all'equilatero (non il punto di lavoro) & mai \\
+$[\vec\sigma_i\!\cdot\!\vec\sigma_j,\vec\sigma_j\!\cdot\!\vec\sigma_k]=-2i\chi$ & sì & sì, identica \\
+$\chi$ compare nell'errore Trotter & sì ($i\tau^2J'^2\chi$) & sì ($i\tau^2J^2\chi$) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Perché non è una contraddizione: dove vive $\chi$}
+
+\subsection{$\langle\chi\rangle=0$ su ogni stato reale, sempre}
+
+$\chi$ contiene, in ciascuno dei suoi tre addendi $\sigma_1^a\sigma_2^b\sigma_3^c$
+($a,b,c$ permutazione di $x,y,z$), \textbf{esattamente un fattore $Y$} (matrice
+immaginaria pura) e due fattori fra $X,Z$ (matrici reali): ogni addendo è
+quindi $i\times(\text{matrice reale})$, e la somma è $\chi=iA$ con $A$
+reale. Poiché $\chi$ è hermitiano (verificato,
+$\|\chi-\chi^\dagger\|=0$), $A$ è necessariamente \textbf{antisimmetrico}
+($iA=(iA)^\dagger=-iA^T\Rightarrow A^T=-A$) -- verificato numericamente,
+$\|A+A^T\|=0$ esatto. Lo stesso vale per l'analogo operatore $\Theta$ del
+livello 2 (Sezione~6 della teoria): $\Theta=iB$, $B$ reale antisimmetrico.
+
+L'Hamiltoniana della catena, DM incluso, è una \textbf{matrice reale} in
+base computazionale: $X,Z$ sono reali, e $Y\otimes Y$ (nel termine di
+scambio) è reale (il prodotto di due fattori immaginari); il termine DM
+$X_iZ_j-Z_iX_j$ è reale. Verificato numericamente ($\|{\rm Im}(H)\|=0$ per
+parametri casuali, con o senza DM). Per un'Hamiltoniana reale simmetrica,
+ogni autospazio ammette una base di autovettori \textbf{reali}. Per un
+vettore reale $v$ e una matrice reale antisimmetrica $A$:
+\begin{equation}
+v^TAv = (v^TAv)^T = v^TA^Tv = -v^TAv \;\Longrightarrow\; v^TAv=0,
+\end{equation}
+quindi $\langle v|\chi|v\rangle = i\,v^TAv = 0$ \textbf{esattamente}, per
+\emph{qualunque} autostato reale di \emph{qualunque} Hamiltoniana reale
+simmetrica -- indipendentemente da topologia, frustrazione, degenerazione,
+o dal valore di $D$. Verificato numericamente sul fondamentale della
+catena in quattro punti diversi (incluso $S_0$): $\langle\chi\rangle$ e
+$\langle\Theta\rangle$ nulli entro $10^{-16}$.
+
+\begin{okbox}{La risposta alla domanda aperta}
+$\chi$ non compare "nello stato": è invisibile in ogni autostato fisico
+del sistema, chiuso o aperto che sia. Compare \textbf{nel generatore
+dell'errore di Trotter}, cioè nella differenza fra due unitarie vicine ma
+distinte ($e^{-iH_{ex}\tau}$ e $V_{ex}(\tau)$) -- un oggetto che vive
+nello spazio degli \emph{operatori}, non in quello degli stati. Un
+operatore può benissimo avere aspettazione nulla su ogni autostato del
+sistema e nondimeno generare una rotazione osservabile quando applicato a
+una sovrapposizione di autostati con fasi relative diverse (esattamente
+ciò che l'evoluzione temporale, esatta o approssimata, fa).
+\end{okbox}
+
+\subsection{Cosa cambierebbe con un ciclo}
+
+Se si richiudesse il ciclo (aggiungendo il legame $(3,1)$, tornando
+all'anello), l'unica cosa che cambierebbe è che ci sarebbero \emph{tre}
+commutatori invece di uno, e la loro somma pesata potrebbe collassare
+(caso isoscele) o non collassare a un singolo multiplo di $\chi$: un fatto
+che riguarda \emph{quanti} termini $\chi$-simili contribuiscono e con che
+peso, non se $\chi$ sia osservabile nel fondamentale -- quella proprietà
+($\langle\chi\rangle=0$ su stati reali) non dipende in alcun modo dal
+numero di legami, per l'argomento generale sopra.
+
+\section{Riepilogo}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item La catena aperta non è frustrata (bipartita, nessun ciclo dispari) e
+non ha alcun regime di degenerazione accidentale in cui porsi la domanda
+di uno stato fondamentale chirale.
+\item Ciò nonostante, l'identità algebrica
+$[\vec\sigma_1\!\cdot\!\vec\sigma_2,\vec\sigma_2\!\cdot\!\vec\sigma_3]=-2i\chi$
+vale identica: nasce dalla condivisione di un qubit fra due legami, non
+da un ciclo chiuso.
+\item $\chi$ (e l'analogo $\Theta$ per il DM) hanno aspettazione
+\textbf{esattamente nulla} su ogni autostato reale di ogni Hamiltoniana
+reale simmetrica -- dimostrato in generale ($\chi=iA$, $A$ antisimmetrico
+reale $\Rightarrow v^TAv=0$), verificato numericamente sulla catena in
+quattro punti.
+\item La distinzione frustrazione/non-commutatività, introdotta per
+l'anello richiedendo solo che l'equilatero non fosse necessario, si
+generalizza qui a un'indipendenza completa: la catena, priva di ciclo,
+frustrazione \emph{e} degenerazione, mostra comunque l'identico fenomeno
+algebrico.
+\end{enumerate}
+
+\begin{editnote}
+In una parola: la chiralità di spin fisica (stato fondamentale con
+$\langle\chi\rangle\neq0$, rottura di $P$ e $T$) e l'operatore di
+chiralità come oggetto algebrico che genera l'errore di Trotter sono due
+cose diverse quanto lo erano per l'anello -- ma la catena mostra che sono
+\emph{ancora più} indipendenti di quanto quel documento potesse dire:
+bastano due legami condivisi su un qubit, senza alcun ciclo, perché
+l'algebra emerga.
+\end{editnote}
+
+\end{document}

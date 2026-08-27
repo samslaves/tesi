@@ -43,6 +43,84 @@ due — da cui il risultato originale di questa fase (sez.\ ``Alternanza dell'or
 trovato per scansione (stesso status di $R_0$ per l'anello): non è una derivazione
 fisica principiata, e non è stato confermato dal relatore.
 
+\textbf{Insieme documentale completo di questa fase}, mirror diretto di
+quello dell'anello: teoria, applicazione, notebook spiegato, nota
+concettuale su frustrazione/chiralità, circuito compatto, il modulo di
+codice e il notebook di lavoro -- sei documenti \texttt{.tex} più codice e
+notebook, come per l'anello.
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_teoria.tex}}}
+
+Derivazione teorica completa, mirror di
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_teoria.tex}}: fattorizzazione
+esatta di $H_0$, operatore di chiralità $\chi$ per il livello 1 (un solo
+commutatore, non tre), operatore $\Theta$ per il livello 2, derivazione
+completa della struttura a tre livelli. Include la correzione, scritta da
+zero e non ereditata, del non-sequitur presente nella documentazione
+dell'anello (Sezione~8: $[S_z^{tot},H_{ex}]=0$ non implica
+$[H_{ex},H_{DM}]=0$), e la derivazione del fenomeno originale
+dell'alternanza dell'ordine dei bond (Sezione~10), specifico della
+topologia a due legami.
+
+\textbf{Verifiche.} Ogni identità algebrica verificata numericamente
+(confronto diretto di matrici $8\times8$) prima di essere scritta.
+Compilato, due passate, zero errori.
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_applicazione.tex}}}
+
+Applica la teoria all'implementazione: convenzioni esplicite (differenze
+dall'anello, inclusa la normalizzazione assoluta di $D$), correzione del
+non-sequitur, ricerca del punto $S_0$ (criterio a due indicatori attorno
+al campo critico $b_c=3J$, non su una griglia cieca), scoperta della
+cecità di $\ket{000}$ al livello 1, risultati di convergenza e
+dell'alternanza, riepilogo dello studio di compattezza.
+
+\textbf{Conclusione.} Punto $S_0$ pronto per Parte 2; aperture dichiarate
+per derivazione principiata e correlazioni dinamiche.
+
+\section*{\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_trotter\_spiegato.tex}}}
+
+Documento di accompagnamento al notebook, cella per cella: sette
+self-test spiegati (due in più dell'anello, che riflettono due proprietà
+non previste all'inizio), ricerca del punto di lavoro, convergenza,
+alternanza, circuito.
+
+\textbf{Conclusione.} Pensato per il colloquio col relatore, indipendente
+dagli altri documenti di teoria.
+
+\section*{\texttt{\seqsplit{trimero\_catena\_frustrazione\_e\_chiralita.tex}}}
+
+Nota concettuale che generalizza la distinzione già fatta per l'anello fra
+frustrazione energetica e non-commutatività algebrica. La catena aperta è
+un caso limite istruttivo: \textbf{nessun ciclo, nessuna frustrazione,
+nessuna degenerazione accidentale}, eppure l'identità
+$[\vec\sigma_1\!\cdot\!\vec\sigma_2,\vec\sigma_2\!\cdot\!\vec\sigma_3]=-2i\chi$
+vale identica. Dimostra in generale (non solo verifica a numeri) che
+$\langle\chi\rangle=0$ su ogni autostato reale di ogni Hamiltoniana reale
+simmetrica: $\chi=iA$ con $A$ reale antisimmetrico, quindi $v^TAv=0$ per
+ogni $v$ reale. Risponde così a una domanda aperta di una sessione
+precedente (dove vive $\chi$ se non nel fondamentale).
+
+\textbf{Verifiche.} Dimostrazione algebrica generale, poi verificata
+numericamente su quattro punti diversi (incluso $S_0$): $\langle\chi\rangle$
+e $\langle\Theta\rangle$ nulli entro $10^{-16}$. Compilato, zero errori.
+
+\textbf{Conclusione.} La chiralità come oggetto algebrico (genera l'errore
+di Trotter) e la chiralità fisica (stato fondamentale con
+$\langle\chi\rangle\neq0$) restano due cose diverse, ancora più indipendenti
+di quanto il documento dell'anello potesse suggerire.
+
+\section*{\texttt{\seqsplit{trimero\_catena\_circuito\_compatto.tex}}}
+
+Ripete per la catena lo studio già fatto per anello e dimero: un singolo
+passo (10 gate nativi a $S_0$) si comprime a 19 CNOT; il prodotto a $N$
+passi si comprime a $\sim19$ CNOT indipendentemente da $N$ (verificato
+fino a $N=100$). Conclusione invariata: non usare il compresso per lo
+studio Trotter-vs-rumore della Parte 2.
+
+\textbf{Verifiche.} Fedeltà verificata a precisione macchina fra
+circuito esplicito e compresso, ogni $N$ testato. Compilato, zero errori.
+
 \section*{\texttt{\seqsplit{trotter\_trimero\_catena.py}}}
 
 Modulo di produzione: costruisce il circuito Trotter (Qiskit 2.x) per la catena

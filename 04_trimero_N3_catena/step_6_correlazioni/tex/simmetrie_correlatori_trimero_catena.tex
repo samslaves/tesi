@@ -1,0 +1,508 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,amsthm}
+\usepackage{mathtools}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{enumitem}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{seqsplit}
+\usepackage{xcolor}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true, linkcolor=blue!50!black, citecolor=blue!50!black, urlcolor=blue!50!black}
+
+\newtheorem{lemma}{Lemma}
+\newtheorem{proposizione}{Proposizione}
+\newtheorem{corollario}{Corollario}
+\newtheorem{osservazione}{Osservazione}
+\newtheorem*{definizione}{Definizione}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Simmetrie residue e annullamento strutturale dei correlatori\\
+dinamici $\langle\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\rangle$\\[2pt]
+\large nel trimero a catena aperta con interazione DM}
+\author{Note preparatorie -- tesi triennale in Fisica (UniPR)\\
+Relatore: Prof.\ Alessandro Chiesa}
+\date{\today}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent
+Mirror, per la topologia a catena aperta ($N=3$, due legami), dell'analisi già svolta per
+l'anello isoscele in \texttt{\seqsplit{simmetrie\_correlatori\_trimero\_anello.tex}}: prima di
+implementare il circuito con qubit ausiliario (Hadamard test) per le correlazioni dinamiche
+$\langle\psi_0|\sigma_i^\alpha(t)\,\sigma_j^\beta(0)|\psi_0\rangle$, si stabilisce per via
+classica (simmetrie dell'Hamiltoniana e diagonalizzazione esatta) quali combinazioni
+$(i,j,\alpha,\beta)$ sono strutturalmente nulle e quali legate da relazioni esatte. Il risultato è
+\textbf{qualitativamente diverso} da quello dell'anello: la simmetria residua della catena
+($P_{13}$, riflessione attorno al sito centrale) è un puro scambio di siti \emph{senza segno}
+($\lambda_\alpha=+1\ \forall\alpha$, notazione distinta da $\eta_\alpha$ del time-reversal),
+mentre nell'anello lo scambio richiedeva $\eta_x=\eta_y=-1,\eta_z=+1$. Conseguenza: nessuna autocorrelazione del sito fisso è forzata a
+zero per ogni $t$ (a differenza del sito 3 dell'anello) -- $P_{13}$ produce solo uguaglianze
+esatte fra correlatori distinti. Il documento include il controllo classico completo delle 81
+combinazioni, con due metodi indipendenti (esponenziale di matrice diretto e formula spettrale),
+al punto di lavoro VQE-DM già validato ($J{=}1,b{=}b_c{=}3.0,D{=}0.15$).
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Inquadramento e obiettivo}
+% =====================================================================
+
+L'Hamiltoniana di riferimento, convenzione Pauli diretta identica a
+\texttt{trimer\_chain\_exact.py} e \texttt{trotter\_trimero\_catena.py} (soli legami $(1,2)$ e
+$(2,3)$, nessun $(3,1)$; mappa sito$\to$qubit site1$\to$q2, site2$\to$q1, site3$\to$q0), è
+
+\begin{align}
+H &= \underbrace{J\big(\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2
+  + \boldsymbol\sigma_2\!\cdot\!\boldsymbol\sigma_3\big)}_{H_{\mathrm{ex}}}
+  + \underbrace{b\sum_{i=1}^3 Z_i}_{H_Z}
+  + \underbrace{D\,(T_{12}-T_{23})}_{H_{\mathrm{DM}}},\notag\\
+&\qquad\qquad T_{ij}\equiv X_iZ_j-Z_iX_j.
+\label{eq:H}
+\end{align}
+Il segno relativo $D_{12}=-D_{23}=D$ non è una scelta libera come le opzioni A/B dell'anello: è
+l'\emph{unica} combinazione compatibile con la simmetria di riflessione $P_{13}$ (nessun legame
+$(3,1)$ esiste, quindi nessuna combinazione "tipo Opzione B" è definibile), come già stabilito in
+\texttt{\seqsplit{analisi\_dm\_trimero\_catena.tex}} e nel commento di
+\texttt{\seqsplit{trimer\_chain\_exact.py}}.
+
+\textbf{Punto di lavoro.} $J{=}1,\,b{=}b_c{=}3.0,\,D{=}0.15$: il ground state VQE
+(\texttt{W-2qC.K2}, $\mathcal F=1$ esatto a $60$+ restart, cfr.\
+\texttt{\seqsplit{trimero\_catena\_vqe\_dm.tex}}) a questo punto è il candidato di preparazione
+per il circuito delle correlazioni, mirror di come \texttt{W-2q.6} fu adottato per l'anello. Non
+è ancora il punto definitivo per il seguito della fase (Trotter usa un punto diverso, $D=0.3$,
+S0 provvisorio): la scelta finale resta aperta e non è oggetto di questo documento, che
+caratterizza le simmetrie in modo indipendente dal punto di lavoro numerico usato per illustrarle.
+
+\begin{osservazione}[Il punto di lavoro è non degenere \emph{solo} grazie al DM]
+\label{oss:degenerazione}
+A $b=b_c=3.0$ e $D=0$ il fondamentale è \textbf{esattamente degenere} (gap $=0$ a precisione
+macchina, verificato): $b_c$ è per definizione l'incrocio $B'\to A'$, e senza DM l'incrocio è
+vero, non un anticrossing. È il DM ad aprire il gap ($g_{\min}=2\sqrt6\,D$, cfr.\
+\texttt{\seqsplit{analisi\_dm\_trimero\_catena.tex}}), portandolo a $0.7347$ per $D=0.15$. La
+formula è stata riverificata qui in modo indipendente, minimizzando il gap su $b$: il rapporto
+$g_{\min}/(2\sqrt6 D)$ vale $1.0000$ a $D=0.05$ e $0.9994$ a $D=0.3$ -- esatta al leading order
+in $D$, con deviazione crescente per $D$ grande. Il minimo si sposta leggermente con $D$, da
+$b=3.0002$ ($D{=}0.05$) a $b=3.0073$ ($D{=}0.3$); quest'ultimo coincide con il punto $S_0$
+adottato per il Trotter della catena, che risulta quindi essere l'argmin del gap a $D=0.3$
+(collegamento verificato qui, non assunto). Tutte
+le conseguenze della Prop.~\ref{prop:unitaria} (che richiede $|\psi_0\rangle$ \emph{non} degenere)
+valgono quindi a questo punto solo per $D\neq0$. Un secondo punto degenere, indipendente dal DM,
+è $b=0$ (doppietto di Kramers per qualunque $D$, cfr.\ \texttt{\seqsplit{trimer\_chain\_exact.py}},
+\texttt{exact\_sweep\_dm}). Fuori da questi due casi, il fondamentale è non degenere e l'intera
+analisi si applica.
+\end{osservazione}
+
+L'osservabile di interesse resta
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) \equiv \langle\psi_0|\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,|\psi_0\rangle,
+\qquad \sigma_i^\alpha(t)\equiv e^{iHt}\sigma_i^\alpha e^{-iHt},
+\qquad i,j\in\{1,2,3\},\ \alpha,\beta\in\{x,y,z\},
+\label{eq:corr-def}
+\end{equation}
+con $\hbar=1$: $3\times3\times3\times3=81$ combinazioni, come per l'anello (contro le $36$ del
+dimero). Il conteggio dipende solo dal numero di \emph{siti} ($3\times3$ coppie $(i,j)$) e di
+componenti di Pauli ($3\times3$ coppie $(\alpha,\beta)$): è quindi identico per anello e catena,
+pur avendo la catena due legami fisici invece di tre. $C_{ij}^{\alpha\beta}(t)$ resta un
+osservabile ben definito e generalmente non nullo anche quando $i,j$ non sono direttamente
+accoppiati in $H$ (es.\ $C_{13}$: nessun legame $(1,3)$ esiste, ma l'evoluzione $U(t)$ propaga
+comunque la correlazione tramite il sito $2$ intermedio) -- verificato numericamente,
+$C_{13}^{\alpha\beta}$ non è fra le combinazioni più piccole nello scan (Sez.~\ref{sec:numerico}).
+Ciò che \emph{dipende} dalla topologia a due legami non è il numero di correlatori misurabili, ma
+la simmetria residua (Sez.~\ref{sec:P13}) e quindi quali di questi $81$ risultano vincolati.
+
+\textbf{Obiettivo}, identico nella struttura a quello dell'anello: stabilire quali combinazioni
+sono nulle per ogni $t$ (simmetria unitaria residua) o a $t=0$ (time-reversal), e quali relazioni
+esatte legano correlatori distinti -- applicando alla topologia a catena il criterio generale già
+dimostrato per dimero e anello, senza riderivarlo da zero.
+
+% =====================================================================
+\section{Criterio generale (richiamo, dimostrazioni indipendenti da $N$ e dalla topologia)}
+% =====================================================================
+
+Le due proposizioni seguenti sono identiche, nella struttura e nella dimostrazione, alla Sez.~2
+di \texttt{\seqsplit{simmetrie\_correlatori\_trimero\_anello.tex}} (a sua volta mirror del
+dimero): non dipendono dal numero di qubit né dalla topologia dei legami, quindi si applicano qui
+senza modifiche.
+
+\begin{proposizione}[Caso unitario]
+\label{prop:unitaria}
+Sia $U$ unitario con $[U,H]=0$, e $|\psi_0\rangle$ autostato non degenere di $H$, cosicché
+$U|\psi_0\rangle=u_0|\psi_0\rangle$, $|u_0|=1$. Allora per ogni $t$
+\begin{equation}
+C_{AB}(t) = \langle\psi_0|\,\widetilde A(t)\,\widetilde B(0)\,|\psi_0\rangle,
+\qquad \widetilde A\equiv UAU^\dagger,\ \widetilde B\equiv UBU^\dagger.
+\end{equation}
+\end{proposizione}
+
+\begin{corollario}
+\label{cor:zero-unitario}
+Se $\widetilde A=\eta_A A'$, $\widetilde B=\eta_B B'$ con $\eta_A,\eta_B\in\{\pm1\}$: se $A',B'$
+danno lo stesso correlatore $(A,B)$, allora $\eta_A\eta_B=-1\ \Rightarrow\ C_{AB}(t)\equiv0$ per
+ogni $t$; se individuano una coppia \emph{diversa}, si ottiene una relazione esatta fra due
+correlatori distinti.
+\end{corollario}
+
+\begin{lemma}[Coniugazione complessa $K$]
+\label{lem:K}
+$K$ antiunitario, $K\ket{n}=\overline{\ket n}$ in base computazionale. Su un singolo qubit,
+$K\sigma^\alpha K = \eta_\alpha\sigma^\alpha$ con $\eta_x=\eta_z=+1,\ \eta_y=-1$ ($X,Z$ reali,
+$Y$ immaginaria pura).
+\end{lemma}
+
+\begin{proposizione}
+\label{prop:H-reale}
+Se $H$ è reale in base computazionale, $KHK=H$.
+\end{proposizione}
+Verificato numericamente sotto: $\max|\mathrm{Im}\,H|=0$ su 20 punti casuali $(J,b,D)$.
+
+% =====================================================================
+\section{Simmetria di riflessione \texorpdfstring{$P_{13}$}{P13}}
+\label{sec:P13}
+% =====================================================================
+
+\begin{lemma}[$P_{13}$ come SWAP puro]
+\label{lem:P13}
+Sia $P_{13}$ lo scambio (fisico) dei siti 1 e 3, sito 2 fisso -- in termini di qubit,
+$P_{13}=\mathrm{SWAP}(q_0,q_2)$, \textbf{senza} alcuna rotazione locale aggiuntiva. Allora
+\begin{equation}
+[P_{13},H]=0,\qquad P_{13}\,\sigma_i^\alpha\,P_{13}^{-1}=\lambda_\alpha\,\sigma_{\pi(i)}^\alpha,
+\qquad \pi=(1\,3),\qquad \lambda_\alpha\equiv+1\ \ \forall\alpha\in\{x,y,z\}.
+\end{equation}
+(Notazione: $\lambda_\alpha$ per non confondersi col $\eta_\alpha$ del Lemma~\ref{lem:K}, che
+denota una cosa diversa -- la parità sotto coniugazione complessa, non sotto $P_{13}$.)
+\end{lemma}
+\begin{proof}
+$H_Z$ e $H_{\mathrm{ex}}$ sono manifestamente simmetrici sotto lo scambio $1\leftrightarrow3$
+(la somma $J(\boldsymbol\sigma_1\!\cdot\!\boldsymbol\sigma_2+\boldsymbol\sigma_2\!\cdot\!
+\boldsymbol\sigma_3)$ è invariante per costruzione, essendo simmetrica nei due legami). Per
+$H_{\mathrm{DM}}$: sotto $1\leftrightarrow3$, $T_{12}\to T_{32}=-T_{23}$ (uso
+$T_{ij}=-T_{ji}$, antisimmetria manifesta da $X_iZ_j-Z_iX_j$) e $T_{23}\to T_{21}=-T_{12}$,
+quindi $D(T_{12}-T_{23})\to D(-T_{23}+T_{12})=D(T_{12}-T_{23})$: invariante, esattamente perché
+il segno relativo è $-1$ (col segno "sbagliato" $D_{12}=D_{23}$ l'invarianza fallisce, verificato
+numericamente sotto). $P_{13}$ è una permutazione di qubit senza fase: sui singoli Pauli agisce
+come pura permutazione di indice di sito, $\lambda_\alpha=+1$ per ogni $\alpha$ (nessuna delle tre
+componenti acquisisce segno, a differenza della rotazione $R_z(\pi)^{\otimes3}$ necessaria per
+l'anello).
+\end{proof}
+Verificato numericamente: $\max\|[P_{13},H]\|=0$ (precisione macchina) su 20 punti casuali
+$(J,b,D)$; con il segno $D_{12}=D_{23}$ (sbagliato), $\|[P_{13},H]\|\approx3.4$ -- rottura netta,
+non un residuo piccolo, stesso tipo di controllo già fatto per l'anello con $U_\text{naive}$.
+
+\begin{corollario}[Relazioni esatte, nessuno zero forzato]
+\label{cor:P13-relazioni}
+Per ogni $\alpha,\beta,t$:
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) = C_{\pi(i)\pi(j)}^{\alpha\beta}(t),\qquad \pi=(1\,3).
+\end{equation}
+In particolare $C_{11}^{\alpha\beta}\equiv C_{33}^{\alpha\beta}$, $C_{12}^{\alpha\beta}\equiv
+C_{32}^{\alpha\beta}$, $C_{21}^{\alpha\beta}\equiv C_{23}^{\alpha\beta}$,
+$C_{13}^{\alpha\beta}\equiv C_{31}^{\alpha\beta}$ per ogni $t$. Conteggio esatto: delle $9$ coppie
+ordinate $(i,j)$, una sola -- $(2,2)$ -- è fissa sotto $\pi$ (relazione tautologica, nessun
+vincolo), le altre $8$ si accoppiano a due a due. Quindi $8\times9=72$ correlatori sono legati in
+$36$ coppie identiche, più i $9$ di $C_{22}^{\alpha\beta}$ \textbf{senza alcun vincolo di
+simmetria}: $36+9=45$ valori indipendenti determinano tutte le $81$ combinazioni.
+\end{corollario}
+\begin{proof}
+Applicazione diretta di Cor.~\ref{cor:zero-unitario} con $\eta_A=\eta_B=\lambda_\alpha=+1$
+sempre (qui gli $\eta_A,\eta_B$ generici del Cor.~\ref{cor:zero-unitario} coincidono coi
+$\lambda_\alpha$ di questo lemma): essendo $\eta_A\eta_B=+1$ (mai $-1$), non si ottiene
+\emph{mai} l'implicazione di zero, solo la relazione fra correlatori distinti quando $A',B'$
+individuano una coppia diversa da $(A,B)$. Per il sito fisso ($i=j=2$, $\pi(2)=2$): la relazione
+diventa $C_{22}^{\alpha\beta}=C_{22}^{\alpha\beta}$, tautologica -- nessun vincolo. Confronto con
+l'anello (dove il ruolo di $\lambda_\alpha$ è giocato dai coefficienti, diversamente chiamati in
+quel documento, $\eta_x\eta_y=+1$ ma $\eta_x\eta_z=\eta_y\eta_z=-1$): lì il sito fisso (3) aveva
+\emph{quattro} zeri forzati; qui $\lambda_\alpha\lambda_\beta=+1$ sempre, quindi nessuno.
+\end{proof}
+
+\begin{osservazione}
+Questa è la differenza qualitativa centrale rispetto all'anello: lì il sito fisso dello scambio
+produceva zeri strutturali (autocorrelazioni nulle per ogni $t$); qui il sito fisso ($2$) non è
+vincolato affatto. La ragione è nel segno di $\lambda_\alpha$: l'anello richiede
+$U_\text{anello}=\mathrm{SWAP}_{12}\cdot(R_z(\pi))^{\otimes3}$ (una vera rotazione oltre allo
+scambio, che introduce segni relativi non tutti $+1$ sulle tre componenti), mentre qui $P_{13}$ è
+un puro scambio geometrico privo di fase ($\lambda_\alpha\equiv+1$), coerente con l'assenza di
+frustrazione nella catena (nessun ciclo, cfr.\ \texttt{trimer\_chain\_exact.py}).
+\end{osservazione}
+
+% =====================================================================
+\section{Time-reversal \texorpdfstring{$K$}{K}}
+\label{sec:K}
+% =====================================================================
+
+Il Lemma~\ref{lem:K-tempo} e la Proposizione~\ref{prop:K-correlatore} (dimostrati usando solo
+$KHK=H$ e il Lemma~\ref{lem:K}, mai la topologia dei legami) si applicano senza modifiche alla
+catena.
+
+\begin{lemma}
+\label{lem:K-tempo}
+$Ke^{-iHt}K=e^{iHt}$.
+\end{lemma}
+
+\begin{proposizione}
+\label{prop:K-correlatore}
+Con $|\psi_0\rangle$ reale (verificato sotto: $H$ reale simmetrica non degenere al punto di
+lavoro), per ogni $i,j,\alpha,\beta,t$:
+\begin{equation}
+\boxed{\;\overline{C_{ij}^{\alpha\beta}(t)} = \eta_\alpha\eta_\beta\,C_{ij}^{\alpha\beta}(-t)\;}
+\end{equation}
+\end{proposizione}
+
+\begin{corollario}[Zero a $t=0$, siti diversi]
+\label{cor:zero-t0-diff}
+Se $i\neq j$ ed esattamente una fra $\alpha,\beta$ è $y$, allora $C_{ij}^{\alpha\beta}(0)=0$.
+\end{corollario}
+\begin{proof}
+Per $i\neq j$, $\sigma_i^\alpha,\sigma_j^\beta$ commutano (siti diversi) $\Rightarrow$
+$\sigma_i^\alpha\sigma_j^\beta$ è hermitiano $\Rightarrow$ $C_{ij}^{\alpha\beta}(0)$ è reale.
+Prop.~\ref{prop:K-correlatore} a $t=0$: $\overline{C(0)}=\eta_\alpha\eta_\beta C(0)$; con
+$\eta_\alpha\eta_\beta=-1$ (esattamente una $y$) questo forza $C(0)$ puramente immaginario.
+Reale $\cap$ immaginario puro $\Rightarrow$ nullo. Conteggio: $6$ coppie ordinate $(i,j)$ con
+$i\neq j$, $4$ combinazioni di componenti a una sola $y$ ciascuna: $24$ zeri.
+\end{proof}
+
+\begin{corollario}[Zero a $t=0$, stesso sito -- caso non coperto dal Cor.~\ref{cor:zero-t0-diff}]
+\label{cor:zero-t0-same}
+Per $i=j$, $\sigma_i^\alpha\sigma_i^\beta$ ($\alpha\neq\beta$) \textbf{non} è hermitiano in
+generale, quindi l'argomento del Cor.~\ref{cor:zero-t0-diff} non si applica. Si usa invece
+l'algebra di Pauli su un singolo qubit, $\sigma^\alpha\sigma^\beta=i\,\varepsilon_{\alpha\beta
+\gamma}\sigma^\gamma$ per $\alpha\neq\beta$, che a $t=0$ dà esattamente
+\begin{equation}
+C_{ii}^{xy}(0)=i\langle\sigma_i^z\rangle,\qquad
+C_{ii}^{yz}(0)=i\langle\sigma_i^x\rangle,\qquad
+C_{ii}^{xz}(0)=-i\langle\sigma_i^y\rangle,
+\label{eq:same-site-t0}
+\end{equation}
+(e i coniugati per l'ordine scambiato). Per $|\psi_0\rangle$ reale,
+$\langle\psi_0|\sigma_i^y|\psi_0\rangle=0$ per ogni sito $i$ (Lemma~\ref{lem:sigma-y-reale}),
+mentre $\langle\sigma_i^x\rangle,\langle\sigma_i^z\rangle$ non sono vincolati. Segue
+\begin{equation}
+C_{ii}^{xz}(0)=C_{ii}^{zx}(0)=0\qquad\forall i,
+\end{equation}
+mentre $C_{ii}^{xy}(0),\,C_{ii}^{yz}(0)$ restano generalmente non nulli.
+\end{corollario}
+\begin{osservazione}[Dipendenza logica]
+Questo corollario non discende dalla Prop.~\ref{prop:K-correlatore}, ma solo dalla
+\emph{realtà} di $|\psi_0\rangle$ (via Lemma~\ref{lem:sigma-y-reale}) più l'algebra di Pauli. La
+realtà di $|\psi_0\rangle$ è a sua volta conseguenza di $H$ reale, cioè della stessa invarianza
+per time-reversal della Prop.~\ref{prop:H-reale}: il corollario appartiene quindi a questa
+sezione, ma per una via distinta da quella del Cor.~\ref{cor:zero-t0-diff}. Le tre identità
+\eqref{eq:same-site-t0} sono state verificate numericamente elemento per elemento (differenza
+$0$ esatta) contro i valori di aspettazione a un sito, non solo dedotte.
+\end{osservazione}
+
+\begin{lemma}
+\label{lem:sigma-y-reale}
+Per $|\psi_0\rangle$ reale, $\langle\psi_0|\sigma_i^y|\psi_0\rangle=0$ per ogni sito $i$.
+\end{lemma}
+\begin{proof}
+$\sigma^y=iA$ con $A$ reale antisimmetrica ($\sigma^y$ hermitiana e puramente immaginaria).
+Per $v$ reale, $v^\top A v=(v^\top A v)^\top=v^\top A^\top v=-v^\top A v\Rightarrow v^\top Av=0$.
+Quindi $\langle\psi_0|\sigma_i^y|\psi_0\rangle=\psi_0^\top(iA)\psi_0=i\cdot0=0$.
+\end{proof}
+
+\begin{osservazione}
+Il Cor.~\ref{cor:zero-t0-same} non compare nella trattazione dell'anello (dove i quattro zeri del
+sito fisso, validi per \emph{ogni} $t$, includevano già $C_{33}^{xz}=C_{33}^{zx}\equiv0$ per via
+della simmetria unitaria residua, rendendo ridondante -- ma non errato -- lo stesso argomento a
+$t=0$). Qui, non avendo la catena alcuno zero strutturale per il sito fisso (Cor.~\ref{cor:P13-relazioni}),
+questo secondo argomento di time-reversal è l'\emph{unica} fonte di zero per i $C_{ii}^{xz},
+C_{ii}^{zx}$, e vale solo a $t=0$, non per ogni $t$.
+\end{osservazione}
+
+Totale zeri a $t=0$: $24$ (Cor.~\ref{cor:zero-t0-diff}, $i\neq j$) $+$ $6$ (Cor.~\ref{cor:zero-t0-same},
+$3$ siti $\times$ $2$ combinazioni $xz$/$zx$) $=30$.
+
+% =====================================================================
+\section{Il caso \texorpdfstring{$D=0$}{D=0}: conservazione di \texorpdfstring{$M$}{M} e 36 zeri strutturali}
+\label{sec:D0}
+% =====================================================================
+
+Le sezioni precedenti trattano il caso generico $D\neq0$. Per $D=0$ compare una simmetria
+\emph{aggiuntiva}, assente a DM acceso, con conseguenze molto più forti sui correlatori: va
+dichiarata esplicitamente, perché il confronto $D=0$ vs $D\neq0$ è parte del lavoro di tesi e
+un circuito testato a $D=0$ mostrerebbe altrimenti zeri "inspiegati".
+
+\begin{proposizione}[Conservazione di $M$]
+Per $D=0$, $[S_z^{\rm tot},H]=0$ con $S_z^{\rm tot}=\sum_i Z_i$ (verificato:
+$\|[S_z^{\rm tot},H]\|=0$ esattamente a $D=0$, contro $1.70$ a $D=0.15$). Il fondamentale non
+degenere ha quindi $M$ definito.
+\end{proposizione}
+
+\begin{corollario}[Regola di selezione]
+\label{cor:selezione-M}
+Per $D=0$ e $|\psi_0\rangle$ autostato di $S_z^{\rm tot}$:
+\begin{equation}
+C_{ij}^{\alpha\beta}(t)\equiv0\ \ \forall t
+\qquad\Longleftrightarrow\qquad
+\text{esattamente una fra }\alpha,\beta\text{ è }z.
+\end{equation}
+\end{corollario}
+\begin{proof}
+$\sigma^z$ conserva $M$, mentre $\sigma^x,\sigma^y$ sono combinazioni di $\sigma^\pm$ e lo
+cambiano di $\pm1$. Per $D=0$ anche $e^{-iHt}$ conserva $M$. Se esattamente una delle due
+componenti è $z$, il vettore
+$\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,|\psi_0\rangle$
+ha $M$ spostato di $\pm1$ rispetto a $|\psi_0\rangle$, e l'overlap con
+$\langle\psi_0|$ si annulla. Se entrambe le componenti sono $z$, o nessuna lo è, gli
+spostamenti si compensano oppure sono assenti: nessun annullamento forzato.
+\end{proof}
+
+Conteggio: $4$ combinazioni $(\alpha,\beta)$ su $9$ hanno esattamente una $z$
+($xz,zx,yz,zy$), per ciascuna delle $9$ coppie $(i,j)$: $\mathbf{36}$ zeri per ogni $t$.
+\textbf{Verificato numericamente} a $J{=}1,b{=}4,D{=}0$ (punto non degenere) su una griglia di
+$40$ tempi: esattamente $36$ combinazioni nulle, e l'insieme osservato \emph{coincide} con quello
+predetto dal Cor.~\ref{cor:selezione-M} (nessuno zero in più, nessuno in meno).
+
+\begin{osservazione}[Il DM distrugge tutti e 36 gli zeri]
+Accendere il DM rompe $[S_z^{\rm tot},H]=0$ e con esso l'intera regola di selezione: a $D=0.15$
+le combinazioni nulle per ogni $t$ passano da $36$ a $\mathbf 0$ (Sez.~\ref{sec:numerico}).
+Il crollo è \emph{continuo} in $D$, non a scatto: l'ampiezza massima dei $36$ correlatori
+"ex-nulli" cresce monotonicamente con $D$ (ordine $10^{-3}$ a $D=10^{-3}$, ordine $10^{-1}$ a
+$D=0.15$), come atteso per un effetto perturbativo al primo ordine.
+
+\textbf{Confronto con l'anello (verificato, non assunto).} Anche l'anello isoscele ha la stessa
+regola di selezione a $D=0$, con in più zeri di origine diversa: a $J{=}1,J'{=}0.4,b{=}1,D{=}0$
+si contano $56$ zeri, di cui $36$ dalla regola su $M$ e $20$ ulteriori, tutti su coppie che
+coinvolgono il sito apicale $3$. Accendendo il DM ($D=0.15$) l'anello scende a $4$ -- esattamente
+i $C_{33}^{xz},C_{33}^{zx},C_{33}^{yz},C_{33}^{zy}$ predetti in
+\texttt{\seqsplit{simmetrie\_correlatori\_trimero\_anello.tex}} (verificato qui
+indipendentemente: l'insieme osservato coincide con quello predetto). Il quadro corretto è quindi
+$56\to4$ per l'anello e $36\to0$ per la catena: \textbf{entrambe} le topologie perdono quasi tutti
+gli zeri quando si accende il DM, e la specificità della catena non è un crollo "più marcato" in
+valore assoluto (l'anello ne perde $52$, la catena $36$), ma il fatto che il crollo sia
+\textbf{totale} -- la catena non conserva alcuno zero protetto, perché $\lambda_\alpha\equiv+1$
+non ne può forzare nessuno (Cor.~\ref{cor:P13-relazioni}), mentre l'anello ne salva quattro grazie
+ai segni $\eta$ della sua simmetria residua.
+
+Conseguenza pratica per la validazione del circuito: uno scan a $D=0$ e uno a $D\neq0$ hanno
+strutture di zeri completamente diverse, e un test svolto solo a $D=0$ non esercita affatto i
+correlatori misti $z$/$xy$.
+\end{osservazione}
+
+% =====================================================================
+\section{Il controllo classico esatto in autobase}
+% =====================================================================
+
+\begin{proposizione}[Criterio esatto]
+Con $H=\sum_{k=0}^7 E_k\ket k\bra k$, $\ket0\equiv\ket{\psi_0}$:
+\begin{equation}
+C_{ij}^{\alpha\beta}(t)=\sum_{k=0}^7 e^{i(E_0-E_k)t}\,a_k b_k,
+\qquad a_k\equiv\langle\psi_0|\sigma_i^\alpha|k\rangle,\ \ b_k\equiv\langle k|\sigma_j^\beta|\psi_0\rangle,
+\end{equation}
+e $C_{ij}^{\alpha\beta}(t)\equiv0$ per ogni $t$ se e solo se $a_kb_k=0$ per ogni $k$ (spettro non
+degenere).
+\end{proposizione}
+
+% =====================================================================
+\section{Risultati numerici al punto di lavoro}
+\label{sec:numerico}
+% =====================================================================
+
+Punto: $J=1,\,b=b_c=3.0,\,D=0.15$. Diagonalizzazione esatta $8\times8$ (NumPy), fase di
+$\ket{\psi_0}$ fissata reale, due metodi indipendenti per il controllo delle 81 combinazioni:
+(a) esponenziale di matrice diretto ($\texttt{scipy.linalg.expm}$, stesso metodo di validazione
+indipendente usato per l'anello, per non poter reintrodurre la stessa classe di bug del
+"coniugato complesso mancante"), (b) formula spettrale $a_kb_k$ della sezione precedente.
+I due metodi sono stati confrontati \emph{direttamente} fra loro su tutte le $81$ combinazioni a
+quattro tempi ($t=0,\,0.37,\,1.3,\,2.9$): accordo entro $5.5\times10^{-15}$ nel caso peggiore.
+Il confronto incrociato è il controllo che rende le due strade effettivamente indipendenti e non
+solo dichiarate tali.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore \\
+\midrule
+$E_0$ & $-7.369247$ \\
+$E_1-E_0$ (gap, fondamentale non degenere) & $0.734742$ \\
+$\max|\mathrm{Im}\,\psi_0|$ & $0$ (a precisione macchina) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Verifica delle predizioni di simmetria.} Le $36$ relazioni del
+Cor.~\ref{cor:P13-relazioni} verificate elemento per elemento a precisione macchina col metodo
+(a). Per non farne una verifica valida solo al punto illustrativo, il controllo è stato ripetuto
+su $6$ punti $(J,b,D)$ \emph{casuali} (con $J\in[0.3,2]$, $b\in[0.2,4]$, $D\in[-0.6,0.6]$) e
+$3$ tempi ciascuno: $\max|\Delta|=1.8\times10^{-15}$ nel caso peggiore. Analogamente, i $30$
+zeri a $t=0$ (Cor.~\ref{cor:zero-t0-diff} e~\ref{cor:zero-t0-same}) sono stati verificati su $4$
+punti casuali: sempre esattamente $30$ zeri osservati, tutti spiegati, nessuno in più.
+
+\textbf{Scan completo delle 81 combinazioni.} Risultato: \textbf{zero combinazioni nulle per ogni
+$t\neq0$} (a differenza dell'anello, che ne aveva 4) -- coerente con l'assenza di vincolo sul sito
+fisso stabilita nel Cor.~\ref{cor:P13-relazioni}. Stabilito sia col criterio spettrale
+($\max_k|a_kb_k|>10^{-9}$ per tutte e 81) sia, indipendentemente, verificando
+$\max_t|C_{ij}^{\alpha\beta}(t)|$ su una griglia di $60$ tempi in $[0.05,6]$: la minima escursione
+osservata è $0.139$ (per $C_{12}^{xy}$ e affini), lontanissima da zero. I correlatori più
+"ricchi" (più autostati intermedi coinvolti, $5$ su $8$):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Correlatore & $\max_k|a_kb_k|$ & modi rilevanti ($>5\%$ del max) \\
+\midrule
+$C_{11}^{xx},C_{13}^{xx},C_{31}^{xx},C_{33}^{xx}$ & $0.395$ & $5/8$ \\
+$C_{11}^{yy},C_{13}^{yy},C_{31}^{yy},C_{33}^{yy}$ & $0.381$ & $5/8$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+I più piccoli (non protetti da simmetria, quasi congelati): $C_{12}^{xy},C_{21}^{yx}$ e affini,
+$\max_k|a_kb_k|\approx0.069$--$0.074$ ($4$ modi) -- nessuno strutturalmente nullo, solo
+numericamente piccolo a questo punto di lavoro.
+
+% =====================================================================
+\section{Sintesi e prossimo passo}
+% =====================================================================
+
+\begin{itemize}
+\item $P_{13}$ (SWAP puro, sito 2 fisso, nessuna rotazione locale) commuta con $H$ completo
+(incluso il DM) esattamente in virtù del segno $D_{12}=-D_{23}=D$ già scelto in
+\texttt{\seqsplit{trimer\_chain\_exact.py}} -- verificato sia analiticamente sia numericamente
+(rotto nettamente col segno opposto).
+\item Differenza qualitativa dall'anello: $\lambda_\alpha=+1$ per ogni $\alpha$ (puro scambio,
+nessun segno), quindi $P_{13}$ produce \textbf{solo uguaglianze} fra correlatori distinti
+($C_{11}\equiv C_{33}$, $C_{12}\equiv C_{32}$, $C_{21}\equiv C_{23}$, $C_{13}\equiv C_{31}$),
+\textbf{mai zeri}. Il sito fisso (sito 2) non è vincolato: nessuna autocorrelazione forzata a
+zero per ogni $t$, a differenza del sito 3 dell'anello.
+\item Time-reversal $K$: $24$ zeri a $t=0$ per $i\neq j$ (identico all'anello nella
+dimostrazione), più $6$ zeri aggiuntivi per $i=j$ ($C_{ii}^{xz},C_{ii}^{zx}$), derivati da un
+argomento distinto ($\langle\sigma_i^y\rangle=0$ per stato reale) non necessario nell'anello
+perché già coperto dallo zero strutturale del sito fisso.
+\item Al punto di lavoro VQE-DM ($J{=}1,b{=}3.0,D{=}0.15$): fondamentale non degenere, $0$
+combinazioni nulle per ogni $t\neq0$ (contro le $4$ dell'anello), $30/81$ nulle a $t=0$, tutte
+spiegate dai due corollari di time-reversal. $45$ valori indipendenti determinano tutte le $81$
+combinazioni.
+\item \textbf{Caso $D=0$ (Sez.~\ref{sec:D0})}: $S_z^{\rm tot}$ torna conservato e la regola di
+selezione su $M$ annulla $36$ combinazioni per ogni $t$ (esattamente quelle con una sola
+componente $z$), verificate e predette con lo stesso insieme. Il DM le distrugge tutte, con
+andamento continuo in $D$. Confronto verificato con l'anello: $56\to4$ per l'anello contro
+$36\to0$ per la catena -- entrambe le topologie perdono quasi tutti gli zeri, ma solo la catena
+li perde \emph{tutti}, non avendo segni $\lambda$ che ne possano proteggere alcuno. Un test
+svolto solo a $D=0$ non esercita i correlatori misti $z$/$xy$.
+\item \textbf{Degenerazione (Oss.~\ref{oss:degenerazione})}: $b=b_c$ con $D=0$ e $b=0$ con
+qualunque $D$ sono punti a fondamentale degenere, dove la Prop.~\ref{prop:unitaria} non si
+applica. Il punto di lavoro scelto è non degenere \emph{solo} perché il DM apre il gap.
+\item \textbf{Nota aperta, non affrontata qui}: se questo punto ($b=b_c=3.0,D=0.15$) sia anche il
+punto di lavoro definitivo per il circuito Trotter dei correlatori (che finora usa $D=0.3$,
+S0 provvisorio) resta da decidere con il relatore -- le simmetrie derivate in questo documento
+valgono qualitativamente per qualunque $(J,b,D)$ reale con fondamentale non degenere, non solo al
+punto qui usato per l'illustrazione numerica.
+\item \textbf{Prossimo passo}: disegno del circuito Hadamard test a $4$ qubit (3 di registro + 1
+ancilla), mirror di \texttt{\seqsplit{circuito\_correlazioni\_trimero\_anello.py}}, con $U(t)$
+costruito da \texttt{\seqsplit{trotter\_trimero\_catena.py}} e stato di preparazione
+\texttt{W-2qC.K2}.
+\end{itemize}
+
+\end{document}

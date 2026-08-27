@@ -2660,3 +2660,84 @@ Fase Trotter per la catena aperta chiusa a un livello di completezza analogo
 all'anello: codice, teoria derivata da zero (non ricopiata), notebook eseguito,
 documentazione compilata e verificata pagina per pagina. Prossimo passo:
 Fase 5 (VQE+DM) per la catena e correlatori dinamici (`domande_relatore.md`).
+
+## Aggiornamento — Sei documenti .tex per la catena, mirror completo dell'anello
+
+Prodotti, su richiesta esplicita, gli analoghi per la catena aperta dei sei
+documenti già esistenti per l'anello, con le argomentazioni derivate da zero
+per la topologia a due bond (non copiate meccanicamente).
+
+| file | MD5 | mirror di |
+|---|---|---|
+| `quantum_simulation_trimero_catena_teoria.tex` | `1dac65b82a1cf51d127d269895b81bce` | `quantum_simulation_trimero_anello_teoria.tex` |
+| `quantum_simulation_trimero_catena_applicazione.tex` | `ee9a6c9b853ec393a79ce79e45dde4b6` | `quantum_simulation_trimero_anello_applicazione.tex` |
+| `quantum_simulation_trimero_catena_trotter_spiegato.tex` | `fb62b53e4c54f277f8efe16d9b00d281` | `quantum_simulation_trimero_anello_trotter_spiegato.tex` |
+| `trimero_catena_circuito_compatto.tex` | `3e3fbe238fbe8cdc3a8a4e55f0033c51` | `trimero_anello_circuito_compatto.tex` |
+| `trimero_catena_frustrazione_e_chiralita.tex` | `80eb8726f29581be769aa8edd5811a66` | `trimero_anello_frustrazione_e_chiralita.tex` |
+| `trimero_catena_quantum_simulation.tex` | `15e0bd439a7ee956eae2ef210235cd6a` | `trimero_anello_quantum_simulation.tex` (aggiornato per includere i 5 nuovi documenti, non solo modulo+notebook) |
+
+### Contenuti originali, non semplice trasposizione
+
+- **Teoria**: derivazione da zero della struttura a due bond (un solo commutatore $\chi$ al livello 1, un solo $\Theta$ al livello 2, non tre come nell'anello); Sezione 8 riscrive correttamente il livello 0 esterno, correggendo il non-sequitur senza toccare il file dell'anello; Sezione 10 deriva l'alternanza dell'ordine dei bond, fenomeno assente nell'anello.
+- **Applicazione**: tabella esplicita delle differenze di convenzione dall'anello (inclusa la normalizzazione assoluta di $D$, punto di attenzione concreto); ricerca di $S_0$ motivata fisicamente (attorno a $b_c=3J$), non su griglia cieca come l'anello.
+- **Spiegato**: sette self-test invece di quattro, due dei quali (non-sequitur, cecità di $\ket{000}$) assenti nell'anello.
+- **Circuito compatto**: stessi numeri già verificati in sessione precedente (10→19 CNOT per passo, 19 CNOT indipendente da $N$ fino a $N=100$), qui documentati con lo stile del progetto.
+- **Frustrazione e chiralità — contributo originale**: dimostrazione algebrica generale (non solo verifica a numeri) che $\langle\chi\rangle=0$ su ogni autostato reale di ogni Hamiltoniana reale simmetrica ($\chi=iA$, $A$ reale antisimmetrico $\Rightarrow v^TAv=0$ per ogni $v$ reale). Risponde a una domanda aperta di una sessione precedente (dove vive $\chi$ se non nel fondamentale). Verificato numericamente su quattro punti (incluso $S_0$): $\langle\chi\rangle,\langle\Theta\rangle$ nulli entro $10^{-16}$. Generalizza la distinzione frustrazione/algebra già fatta per l'anello: la catena, priva di ciclo, frustrazione *e* degenerazione, mostra comunque l'identica non-commutatività algebrica.
+
+### Verifica di compilazione
+
+Tutti e sei compilati con `pdflatex`, due passate ciascuno. Un solo overfull
+serio trovato e corretto (107pt, tabella troppo larga nell'applicazione,
+risolta con `\small` e colonne `p{}`). Overfull residui: solo cosmetici
+(≤1.4pt), invisibili. Ispezionati pagina per pagina (28 pagine totali fra i
+sei documenti): nessun testo sovrapposto, nessun riferimento vuoto.
+
+### Stato
+
+Documentazione della fase Trotter per la catena ora a parità strutturale
+completa con l'anello: sei documenti `.tex`, un modulo `.py`, un notebook
+eseguito. Prossimo: correlatori dinamici (entrambe le topologie), Parte 2.
+
+## Aggiornamento — correzione MD5 del notebook Trotter catena (rendering circuito)
+
+L'MD5 registrato per `quantum_simulation_trimero_catena_trotter.ipynb`
+nell'aggiornamento precedente (`b53cd62809debbf360917c00936eb32f`) è
+**superato**: si riferiva alla versione con `qc.draw(output='text')`.
+
+**Bug trovato**: la cella del circuito usava il rendering testuale invece
+di quello grafico (`output='mpl'`), a differenza del notebook dell'anello.
+Una seconda cella (traiettoria di $\langle S_z^{tot}\rangle(t)$) forzava
+`matplotlib.use('Agg')`, impedendo la visualizzazione inline anche lì (il
+grafico veniva solo salvato su file, mai mostrato).
+
+**Corretto**: rimosso il backend forzato, sostituito il disegno testuale
+con `qc.draw(output="mpl", fold=-1, style={"name": "iqp"})`, identico
+all'anello. Rieseguito per intero (`jupyter nbconvert --execute`): entrambe
+le celle producono ora `image/png` reale (46 KB e 28 KB), non testo.
+
+**MD5 corretto**: `quantum_simulation_trimero_catena_trotter.ipynb` →
+`de616b6c63ae0f9e810dde256d60cc6b` (era `b53cd62809debbf360917c00936eb32f`).
+Nessun altro file di questa fase è stato toccato.
+
+## Aggiornamento — MD5 del notebook Trotter catena: la versione con output puliti è quella corretta (decisione, non bug)
+
+Correzione al proprio aggiornamento precedente. L'MD5
+`de616b6c63ae0f9e810dde256d60cc6b` lì registrato è quello della versione
+**eseguita** (output embedded: immagini del circuito e della traiettoria,
+~94 KB). Il file effettivamente presente nel Project ha MD5
+`46e4edf398d009b591dd0108253ad548` — stesso codice, cella per cella
+identico (verificato), ma **output azzerati** (~20 KB).
+
+**Decisione esplicita**: tenere la versione a output puliti nel Project,
+per limite di spazio (le immagini `png` incorporate pesano quasi 5 volte
+il file). Non è un errore da correggere al prossimo controllo MD5.
+
+| stato | MD5 | dimensione | uso |
+|---|---|---|---|
+| output puliti (nel Project) | `46e4edf398d009b591dd0108253ad548` | ~20 KB | riferimento di codice, da rieseguire per vedere le figure |
+| output eseguiti (solo in sessione locale, non nel Project) | `de616b6c63ae0f9e810dde256d60cc6b` | ~94 KB | consultata una tantum quando serve vedere circuito/traiettoria senza rieseguire |
+
+**Nota per la verifica MD5 di apertura sessione**: da qui in avanti,
+l'MD5 di riferimento per `quantum_simulation_trimero_catena_trotter.ipynb`
+nel Project è `46e4edf398d009b591dd0108253ad548` (output puliti), non
+`de616b6c63ae0f9e810dde256d60cc6b`.

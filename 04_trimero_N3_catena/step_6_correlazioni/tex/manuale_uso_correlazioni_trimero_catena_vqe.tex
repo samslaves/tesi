@@ -1,0 +1,164 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\title{Manuale d'uso --- correlazioni dinamiche trimero a catena aperta\\
+\large versione attuale (circuito VQE reale \texttt{W-2qC.K2})}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Scopo}
+
+Questo manuale spiega come eseguire la simulazione delle correlazioni dinamiche
+$C_{ij}^{\alpha\beta}(t)$ per il trimero a catena aperta nella versione \emph{attuale}: lo
+stato fondamentale non è più preparato con le ampiezze esatte, ma con il circuito VQE reale
+(ansatz \texttt{W-2qC.K2}, $10$ parametri, $2$ cicli), ottimizzato numericamente. La versione a
+stato esatto resta disponibile (comportamento di default se non si passano parametri VQE) e
+serve da riferimento: vedi il manuale gemello
+\texttt{\seqsplit{manuale\_uso\_correlazioni\_trimero\_catena\_statevector.tex}}.
+
+\section*{Prerequisiti}
+
+Tutti i file del manuale gemello, più:
+\begin{itemize}
+\item \texttt{vqe\_w2qC\_k2\_trimero\_catena.py} --- costruzione dell'ansatz \texttt{W-2qC.K2}
+e ottimizzazione VQE, su \textbf{entrambi} i punti di lavoro.
+\item \texttt{validate\_vqe\_circuito\_correlazioni\_catena.py} --- confronto sistematico contro
+la versione a stato esatto, entrambi i punti.
+\end{itemize}
+
+\begin{quote}
+\textbf{Importante, a differenza dell'anello}: esistono \textbf{due} file di parametri
+ottimali, uno per punto di lavoro --- \texttt{w2qC\_k2\_params\_vqedm.npz} (VQE-DM,
+$J{=}1,b{=}3.0,D{=}0.15$) e \texttt{w2qC\_k2\_params\_S0.npz} (S0,
+$J{=}1,b{=}3.0073414,D{=}0.3$). Come nell'anello, i parametri dipendono dal punto: non riusare
+quelli di un punto per l'altro.
+\end{quote}
+
+\section*{Passo 1 --- ottimizzazione VQE (una tantum per punto di lavoro)}
+
+\begin{verbatim}
+python vqe_w2qC_k2_trimero_catena.py
+\end{verbatim}
+Esegue $60$ partenze casuali (COBYLA) più polish (L-BFGS-B) \textbf{su entrambi i punti in
+sequenza} (funzione \texttt{main()}), e salva due file. Valori ottenuti:
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+& VQE-DM & S0 \\
+\midrule
+$E_{\rm vqe}$ & $-7.36924699164432$ & $-7.75658090425334$ \\
+$E_{\rm esatto}$ & $-7.36924699164433$ & $-7.75658090425337$ \\
+$\mathcal F$ & $1.000000000000$ & $0.999999999999992$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Nella sessione di sviluppo sono bastati $15$ restart per raggiungere questi valori (verificato:
+$5$ restart già sufficienti al punto VQE-DM); lo script di produzione ne usa $60$ per
+sicurezza, seguendo la stessa cautela già documentata in
+\texttt{\seqsplit{trimero\_catena\_vqe\_dm.tex}} per il punto $b=b_c$ (vicino a un level
+crossing a $D=0$, dove pochi restart possono dare un falso ceiling). Se il tuo output mostra
+$1-\mathcal F$ molto più grande (es.\ $10^{-3}$ o peggio), aumenta \texttt{n\_restarts} nella
+chiamata a \texttt{optimize\_point}.
+
+\section*{Passo 2 --- un correlatore singolo, con preparazione VQE}
+
+\begin{verbatim}
+import numpy as np
+from circuito_correlazioni_trimero_catena import correlator_from_circuit
+
+data = np.load("w2qC_k2_params_vqedm.npz")
+params = data["params"]
+
+J, b, D = 1.0, 3.0, 0.15
+C = correlator_from_circuit(1, 'y', 1, 'y', t=1.3, N=200, J=J, b=b, D=D,
+                             ansatz_params=params)
+print(C)
+\end{verbatim}
+Passando \texttt{ansatz\_params}, la preparazione usa \texttt{w2qC\_k2\_circuit()} (X + due
+cicli di [2 blocchi \texttt{W}, 3 $R_y$]) invece di \texttt{prepare\_state}. Per il punto S0,
+caricare \texttt{w2qC\_k2\_params\_S0.npz} e usare $b{=}3.0073414, D{=}0.3$.
+
+\section*{Passo 3 --- validazione contro la versione a stato esatto}
+
+\begin{verbatim}
+python validate_vqe_circuito_correlazioni_catena.py
+\end{verbatim}
+Richiede \textbf{entrambi} i file \texttt{.npz} del Passo 1 (già presenti). Esegue
+automaticamente entrambi i punti in sequenza, ricalcola le 81 combinazioni con preparazione VQE
+e con preparazione esatta, stampa l'errore medio e massimo:
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+& VQE-DM & S0 \\
+\midrule
+errore medio & $1.9\times10^{-8}$ & $3.8\times10^{-8}$ \\
+errore massimo & $5.9\times10^{-8}$ & $9.8\times10^{-8}$ \\
+$\sqrt{1-\mathcal F}$ (riferimento) & $4.5\times10^{-8}$ & $9.1\times10^{-8}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Entrambi coerenti con $\sqrt{1-\mathcal F}$, come atteso per un residuo di fedeltà a livello di
+stato. Errori molto più grandi indicano parametri VQE non ottimizzati bene (torna al Passo 1).
+
+\section*{Passo 4 --- scan completo (statevector + shot), preparazione VQE}
+
+A differenza dell'anello, non esiste uno script \texttt{scan81\_vqe\_*} separato: lo scan
+completo con preparazione VQE è incorporato nei notebook (vedi sotto), non in uno script
+standalone. Per un confronto rapido da riga di comando, usare \texttt{correlator\_from\_circuit}
+con \texttt{ansatz\_params} in un ciclo sulle $81$ combinazioni (Passo 2, ripetuto).
+
+\section*{Come esplorare tutto insieme: il notebook}
+
+\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena\_vqe.ipynb}} carica i parametri già
+ottimizzati (Passo 1, non li ricalcola) e mostra, con la preparazione VQE al posto di
+\texttt{prepare\_state}: misura diretta delle 81 combinazioni, heatmap $|C|$ d'insieme, vista
+nel tempo su griglia $9\times9$ (Re e Im), selettore per ispezione singola, verifica della
+relazione $P_{13}$ ($C_{11}=C_{33}$), spettro dietro un caso ricco/piatto, confronto con lo scan
+a shot finiti precomputato (\texttt{scan81\_catena\_vqedm\_results.npz}, Passo 4 del manuale
+gemello). Lavora solo al punto VQE-DM (hard-coded); per S0 vanno adattati i parametri
+$(J,b,D)$ e ricaricato \texttt{w2qC\_k2\_params\_S0.npz}.
+
+\section*{Cosa NON cambia rispetto alla versione a stato esatto}
+
+\texttt{build\_correlator\_circuit} e \texttt{correlator\_from\_circuit} sono retrocompatibili:
+se non si passa \texttt{ansatz\_params} (o si passa \texttt{None}), il comportamento è
+identico, bit per bit, alla versione statevector --- tutto il codice esistente
+(\texttt{scan81\_trimero\_catena.py}, \texttt{\seqsplit{validate\_shot\_noise\_trimero\_catena.py}},
+i primi tre notebook della fase) continua a funzionare senza modifiche.
+
+\section*{Problemi comuni}
+
+\begin{itemize}
+\item \texttt{FileNotFoundError} su uno dei due file \texttt{w2qC\_k2\_params\_*.npz} --- va
+generato eseguendo \texttt{vqe\_w2qC\_k2\_trimero\_catena.py} (Passo 1); richiede alcuni minuti
+per via dei $60$ restart $\times$ $2$ punti.
+\item Fidelity bassa dopo l'ottimizzazione --- vedi nota al Passo 1 (minimo locale, più probabile
+vicino a $b_c$); aumentare i restart di solito risolve.
+\item Uso dei parametri sbagliati per il punto --- verificare sempre quale \texttt{.npz} si sta
+caricando: i due punti hanno parametri ottimali diversi e non intercambiabili.
+\item Import circolare se si prova a importare \texttt{ground\_state} da
+\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena.py}} dentro
+\texttt{\seqsplit{vqe\_w2qC\_k2\_trimero\_catena.py}} --- per questo il secondo modulo definisce
+una propria copia locale \texttt{\_ground\_state}, stessa scelta già fatta per l'anello.
+\end{itemize}
+
+\section*{Riferimenti}
+
+Derivazione dell'ansatz: \texttt{\seqsplit{trimero\_catena\_vqe\_dm.tex}},
+\texttt{ansatz\_catena.py}. Documentazione teorica: \texttt{\seqsplit{simmetrie\_correlatori\_trimero\_catena.tex}},
+\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena\_spiegato.tex}}. Catalogo completo
+della fase: \texttt{\seqsplit{trimero\_catena\_correlazioni.tex}}.
+
+\end{document}

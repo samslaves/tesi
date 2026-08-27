@@ -1,0 +1,230 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{seqsplit}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+\definecolor{advisorpurple}{HTML}{5B3A7A}
+\definecolor{advisorbg}{HTML}{F1ECF6}
+\definecolor{notebar}{HTML}{9C6B12}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.8em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=4pt, bottom=4pt, #1
+}
+\newtcolorbox{panelbox}[1]{
+  colback=white, colframe=softgray!50, boxrule=0.5pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{inkblue}, title={#1}
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=3pt, bottom=3pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+\newtcolorbox{advisorbox}[1]{
+  colback=advisorbg, colframe=advisorpurple!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=4pt, bottom=4pt,
+  fonttitle=\bfseries\color{advisorpurple}, title={#1}
+}
+\newtcolorbox{editnote}{
+  colback=white, colframe=white, boxrule=0pt,
+  borderline west={2.2pt}{0pt}{notebar},
+  arc=0pt, left=10pt, right=4pt, top=2pt, bottom=2pt,
+  fontupper=\itshape\small\color{softgray!90!black}
+}
+\fancyhead[L]{\small\color{softgray}Circuito compatto per il passo di Trotter --- trimero catena aperta}
+
+\title{\vspace{-1.5em}\color{inkblue}Circuito compatto per il Trotter del trimero a catena aperta\\[0.1em]
+\Large\normalfont\color{softgray}Verifica empirica, mirror diretto dello studio già fatto per l'anello}
+\author{Note di lavoro --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2em}
+
+Seguito naturale di \texttt{trimero\_anello\_circuito\_compatto.pdf}, applicato
+ora alla catena aperta. Stessa domanda, stesso metodo, punto di lavoro
+diverso ($S_0$ invece di $R_0$). Riportato per completezza, non perché ci
+si aspettasse un esito qualitativamente diverso.
+
+\section{Il problema, invariato rispetto all'anello}
+
+\begin{warnbox}{Stessa differenza dal dimero, qui confermata}
+Per il trimero (3 qubit, $SU(8)$), anello o catena che sia, non esiste un
+teorema di compressione universale chiuso come quello a 2 qubit del
+dimero (Cartan/Weyl, Vatan--Williams 2004). Anche qui la verifica è
+\textbf{empirica} (transpiler), non un teorema.
+\end{warnbox}
+
+Il circuito Trotter della catena (\texttt{trotter\_trimero\_catena.py}) usa,
+per un singolo passo esterno al punto $S_0$ ($J{=}1,b{=}3.0073414,D{=}0.3$),
+\textbf{10 gate a due qubit nativi} ($2\times R_{XX}+2\times R_{YY}+6\times
+R_{ZZ}$: due bond per lo scambio, due bond per il DM), più 8 Hadamard e 3
+$R_z$ per il campo -- meno della metà dei 15 dell'anello, proporzionale al
+numero di bond (2 contro 3).
+
+\section{Metodo, identico all'anello}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.25em]
+\item costruzione del circuito Trotter esplicito con
+\texttt{trotter\_trimero\_catena.py};
+\item estrazione dell'unitaria $8\times8$ esatta, \texttt{Operator(qc).data}
+(già validata a precisione macchina contro la matrice indipendente, self-test
+5 del modulo);
+\item la matrice passata come blocco opaco, \texttt{qc.unitary(U,[0,1,2])};
+\item sintesi: \texttt{transpile(qc, basis\_gates=['cx','rz','sx','x'],
+optimization\_level=3)};
+\item verifica di fedeltà (\texttt{process\_fidelity}) fra compresso ed
+esplicito.
+\end{enumerate}
+
+\section{Risultati}
+
+\subsection*{Un solo passo, a $S_0$}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{lcc}
+\toprule
+& gate a due qubit & fedeltà vs esplicito \\
+\midrule
+circuito fisico (esplicito) & 10 ($R_{XX}{+}R_{YY}{+}R_{ZZ}$ nativi) & --- \\
+compresso (\texttt{optimization\_level=3}) & \textbf{19 CNOT} & $0.9999999999999996$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Fedeltà a precisione macchina (scarto $\sim4\times10^{-16}$, non zero
+esatto per via degli arrotondamenti del transpiler stesso, non un errore
+di approssimazione fisica). Il compresso usa \emph{più} gate a due qubit
+del fisico esplicito qui (19 contro 10): non contraddittorio, il conteggio
+di riferimento rilevante è quello del prodotto a molti passi (sotto), non
+del singolo passo isolato -- per un solo passo il circuito esplicito è già
+economico, poco spazio per il transpiler di comprimere ulteriormente.
+
+\subsection*{L'intero prodotto a $N$ passi --- il punto concettualmente importante}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{cccc}
+\toprule
+\rowcolor{inkblue!10}
+$N$ & gate 2q nativi (esplicito) & CNOT (compresso) & fedeltà \\
+\midrule
+1   & 10   & 19 & $1.0$ \\
+2   & 20   & 19 & $1.0$ \\
+5   & 50   & 19 & $1.0$ \\
+20  & 200  & 19 & $1.0$ \\
+100 & 1000 & 19 & $1.0$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il conteggio compresso si stabilizza a $19$ CNOT già da $N=1$ in poi,
+verificato fino a $N=100$: identico fenomeno di anello e dimero. A
+$N=8000$ (soglia di convergenza usata nello studio principale, Sezione~6 di
+\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_applicazione.tex}}), il
+circuito esplicito avrebbe $80000$ gate a due qubit, contro i $\sim19$ del
+compresso.
+
+\section{Perché non si usa per il rumore (stessa conclusione di anello e dimero)}
+
+\begin{warnbox}{Il compromesso $N$-vs-rumore sparirebbe}
+Identica considerazione già fatta per anello e dimero: il costo in gate del
+compresso resta fisso a $\sim19$ qualunque sia $N$, quindi userlo in Parte 2
+farebbe sparire dal grafico il compromesso fra errore di Trotter
+($\propto1/N$) ed errore fisico di gate sotto rumore (scala col numero di
+gate). Con gli $N$ dell'ordine delle migliaia trovati per $S_0$, l'effetto
+sarebbe ancora più ingannevole: si misurerebbe il rumore su un'unitaria a
+costo fisico del tutto slegato dal numero di passi realmente usati per la
+fisica.
+\end{warnbox}
+
+\section{Riepilogo}
+
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.3em]
+\item Nessun teorema di compressione universale per 3 qubit: verifica
+empirica, non un minimo dimostrato -- stessa situazione dell'anello.
+\item Un singolo passo (10 gate nativi a $S_0$) si comprime a 19 CNOT,
+fedeltà $\approx1.0$.
+\item Il prodotto a $N$ passi si comprime a $\sim19$ CNOT
+\textbf{indipendentemente da $N$} (verificato fino a $N=100$) -- stesso
+fenomeno di anello e dimero, qui con un rapporto di compressione ancora
+più marcato per la scala di $N$ richiesta ($\sim8000$ contro $\sim1000$
+dell'anello).
+\item Conclusione invariata: non usare il circuito compresso per lo studio
+Trotter-vs-rumore della Parte 2.
+\end{enumerate}
+
+\needspace{15\baselineskip}
+\section*{Appendice: comandi Qiskit usati per la verifica}
+\addcontentsline{toc}{section}{Appendice}
+
+\begin{panelbox}{Codice}
+\small
+\begin{verbatim}
+from qiskit import QuantumCircuit, transpile
+from qiskit.quantum_info import Operator, process_fidelity
+from trotter_trimero_catena import trotter_circuit
+
+qc_step = trotter_circuit(J, b, D, tau, 1)          # un passo esplicito
+U = Operator(qc_step).data                          # unitaria 8x8 esatta
+
+qc_compact = QuantumCircuit(3)
+qc_compact.unitary(U, [0, 1, 2])                    # blocco opaco
+qc_t = transpile(qc_compact, basis_gates=['cx','rz','sx','x'],
+                  optimization_level=3)
+
+print(qc_t.count_ops())
+print(process_fidelity(Operator(qc_t), Operator(qc_step)))
+
+# ripetuto su trotter_circuit(J, b, D, T, N) per N = 1, 2, 5, 20, 100
+\end{verbatim}
+\end{panelbox}
+
+\end{document}

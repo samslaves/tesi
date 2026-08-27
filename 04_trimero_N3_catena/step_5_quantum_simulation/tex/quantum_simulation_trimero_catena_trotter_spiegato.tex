@@ -1,0 +1,193 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath}
+\usepackage{amssymb}
+\usepackage{mathtools}
+\usepackage{geometry}
+\usepackage{booktabs}
+\usepackage{hyperref}
+\usepackage{seqsplit}
+\usepackage{graphicx}
+
+\geometry{margin=2.7cm}
+
+\title{Il notebook \texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_trotter.ipynb}} spiegato\\
+\large Fisica, matematica e numeri, passo per passo, senza salti logici}
+\author{Note per la discussione col relatore --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\bigskip
+\noindent Questo documento accompagna, cella per cella, il notebook
+\texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_trotter.ipynb}}, mirror
+diretto per la catena aperta di
+\texttt{\seqsplit{quantum\_simulation\_trimero\_anello\_trotter\_spiegato.tex}}.
+Per ogni sezione: cosa viene calcolato, perché, cosa significano i numeri.
+Due differenze rispetto all'anello vanno tenute presenti fin da subito: un
+solo commutatore al livello 1 (non tre), e la possibilità di alternare
+l'ordine dei due bond, assente nell'anello in forma altrettanto pulita.
+
+\section{Il problema e l'Hamiltoniana (cella di setup)}
+
+Il notebook implementa $e^{-iHt}$ per il trimero a catena aperta ($N=3$),
+\begin{align}
+H &= b\sum_{i=1}^3 Z_i \;+\; H_{ex} \;+\; H_{DM}, \label{eq:H-full}\\[3pt]
+H_{ex} &= J\,\vec\sigma_1\!\cdot\!\vec\sigma_2 \;+\; J\,\vec\sigma_2\!\cdot\!\vec\sigma_3, \notag\\[3pt]
+H_{DM} &= D\,(X_1Z_2{-}Z_1X_2) \;-\; D\,(X_2Z_3{-}Z_2X_3), \notag
+\end{align}
+convenzione di Pauli diretta, un solo accoppiamento di scambio $J$ (la
+catena non ha il terzo legame dell'anello), e un solo grado di libertà DM
+($D_{12}=-D_{23}=D$, fissato dalla simmetria di riflessione $P_{13}$, non
+una scelta fra opzioni come nell'anello).
+
+Importa \texttt{\seqsplit{trimer\_chain\_exact.py}} (benchmark esatto, stessa
+sorgente dell'Hamiltoniana usata da VQE e teoria) e
+\texttt{\seqsplit{trotter\_trimero\_catena.py}} (circuito Trotter e confronto
+con la matrice esatta) -- stesso principio "single source" dell'anello,
+stessa ragione: eliminare la possibilità che una discrepanza numerica sia
+un problema di convenzione anziché un vero errore Trotter.
+
+\section{Self-test del modulo (Sezione 1 del notebook)}
+\label{sec:self-test}
+
+Sette verifiche indipendenti, non quattro come nell'anello: due in più
+riflettono due proprietà non previste all'inizio (Sezioni~\ref{subsec:st2}
+e~\ref{subsec:st6} sotto).
+
+\subsection{Self-test 1: fattorizzazione esatta di $H_0$}
+
+Identico nello spirito al self-test 1/4 dell'anello: $\|[S_z^{tot},h_{12}]\|=\|[S_z^{tot},h_{23}]\|=0$ esatto, quindi $e^{-iH_0\tau}=e^{-ib\tau S_z^{tot}}e^{-iH_{ex}\tau}$ senza approssimazione, verificato su parametri casuali ($\sim10^{-16}$).
+
+\subsection{Self-test 2: il non-sequitur non si estende a $H_{DM}$}
+\label{subsec:st2}
+
+Assente nell'anello (dove la stessa verifica non era stata fatta, portando al non-sequitur poi corretto qui). Verifica esplicita che $[S_z^{tot},H_{ex}]=0$ \textbf{non implica} $[H_{ex},H_{DM}]=0$:
+\begin{equation}
+\|[H_{ex},H_{DM}]\| = 10.182338, \qquad \|[S_z^{tot},H_{DM}]\| = 3.394113
+\end{equation}
+a $J{=}1,b{=}0.7,D{=}0.3$ (norma di Frobenius). $H_{ex}$ domina, circa il triplo del campo -- non trascurabile.
+
+\subsection{Self-test 3: le due identità dei commutatori di bond}
+
+$[h_{12},h_{23}]=-2i\chi$ e $[d_{12},-d_{23}]=-2i\Theta$ ($\Theta=X_1Y_2Z_3-Z_1Y_2X_3$), residuo $0.0$ esatto per entrambe. $\chi$ e $\Theta$ verificati hermitiani.
+
+\subsection{Self-test 4: il segno del termine chirale dipende dall'ordine}
+
+Assente nell'anello (dove la somma ciclica dei tre commutatori rende la questione dell'ordine meno diretta). Misurato per proiezione diretta sul sottospazio di $\chi$: $s=+1.000$ per l'ordine $(1,2)\to(2,3)$, $s=-1.000$ per l'ordine invertito -- base della Sezione~\ref{sec:alternanza}.
+
+\subsection{Self-test 5: il circuito Qiskit reale contro la matrice indipendente}
+
+Identico nello spirito al self-test 2 dell'anello: per cinque set di parametri casuali, errore $\sim10^{-15}$ fra \texttt{Operator(qc).data} e la costruzione a matrice indipendente.
+
+\subsection{Self-test 6: $\ket{000}$ è cieco all'errore di livello 1}
+\label{subsec:st6}
+
+Assente nell'anello. $\ket{000}$ è autostato di \emph{ogni} bond separatamente ($h_{ij}\ket{00}=+\ket{00}$): $\|h_{12}\ket{000}-\ket{000}\|=\|h_{23}\ket{000}-\ket{000}\|=0$, esatto. Conseguenza: tutti i fattori Trotter di $H_{ex}$ agiscono su $\ket{000}$ come fasi globali e commutano fra loro -- un test di convergenza su $\ket{000}$ a $D=0$ darebbe infedeltà $\sim10^{-14}$ per \emph{qualunque} $N$, un test vuoto. Per questo il notebook usa $\ket{010}$, non $\ket{000}$, per tutte le analisi di convergenza (Sezioni~\ref{sec:conv} e seguenti).
+
+\subsection{Self-test 7: convergenza e guadagno dell'alternanza}
+
+Riassunto nella Sezione~\ref{sec:alternanza}.
+
+\section{Ricerca del punto di lavoro (Sezione 2 del notebook)}
+\label{sec:ricerca-punto}
+
+\subsection{Perché serve il DM: stessa dimostrazione dell'anello, verificata anche qui}
+
+Con lo stesso argomento dell'anello (annullamento di $X_iX_j+Y_iY_j$ su $\ket{\uparrow\uparrow}$ per ogni coppia), $\ket{000}$ è autostato esatto di $H_{ex}$: $H_{ex}\ket{000}=2J\ket{000}$ (due bond, non tre: coefficiente $2J$ invece di $J{+}2J'$). Resta autostato anche di $H_0$ (per commutare banalmente con $S_z^{tot}$). Senza DM, $\langle S_z^{tot}\rangle(t)$ sarebbe costante: è $D\neq0$, e solo quello, a rendere possibile la dinamica -- stesso fenomeno del dimero e dell'anello, verificato di nuovo qui.
+
+\subsection{Il criterio a due indicatori, applicato attorno a $b_c$}
+
+A differenza dell'anello (scan cieco su una griglia $60\times40$), qui la ricerca è mirata: attorno al campo critico $b_c=3J$ (crossing esatto senza DM, teorema di Kramers per $N$ dispari), dove il DM apre un vero anti-crossing.
+
+\begin{center}
+\begin{tabular}{@{}ccccc@{}}
+\toprule
+$b$ & $D$ & $a_1$ & $a_2$ & $a_2/a_1$ \\
+\midrule
+3.000 & 0.05 & 2.0001 & 2.0001 & 1.000 \\
+3.000 & 0.10 & 2.0005 & 2.0003 & 1.000 \\
+3.000 & 0.30 & 2.0046 & 2.0024 & 0.999 \\
+\bottomrule
+\end{tabular}
+\end{center}
+A $b=b_c$ fisso, $a_2/a_1\to1$ per ogni $D$: due modi quasi degeneri in ampiezza, esattamente il criterio di ricchezza spettrale cercato. \textbf{Ma il punto fisicamente corretto non è $b_c$ fisso}: è il minimo vero del gap (stessa cautela già documentata per l'anello e per la catena in \texttt{\seqsplit{analisi\_dm\_trimero\_catena.tex}}), calcolato con \texttt{dm\_min\_gap}.
+
+\subsection{Il punto adottato: $S_0$}
+
+$$J=1, \qquad D=0.3, \qquad b=3.0073414 \ (\text{minimo vero del gap}), \qquad \text{gap}=1.468777.$$
+Due modi dominanti quasi degeneri (\(a\approx2.0\), gap $0.847$ e $1.469$): battimento di periodo $\approx10.1$, escursione picco-picco $1.34$ su $\ket{010}$. \textbf{Provvisorio}, stesso status di $R_0$ (anello): scan verificato, non derivazione fisica principiata.
+
+\section{Convergenza in $N$ (Sezione 4 del notebook)}
+\label{sec:conv}
+
+\subsection{Perché il passo ha tre livelli, con un solo commutatore al livello 1}
+
+Il passo implementato è
+\begin{align}
+U_{\rm step}(\tau) &= V_{DM}(\tau)\;e^{-ib\tau S_z^{tot}}\;V_{ex}(\tau), \label{eq:Ustep}\\
+V_{ex}(\tau)&=U_{23}(\tau)\,U_{12}(\tau), \qquad V_{DM}(\tau)=U_{23}^{DM}(\tau)\,U_{12}^{DM}(\tau), \notag
+\end{align}
+con tre approssimazioni indipendenti: livello 0 esterno ($[H_0,H_{DM}]\neq0$, quantificato in \texttt{\seqsplit{quantum\_simulation\_trimero\_catena\_teoria.tex}} \S8), livello 1 ($[h_{12},h_{23}]=-2i\chi\neq0$, un solo commutatore, non tre), livello 2 ($[d_{12},-d_{23}]=-2i\Theta\neq0$).
+
+\subsection{Convergenza a $S_0$ su $\ket{010}$}
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$N$ & infedeltà (fisso) & rapporto raddoppiando $N$ \\
+\midrule
+1000 & $4.14\times10^{-4}$ & --- \\
+2000 & $1.02\times10^{-4}$ & $4.07$ \\
+4000 & $2.53\times10^{-5}$ & $4.02$ \\
+8000 & $6.32\times10^{-6}$ & $4.00$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Rapporto $\to4$: stessa firma del prim'ordine già osservata nel dimero e nell'anello (infedeltà $\propto\|\Delta U\|^2\propto1/N^2$).
+
+\section{Il risultato originale: alternanza dell'ordine dei bond}
+\label{sec:alternanza}
+
+\subsection{L'idea, specifica della catena}
+
+Poiché il segno del termine $\chi$ dipende dall'ordine dei due bond (self-test 4), invertirlo su passi consecutivi cancella quel termine al leading order, \textbf{a parità esatta di gate}. Con tre bond ciclici, l'anello non ha un analogo altrettanto pulito (la somma dei tre commutatori ciclici già collassa a un solo termine indipendente dall'ordine).
+
+\subsection{I numeri, e il loro limite}
+
+\begin{center}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$N$ & infedeltà fisso & infedeltà alternato \\
+\midrule
+500 & $1.77\times10^{-3}$ & $1.37\times10^{-3}$ \\
+1000 & $4.14\times10^{-4}$ & $9.83\times10^{-5}$ \\
+2000 & $1.02\times10^{-4}$ & $9.11\times10^{-6}$ \\
+4000 & $2.53\times10^{-5}$ & $1.27\times10^{-6}$ \\
+8000 & $6.32\times10^{-6}$ & $2.51\times10^{-7}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+Guadagno $25.2\times$ a $N=8000$, ma il rapporto raddoppiando $N$ è $\times5.08$ all'ultimo passo -- \textbf{non} il $\times16$ pulito osservato isolando il solo livello 1 a $D=0$ (dove il rapporto è netto e stabile). Con il DM acceso, l'alternanza cancella \emph{solo} il termine chirale: il livello 2 e i termini incrociati del livello 0 esterno restano $O(1/N^2)$ e tornano a dominare per $N$ grande. Il guadagno è reale ma parziale e satura -- non va presentato come un risultato generale.
+
+\section{Il circuito (Sezione 5 del notebook)}
+
+Un passo a $S_0$: 21 gate totali (6 a due qubit per il livello 1, 6 a due qubit più 4 Hadamard per il livello 2, 3 rotazioni di campo). Confronto diretto con l'anello: 15 gate nativi per passo là (tre bond), qui 10 gate a due qubit nativi (due bond) -- proporzionale al numero di legami, come atteso.
+
+\section{Conclusioni}
+
+\begin{enumerate}
+\item Modulo validato su sette test indipendenti, incluse due proprietà non previste all'inizio: il segno del termine chirale dipendente dall'ordine, e la cecità di $\ket{000}$ al livello 1.
+\item La struttura dell'errore ha tre livelli, come nell'anello, ma con un solo commutatore al livello 1 e al livello 2 (non tre): struttura più semplice, non un caso particolare.
+\item Il punto $S_0$ è provvisorio, stesso status di $R_0$.
+\item Risultato originale: l'alternanza dell'ordine dei bond, possibile solo nella catena, dà un guadagno pulito ($O(1/N^4)$) isolando il livello 1, ma solo parziale in presenza di DM -- documentato con la sua reale portata.
+\end{enumerate}
+
+\end{document}

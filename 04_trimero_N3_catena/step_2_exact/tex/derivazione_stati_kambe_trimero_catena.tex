@@ -31,13 +31,13 @@ Questo documento deriva, passo per passo e senza invocare tabelle di
 coefficienti di Clebsch–Gordan come "scatola nera", gli otto autostati
 esatti dell'Hamiltoniana del trimero a catena aperta uniforme (blocchi
 $A',B',C'$ della decomposizione di Kambe introdotta in
-\texttt{teoria\_trimero\_catena\_aperta.pdf}), scritti esplicitamente nella
+\texttt{teoria\_\allowbreak trimero\_\allowbreak catena\_\allowbreak aperta.pdf}), scritti esplicitamente nella
 base computazionale a 3 qubit $|q_1q_2q_3\rangle$. A differenza del caso
 dell'anello, qui la coppia usata per la classificazione ($1,3$) non è
 adiacente nell'ordine dei qubit del registro ($1,2,3$): il documento tratta
 esplicitamente questo riordino, che è l'unica vera differenza tecnica
 rispetto al metodo già usato per l'anello
-(\texttt{derivazione\_stati\_kambe\_trimero.pdf}).
+(\texttt{derivazione\_\allowbreak stati\_\allowbreak kambe\_\allowbreak trimero.pdf}).
 \end{abstract}
 
 \section{Obiettivo e collocazione}
@@ -63,7 +63,7 @@ $\mathbf S^2|S,M\rangle=S(S+1)|S,M\rangle$. Gli autovettori di $\mathbf
 S^2,S_z$ non dipendono da quale dei due operatori si usa per definirli:
 cambia solo la normalizzazione degli autovalori (fattori di conversione già
 noti dal resto del progetto), non i vettori. Le energie restano quelle di
-\texttt{teoria\_trimero\_catena\_aperta.pdf}; qui interessano solo gli
+\texttt{teoria\_\allowbreak trimero\_\allowbreak catena\_\allowbreak aperta.pdf}; qui interessano solo gli
 autovettori.
 
 \section{Il punto delicato: l'ordine di accoppiamento non coincide con l'ordine del registro}
@@ -97,7 +97,7 @@ angolari è identica.
 \subsection{Perché si parte da qui}
 
 La simmetria $P_{13}$ rende $\mathbf S_{13}^2=(\mathbf s_1+\mathbf s_3)^2$ una
-quantità conservata (dimostrato in \texttt{teoria\_trimero\_catena\_aperta.pdf}).
+quantità conservata (dimostrato in \texttt{teoria\_\allowbreak trimero\_\allowbreak catena\_\allowbreak aperta.pdf}).
 Conviene quindi costruire una base che sia già autostato di
 $\mathbf S_{13}^2$, prima di aggiungere lo spin del sito $2$.
 
@@ -209,11 +209,10 @@ Nella decomposizione pair+spettatore (via \eqref{eq:riordino}):
 |010\rangle &= |00\rangle_{13}\otimes|1\rangle_2 .
 \end{align}
 Definiamo la base ortonormale del settore $M{=}{+}1/2$
-\begin{equation}
-e_1 \equiv \tfrac1{\sqrt2}\big(|100\rangle+|001\rangle\big) \quad(\text{da }S_{13}{=}1,M_{13}{=}0\ \otimes\ |0\rangle_2),
-\qquad
-e_2 \equiv |010\rangle \quad(\text{da }S_{13}{=}1,M_{13}{=}{+}1\ \otimes\ |1\rangle_2).
-\end{equation}
+\begin{align*}
+e_1 &\equiv \tfrac1{\sqrt2}\big(|100\rangle+|001\rangle\big) \quad(\text{da }S_{13}{=}1,M_{13}{=}0\otimes|0\rangle_2),\\
+e_2 &\equiv |010\rangle \quad(\text{da }S_{13}{=}1,M_{13}{=}{+}1\otimes|1\rangle_2).
+\end{align*}
 Riscriviamo la \eqref{eq:Ap12} in questa base:
 \begin{equation}
 |A',{+}\tfrac12\rangle = \tfrac1{\sqrt3}\big[(|100\rangle+|001\rangle)+|010\rangle\big]
@@ -241,9 +240,12 @@ Analogamente, i tre stati $|011\rangle,|101\rangle,|110\rangle$ si scompongono c
 |101\rangle &= |11\rangle_{13}\otimes|0\rangle_2, &
 |110\rangle &= |10\rangle_{13}\otimes|1\rangle_2 .
 \end{align}
-Base ortonormale: $f_1\equiv\tfrac1{\sqrt2}(|011\rangle+|110\rangle)$ (da
-$S_{13}{=}1,M_{13}{=}0\otimes|1\rangle_2$), $f_2\equiv|101\rangle$ (da
-$S_{13}{=}1,M_{13}{=}{-}1\otimes|0\rangle_2$). La \eqref{eq:Am12} diventa
+Base ortonormale del settore $M{=}{-}1/2$:
+\begin{align*}
+f_1 &\equiv \tfrac1{\sqrt2}\big(|011\rangle+|110\rangle\big) \quad(\text{da }S_{13}{=}1,M_{13}{=}0\otimes|1\rangle_2),\\
+f_2 &\equiv |101\rangle \quad(\text{da }S_{13}{=}1,M_{13}{=}{-}1\otimes|0\rangle_2).
+\end{align*}
+La \eqref{eq:Am12} diventa
 $|A',{-}\tfrac12\rangle=\sqrt{2/3}\,f_1+\sqrt{1/3}\,f_2$, e per ortogonalità:
 \begin{equation}
 |B',{-}\tfrac12\rangle = \sqrt{\tfrac13}\,f_1-\sqrt{\tfrac23}\,f_2
@@ -342,11 +344,14 @@ sui bit estremi invece che sui bit $2,3$. $B'$ ha la stessa struttura a tre
 termini di $B$, ma con i pesi $2{:}1{:}1$ ridistribuiti sui bit
 corrispondenti alla nuova coppia di classificazione.
 
+\begin{sloppypar}
 \textbf{Verifica indipendente (autotest numerico).} Gli otto vettori sono
 stati verificati con NumPy contro $H$ dell'eq.~(1) in convenzione di Pauli
-diretta (stessa funzione \texttt{H\_chain} di \texttt{verifica\_catena\_preliminare.py}),
-al punto $(J,b)=(1.3,-0.7)$ scelto casualmente (nessuna simmetria
-accidentale che potrebbe mascherare un errore):
+diretta (stessa funzione \texttt{H\_\allowbreak chain} di
+\texttt{verifica\_\allowbreak catena\_\allowbreak preliminare.py}), al punto
+$(J,b)=(1.3,-0.7)$ scelto casualmente (nessuna simmetria accidentale che
+potrebbe mascherare un errore):
+\end{sloppypar}
 
 \begin{table}[h]
 \centering
@@ -376,7 +381,7 @@ massimo residuo $9.9\times10^{-16}$ su tutti e otto gli stati.
 
 \begin{table}[h]
 \centering
-\begin{tabular}{@{}lll@{}}
+\begin{tabular}{@{}p{1.7cm}p{4.9cm}p{7.9cm}@{}}
 \toprule
 Stato & Struttura & Preparazione\\
 \midrule
@@ -387,6 +392,7 @@ $B',\pm1/2$ & sovrapposizione a 3 termini, pesi $2{:}1{:}1$ & stessa famiglia di
 \bottomrule
 \end{tabular}
 \caption{Complessità di preparazione dei diversi stati.}
+\label{tab:preparazione}
 \end{table}
 
 \begin{osservazione}[Differenza pratica rilevante rispetto all'anello]
@@ -407,12 +413,12 @@ come lo era per l'anello.
 
 Con gli otto stati espliciti disponibili, i candidati come stato iniziale
 del PMA per il VQE a 3 qubit sulla catena sono già identificati (Tabella
-\ref{tab:stati}). Dato che, dalla sez.~6 di \texttt{teoria\_trimero\_catena\_aperta.pdf},
+\ref{tab:stati}). Dato che, dalla sez.~6 di \texttt{teoria\_\allowbreak trimero\_\allowbreak catena\_\allowbreak aperta.pdf},
 per $J>0$ (regime antiferromagnetico) il fondamentale a campo debole è nel
 blocco $B'$ — non $C'$ come nell'anello nel punto di lavoro consueto — lo
 stato iniziale naturale per il primo test end-to-end su questa topologia
 sarà $|B',-1/2\rangle$, che richiede comunque una preparazione non banale
-(Tabella 3): non c'è, per questa topologia, un analogo "gratuito" del
+(Tabella \ref{tab:preparazione}): non c'è, per questa topologia, un analogo "gratuito" del
 singoletto del dimero come punto di partenza a campo debole.
 
 \appendix

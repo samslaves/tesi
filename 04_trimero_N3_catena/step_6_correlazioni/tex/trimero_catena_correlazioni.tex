@@ -1,0 +1,241 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.5cm}
+\usepackage{booktabs}
+\usepackage{seqsplit}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blue,citecolor=blue,urlcolor=blue}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+
+\title{Correlazioni dinamiche — trimero a catena aperta}
+\author{Note di lavoro — Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\section*{Introduzione}
+
+Questo documento raccoglie i file della fase di \emph{correlazioni dinamiche} (circuito con
+l'ancilla, Hadamard test) per il trimero a catena aperta — mirror diretto, per la topologia a due
+legami, di quanto già completato per l'anello
+(\texttt{\seqsplit{trimero\_anello\_correlazioni.tex}}). A differenza dell'anello, questa fase
+lavora fin dall'inizio su \textbf{due} punti di lavoro, non uno solo (VQE-DM,
+$J{=}1,b{=}b_c{=}3.0,D{=}0.15$; S0 Trotter, $J{=}1,b{=}3.0073414,D{=}0.3$), tenuti entrambi per
+confronto perché la scelta definitiva resta aperta col relatore. L'ordine seguito è stato lo
+stesso dell'anello: prima l'analisi di simmetria (verificata numericamente e sottoposta a tre
+giri di audit indipendenti, con correzioni reali a ogni giro), poi il circuito.
+
+Per ciascun file: cosa fa, le funzioni interne, come si usa, le verifiche effettuate, e cosa se ne
+può concludere.
+
+\section*{\texttt{\seqsplit{simmetrie\_correlatori\_trimero\_catena.tex}}}
+
+Documento di teoria, primo passo della fase: analisi di simmetria dell'Hamiltoniana completa
+(scambio + campo + DM) applicata ai correlatori
+$C_{ij}^{\alpha\beta}(t)=\langle\psi_0|\sigma_i^\alpha(t)\sigma_j^\beta(0)|\psi_0\rangle$, prima di
+qualunque implementazione di circuito.
+
+\textbf{Contenuto.} La simmetria residua è $P_{13}$ (riflessione siti $1,3$, sito $2$ fisso) --
+uno \textbf{scambio puro}, senza rotazioni aggiuntive, a differenza dell'anello che richiede
+$U_\text{anello}=\mathrm{SWAP}_{12}\cdot(R_z(\pi))^{\otimes3}$. Conseguenza qualitativa: i
+coefficienti $\lambda_\alpha\equiv+1$ per ogni $\alpha$ (contro $\eta_x=\eta_y=-1,\eta_z=+1$
+dell'anello), quindi $P_{13}$ produce \textbf{solo uguaglianze} fra correlatori distinti
+($C_{11}\equiv C_{33}$, $C_{12}\equiv C_{32}$, $C_{21}\equiv C_{23}$, $C_{13}\equiv C_{31}$),
+\textbf{mai zeri}: il sito fisso (2) non è vincolato, a differenza del sito fisso (3) dell'anello
+(4 zeri strutturali). Time-reversal $K$: $24$ zeri a $t=0$ per $i\neq j$ (stessa dimostrazione
+dell'anello) più $6$ zeri aggiuntivi per $i=j$ ($C_{ii}^{xz},C_{ii}^{zx}$), da un argomento
+distinto ($\langle\sigma_i^y\rangle=0$ per stato reale). A $D=0$: regola di selezione su $M$, $36$
+zeri per ogni $t$, distrutti tutti dal DM (contro $56\to4$ dell'anello).
+
+\textbf{Verifiche.} Tre giri di audit indipendenti, ciascuno con correzioni reali: (1) errore di
+conteggio nel Cor.\ delle relazioni $P_{13}$ (72 correlatori in 36 coppie, non 36 correlatori),
+più due lacune (caso $D=0$ mai trattato, degenerazione del punto di lavoro a $D=0$ mai
+dichiarata); (2) collisione di notazione ($\eta_\alpha$ usato con due significati diversi in due
+lemmi, rinominato $\lambda_\alpha$ per $P_{13}$); (3) un claim comparativo verso l'anello errato
+($56\to4$ per l'anello, non "restava 4"). Scan completo delle 81 combinazioni, due metodi
+indipendenti (esponenziale di matrice diretto e formula spettrale), confrontati direttamente fra
+loro (accordo $5.5\times10^{-15}$).
+
+\textbf{Conclusione.} Nessuno zero strutturale per ogni $t\neq0$ (0/81, contro i 4 dell'anello);
+$30/81$ nulle a $t=0$; $45$ valori indipendenti determinano tutte le $81$ combinazioni. Punto di
+lavoro non degenere solo grazie al DM (verificato: degenere a $D=0$).
+
+\section*{\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena.py}}}
+
+Modulo di produzione principale: costruisce il circuito Hadamard test a 4 qubit (3 di registro +
+1 ancilla) per misurare $C_{ij}^{\alpha\beta}(t)$, mirror diretto del circuito già validato per
+l'anello, riusando \texttt{\seqsplit{trotter\_trimero\_catena.py}} come blocco $U(t)$.
+
+\textbf{Funzioni interne.}
+\begin{itemize}
+\item \texttt{ANCILLA = 3} — indice del qubit ancilla.
+\item \texttt{ground\_state(J,\ b,\ D)} — stato fondamentale esatto (fase reale fissata).
+\item \texttt{build\_correlator\_circuit(...)} — il circuito completo (stessi argomenti
+dell'anello più \texttt{alternate}, propagato a \texttt{trotter\_circuit}, opzione assente nel
+modulo dell'anello).
+\item \texttt{ancilla\_z\_expectation(qc)}, \texttt{correlator\_from\_circuit(...)} — lettura e
+combinazione Re/Im, identiche nella struttura all'anello.
+\end{itemize}
+
+\textbf{Verifiche.} Test mirato con \textbf{stato iniziale asimmetrico} sotto $P_{13}$
+($\|P_{13}\psi-\psi\|=1.21$): con il ground state (autostato di $P_{13}$) un mapping
+sito$\leftrightarrow$qubit invertito sarebbe stato invisibile a ogni altro test. Errore su tutte
+le 81 combinazioni scala $O(1/N)$ (rapporto $2.00$ raddoppiando $N$, da $N{=}50$ a $N{=}800$):
+puro Trotter, nessun bias residuo — mapping verificato corretto in condizioni che ne avrebbero
+rivelato l'errore.
+
+\textbf{Conclusione.} Modulo maturo, usato senza modifiche da tutti gli script successivi.
+
+\section*{\texttt{\seqsplit{vqe\_w2qC\_k2\_trimero\_catena.py}}}
+
+Modulo minimo per l'ansatz \texttt{W-2qC.K2} (\texttt{pma\_2q\_trimer\_cyclic(2, w\_block)}, 10
+parametri, 2 cicli), mirror di \texttt{vqe\_w2q6\_trimero\_anello.py}. A differenza dell'anello,
+ottimizza \textbf{entrambi} i punti di lavoro nella stessa esecuzione (\texttt{main()}).
+
+\textbf{Risultato.} $60$ restart (COBYLA + polish L-BFGS-B) per punto: VQE-DM
+$\mathcal F=1.000000000000$; S0 $\mathcal F=0.999999999999992$. Nella sessione di sviluppo,
+$5$--$15$ restart erano già sufficienti; $60$ adottati per lo stesso motivo di cautela già
+documentato in \texttt{\seqsplit{trimero\_catena\_vqe\_dm.tex}} (vicinanza a un level crossing a
+$D=0$). Parametri ricaricati e ricalcolati indipendentemente (energia, fidelity, norma dello
+stato): coincidenti coi valori salvati.
+
+\textbf{Conclusione.} Due file \texttt{.npz}, uno per punto, non intercambiabili.
+
+\section*{\texttt{\seqsplit{validate\_circuito\_correlazioni\_catena.py}}}
+
+Validazione indipendente: riferimento classico esatto per esponenziale di matrice diretto (non
+formula spettrale), mirror di \texttt{validate\_circuito\_correlazioni.py}. Esegue
+\textbf{automaticamente entrambi} i punti di lavoro.
+
+\textbf{Verifiche.} Convergenza Trotter confermata ($O(1/N)$, rapporto $\to2.0$); zeri predetti a
+$t=0$ confermati a precisione macchina, sia sull'esatto sia sul circuito; relazione $P_{13}$
+($C_{11}^{xx}\equiv C_{33}^{xx}$) rispettata entro l'errore di Trotter, in entrambi i punti.
+
+\section*{\texttt{\seqsplit{validate\_vqe\_circuito\_correlazioni\_catena.py}}}
+
+Chiude la pipeline VQE$\to$correlazioni, mirror di
+\texttt{validate\_vqe\_circuito\_correlazioni.py}. Confronto sistematico delle 81 combinazioni fra
+preparazione VQE reale e preparazione esatta, su entrambi i punti.
+
+\textbf{Risultato.} Errore massimo $5.9\times10^{-8}$ (VQE-DM) e $9.8\times10^{-8}$ (S0), entrambi
+coerenti con $\sqrt{1-\mathcal F}$ — stesso comportamento dell'anello.
+
+\section*{\texttt{\seqsplit{scan81\_trimero\_catena.py}} + \texttt{\seqsplit{generate\_figure\_scan81\_catena.py}}}
+
+Estensione a tutte e 81 le combinazioni via circuito effettivo (statevector e shot finiti, 8192
+shots), mirror di \texttt{scan81\_trimero\_anello.py}. A differenza dell'anello, prende un
+argomento da riga di comando (\texttt{vqedm} o \texttt{s0}) e va lanciato una volta per punto.
+
+\textbf{Risultati.}
+\begin{center}
+\begin{tabular}{lcc}
+\toprule
+& VQE-DM ($D{=}0.15$) & S0 ($D{=}0.3$) \\
+\midrule
+$|C|$ minimo statevector & $0.1008$ & $0.0168$ \\
+errore Trotter, media/max & $1.76\times10^{-3}$/$3.34\times10^{-3}$ & $1.72\times10^{-3}$/$3.97\times10^{-3}$\\
+errore statistico, media/max & $1.39\times10^{-2}$/$3.85\times10^{-2}$ & $1.36\times10^{-2}$/$3.90\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Nessuna delle 81 combinazioni collassa a zero, in nessuno dei due punti — coerente col documento
+di simmetria (0 zeri predetti, contro i 4 dell'anello).
+
+\section*{\texttt{\seqsplit{validate\_shot\_noise\_trimero\_catena.py}} + \texttt{\seqsplit{generate\_figure\_shotnoise\_catena.py}}}
+
+Separazione errore Trotter/statistico, mirror di
+\texttt{validate\_shot\_noise\_trimero\_anello.py}. Un punto per lancio (argomento da riga di
+comando).
+
+\textbf{Risultato.} Rapporto statistico/Trotter $\sim10\times$ a VQE-DM, $\sim115\times$ a S0
+(su $C_{11}^{zz}(t{=}1.3)$): lo statistico domina in entrambi, con margine molto diverso —
+specifico del correlatore e del punto scelti, non un'anomalia. Convergenza $1/\sqrt{N_\text{shots}}$
+confermata su 7 valori di shot $\times$ 40 ripetizioni, in entrambi i punti.
+
+\section*{\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena\_spiegato.tex}}}
+
+Documento pedagogico principale: spiegazione passo per passo del circuito, mirror di
+\texttt{\seqsplit{circuito\_correlazioni\_trimero\_anello\_spiegato.tex}} -- non una copia: la
+Sez.~2 è ribaltata rispetto all'anello (mostra \emph{perché} il sito fisso \textbf{non} produce
+zeri, con figura di contrasto diretto $C_{22}^{xz}(t)$), e la Sez.~6 aggiunge una novità assente
+nell'anello (l'opzione \texttt{alternate}, guadagno non monotono in $D$ e $N$).
+
+\textbf{Contenuto specifico della catena.} Verifica dedicata sul mapping sito$\leftrightarrow$qubit
+con stato asimmetrico (Sez.~8, box "Verifica mirata"); tabella "$U$ controllato" con valori
+effettivamente calcolati (non placeholder, corretto durante la stesura); scan a 81 combinazioni su
+entrambi i punti di lavoro.
+
+\textbf{Figure prodotte} (da \texttt{\seqsplit{generate\_circuit\_fig\_trimero\_catena.py}},
+\texttt{\seqsplit{generate\_figures\_circuito\_trimero\_catena.py}}): diagramma del circuito
+(Re/Im), convergenza Trotter, validazione continua $C_{11}^{yy}(t)$, contrasto "nessuno zero sul
+sito 2" ($C_{22}^{xz}(t)$).
+
+\textbf{Verifiche.} Compilato due volte, zero errori, un solo underfull cosmetico residuo (stessa
+soglia di tolleranza già accettata nei documenti dell'anello). 10 pagine, tutte verificate
+visivamente pagina per pagina.
+
+\section*{Quattro notebook della fase}
+
+Mirror per la catena della struttura a quattro notebook già usata per l'anello, eseguiti per
+intero (non solo listati di codice), tutta la logica pesante riusata per import dai moduli sopra.
+
+\textbf{\texttt{\seqsplit{correlazioni\_trimero\_catena\_simmetria.ipynb}}} (18 celle) — mirror
+computazionale del documento di teoria: $P_{13}$ commuta senza rotazioni aggiuntive, $\lambda_\alpha
+\equiv+1$, nessuno zero forzato sul sito fisso, i due corollari di time-reversal (30 zeri a
+$t=0$), la regola $D=0$ (36 zeri). Ogni numero verificato coincidere con quello del \texttt{.tex}.
+
+\textbf{\texttt{\seqsplit{correlazioni\_trimero\_catena\_esplorazione.ipynb}}} (16 celle) —
+circuito con l'ancilla disegnato esplicitamente, validazione su 4 casi, convergenza Trotter, shot
+noise su un caso singolo.
+
+\textbf{\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena\_tutte.ipynb}}} (25 celle) —
+scan completo delle 81 combinazioni con preparazione esatta: heatmap, griglia $9\times9$ nel
+tempo (Re \emph{e} Im — corretto durante la sessione dopo una domanda mirata sull'assenza della
+parte immaginaria), selettore, analisi spettrale, verifica esplicita che nessun correlatore sia
+quasi-costante (escursione minima $0.196$, contro $\sim0.0005$ di $C_{33}^{zz}$ nell'anello) --
+anch'essa aggiunta dopo la stessa domanda, non presente nella prima stesura.
+
+\textbf{\texttt{\seqsplit{circuito\_correlazioni\_trimero\_catena\_vqe.ipynb}}} (22 celle) —
+stessa analisi con preparazione VQE reale. Residuo medio $1.89\times10^{-8}$, identico a quello
+dello script standalone corrispondente: buon controllo incrociato fra le due strade.
+
+\textbf{Verifiche.} Tutti e quattro eseguiti senza errori; tutti i numeri stampati verificati
+coincidere con quelli degli script standalone dove sovrapposti.
+
+\textbf{Conclusione.} Mirror computazionale completo; una correzione reale emersa durante
+l'ispezione (parte immaginaria mancante nella griglia temporale, assenza di verifica esplicita
+sui correlatori quasi-costanti), non solo confermata ma con causa e correzione dichiarate.
+
+\section*{\texttt{\seqsplit{manuale\_uso\_correlazioni\_trimero\_catena\_\{statevector,vqe\}.tex}}}
+
+Manuali d'uso, mirror dei corrispondenti dell'anello. Differenza strutturale dichiarata in
+entrambi: la catena lavora su \textbf{due} punti di lavoro, non uno; gli script che li supportano
+prendono un argomento da riga di comando (\texttt{vqedm}/\texttt{s0}) oppure eseguono entrambi
+automaticamente, a seconda dello script -- distinzione esplicita nel manuale, verificata contro
+il comportamento reale di ciascuno script prima di scriverla.
+
+\textbf{Verifiche.} Compilati entrambi, zero errori, alcuni overfull cosmetici residui (righe di
+codice/nomi file lunghi in \texttt{verbatim}/\texttt{texttt}), verificati non compromettere la
+leggibilità pagina per pagina.
+
+\section*{Conclusione generale}
+
+La fase di correlazioni dinamiche per la catena aperta è arrivata a copertura completa: teoria di
+simmetria derivata e sottoposta a tre giri di audit indipendenti (con correzioni reali a ogni
+giro, non solo conferme), circuito costruito e validato su entrambi i punti di lavoro in uso nel
+progetto, pipeline VQE$\to$correlazioni chiusa, scan sistematico delle 81 combinazioni (nessuno
+zero, coerente con la teoria), quattro notebook eseguiti, manuali d'uso completi. Il risultato
+qualitativo centrale -- la catena non eredita gli zeri strutturali dell'anello, perché la sua
+simmetria residua ($P_{13}$) è un puro scambio privo di segno -- è stato verificato con lo stesso
+livello di rigore già applicato all'anello, incluso un controllo dedicato a escludere che la
+simmetria stessa potesse mascherare un errore di implementazione. Aperti per il seguito: scelta
+definitiva del punto di lavoro con il relatore; correlatori dinamici già chiusi per entrambe le
+topologie di $N=3$ -- unico filone rimasto è la Parte 2 della tesi (rumore, Kraus/Lindblad).
+
+\end{document}

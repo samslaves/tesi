@@ -1,0 +1,178 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 3. Dinamica}
+\input{preambolo_dimero}
+
+\title{\bfseries Far evolvere il sistema nel tempo\\[2pt]
+\large Documento 3 --- simulazione quantistica via decomposizione di Suzuki--Trotter}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Il problema: un'esponenziale che non si sa fare}
+
+Finora abbiamo cercato uno stato stazionario. Adesso cambiamo domanda: dato uno
+stato iniziale, come evolve nel tempo? La risposta formale è immediata,
+$\ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}$, ma sul piano operativo non lo è affatto:
+$e^{-iHt}$ è una matrice unitaria arbitraria, e non esiste una porta elementare
+che la realizzi.
+
+La via d'uscita è spezzare $H$ in pezzi che \emph{si sanno} esponenziare. Nel
+nostro caso
+\begin{equation}
+H = \underbrace{J\,\vs1\!\cdot\!\vs2 + b\,(Z_1{+}Z_2)}_{H_1}
+  \;+\; \underbrace{D\,(X_1Z_2-Z_1X_2)}_{H_2},
+\end{equation}
+dove $H_1$ raccoglie scambio e campo e $H_2$ è il solo termine DM. Ciascuno dei
+due si traduce in poche porte standard. Il problema è che $e^{-iHt}\neq
+e^{-iH_1t}e^{-iH_2t}$, perché i due pezzi non commutano.
+
+\messaggio{Con $D=0$ i due pezzi commutano e la fattorizzazione è esatta: non
+servirebbe alcuna approssimazione. È proprio il termine che rende il problema
+interessante a rendere necessario l'algoritmo.}
+
+\section{La ricetta di Trotter}
+
+Si divide l'intervallo in $N$ passi di durata $\tau=t/N$ e si alterna:
+\begin{equation}
+e^{-iHt} \;\simeq\; \Big(e^{-iH_2\tau}\,e^{-iH_1\tau}\Big)^{N}.
+\end{equation}
+L'idea è che su un intervallo breve l'errore di scambiare l'ordine è piccolo:
+formalmente l'errore per passo è del secondo ordine in $\tau$, e sommato su
+$N$ passi resta del primo ordine in $1/N$. Più passi si usano, più
+l'approssimazione è buona --- e più lungo diventa il circuito. È il compromesso
+centrale di tutta la simulazione quantistica.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/circ_trotter}
+\caption{Un singolo passo di Trotter, come effettivamente costruito. Le prime
+porte realizzano $e^{-iH_1\tau}$ (due rotazioni $R_z$ per il campo, poi i tre
+blocchi $R_{XX},R_{YY},R_{ZZ}$ per lo scambio isotropo); le ultime realizzano
+$e^{-iH_2\tau}$, il termine DM, ottenuto coniugando due rotazioni $ZZ$ con
+porte di Hadamard. Il circuito completo è questo blocco ripetuto $N$ volte.}
+\end{figure}
+
+\FloatBarrier
+
+\section{Verifica: il circuito riproduce la dinamica vera}
+
+Partendo da $\ket{\uparrow\uparrow}$ e seguendo la magnetizzazione totale nel
+tempo, si può confrontare direttamente il risultato del circuito con quello
+dell'esponenziale di matrice calcolata classicamente.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{figure/fig05_trotter_sz}
+\caption{Magnetizzazione totale in funzione del tempo. La curva nera è
+l'evoluzione esatta. Con soli $2$ passi (rosso) il circuito sbaglia visibilmente
+ampiezza e fase; con $5$ passi (arancio) l'errore si riduce ma resta; con $20$
+passi (verde) la curva si sovrappone all'esatta e non è più distinguibile a
+occhio. Il punto di lavoro è scelto perché la dinamica non sia monocromatica:
+un'unica frequenza renderebbe l'errore molto più difficile da vedere.}
+\label{fig:sz}
+\end{figure}
+
+\FloatBarrier
+
+\verifica{Che il circuito Qiskit implementi davvero il prodotto di matrici che
+crediamo non è stato assunto ma controllato: a $t=6$, $N=20$, lo stato
+prodotto dal circuito e quello ottenuto moltiplicando le matrici differiscono al
+massimo di $2.2\times10^{-15}$, e le due magnetizzazioni coincidono su tutte le
+cifre stampate ($+0.666963697$).}
+
+\needspace{9\baselineskip}
+\section{L'errore si comporta come previsto}
+
+L'affermazione ``l'errore va come $1/N$'' è verificabile, e va verificata: è il
+modo di distinguere un'approssimazione controllata da un'approssimazione che si
+spera vada bene.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.76\textwidth]{figure/fig06_trotter_errore}
+\caption{Errore a tempo fissato ($t=6$) al crescere del numero di passi, in
+scala doppio-logaritmica. Le due grandezze misurano cose diverse: la distanza
+fra gli operatori di evoluzione (blu) scala come $1/N$, la perdita di fidelity
+sullo stato (rosso) come $1/N^2$. Le rette punteggiate sono le pendenze attese,
+ancorate al primo punto. Gli scostamenti a $N$ piccolo sono i termini di ordine
+superiore, che a pochi passi non sono trascurabili.}
+\label{fig:errore}
+\end{figure}
+
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rccc@{}}
+\toprule
+\rowcolor{grigetto}
+$N$ & $\lVert U_{\rm Trotter}-U_{\rm esatto}\rVert$ & $1-\mathcal F$ & $\lvert\Delta\media{S_z}\rvert$ \\
+\midrule
+  2 & $1.26$ & $3.9\times10^{-1}$ & $1.8\times10^{-1}$ \\
+  8 & $2.7\times10^{-1}$ & $8.6\times10^{-3}$ & $3.8\times10^{-2}$ \\
+ 32 & $6.5\times10^{-2}$ & $4.3\times10^{-4}$ & $2.3\times10^{-3}$ \\
+128 & $1.6\times10^{-2}$ & $2.6\times10^{-5}$ & $1.5\times10^{-4}$ \\
+512 & $4.0\times10^{-3}$ & $1.6\times10^{-6}$ & $9.1\times10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\caption{Errore a $t=6$. Raddoppiando i passi, la prima colonna si dimezza e la
+seconda si divide per quattro: è esattamente il comportamento atteso. Le
+pendenze misurate con un fit sui punti con $N\ge8$ valgono $-1.008$ e $-2.059$
+contro i valori teorici $-1$ e $-2$.}
+\end{table}
+
+\FloatBarrier
+
+\needspace{9\baselineskip}
+\section{Quanto costa: la parte che decide se è fattibile su hardware}
+
+Il numero di passi non è gratis. Ogni passo aggiunge porte, e sull'hardware
+reale sono le porte a due qubit a dominare il tasso di errore. Contarle è quindi
+la misura di fattibilità più diretta.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Compilazione} & \textbf{CNOT per passo} & \textbf{profondità} \\
+\midrule
+traduzione diretta, nessuna ottimizzazione & $10$ & $37$ \\
+compilazione ottimizzata & $\mathbf{3}$ & $13$ \\
+\bottomrule
+\end{tabular}
+\caption{Costo di un passo di Trotter, contato dopo la traduzione nel set di
+porte nativo. Chiedere al compilatore di minimizzare riduce le porte a due
+qubit di un fattore superiore a tre. Non è una raffinatezza: su hardware reale
+il numero di CNOT è il fattore che determina quanto lontano si può spingere
+l'evoluzione prima che il rumore la distrugga.}
+\end{table}
+
+\FloatBarrier
+
+\messaggio{C'è una tensione strutturale fra i due risultati di questo documento:
+l'errore di Trotter scende aumentando $N$, ma l'errore hardware sale, perché il
+circuito si allunga di $3$ CNOT per ogni passo aggiunto. Esiste quindi un $N$
+ottimo, e non è né il più piccolo né il più grande. Determinarlo richiede un
+modello di rumore: è il ponte naturale verso la Parte 2 della tesi.}
+
+\section{Nota sul punto di lavoro}
+
+Le figure~\ref{fig:sz} e~\ref{fig:errore} usano $b/J=-0.18$, $D/J=1$, con stato
+iniziale $\ket{\uparrow\uparrow}$. La scelta è deliberata e vale la pena
+motivarla, perché è un punto metodologico che si ripresenta: uno stato iniziale
+che sia già autostato dei singoli blocchi dell'Hamiltoniana evolve in modo
+banale e \emph{non mostra} l'errore di Trotter, anche quando c'è. Un test di
+convergenza fatto su uno stato del genere darebbe un risultato ottimo e privo di
+significato. Servono uno stato e un punto di lavoro asimmetrici, che facciano
+emergere l'errore invece di mascherarlo.
+
+\end{document}

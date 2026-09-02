@@ -217,3 +217,101 @@ fra i tre bond nell'anello).
 **Domanda:** quale priorità, vista la scadenza di settembre — chiudere
 prima il parallelismo anello/catena sul VQE con DM, o passare subito a
 Trotter/correlazioni su N=3?
+
+## Aggiornamento — domanda 11 risolta nei fatti: fatti entrambi sull'anello
+
+Non è stato necessario scegliere: per l'anello sono stati completati sia
+il VQE con DM (Fase 5) sia Trotter e correlazioni dinamiche — il filone
+anello è ora chiuso a tutti i livelli (teoria esatta, VQE senza/con DM,
+Trotter, correlazioni). Vedi `scheda_progetto_tesi.md` e
+`log_decisioni.md` per il dettaglio.
+
+**Domanda aperta residua, per la catena aperta:** replicare lo stesso
+percorso completo (Fase 5 con DM, poi Trotter, poi correlazioni
+dinamiche) usato per l'anello — non ci sono più alternative di priorità
+da chiedere al relatore, è l'ultimo filone rimasto per chiudere N=3 con lo
+stesso livello di completezza. Un solo punto tecnico da confermare (non
+al relatore, ma come primo checkpoint della prossima sessione): il punto
+di lavoro $(b,D)$ per la Fase 5 della catena, dato che la struttura del
+termine DM ($D_{12}=-D_{23}$, forzata dalla riflessione $P_{13}$) è già
+nota e non richiede una scelta fra opzioni come per l'anello. Vedi
+`prompt_nuova_chat_trimero_catena.md`.
+
+---
+
+# Domande per il relatore — Parte 2 (rumore sul dimero)
+
+## 12. Dove attaccare il rumore, come interpretare la percentuale, quale piattaforma, readout simmetrico o no
+
+Aperta la Parte 2. Scope confermato dal relatore: solo errori di gate (1q/2q)
+e di readout, $T_1$/$T_2$ esclusi. Prima di scrivere codice, quattro punti
+verificati come non banali (vedi `log_decisioni.md`, sezione "apertura Parte
+2") e posti in una mail:
+
+a) dove attaccare l'errore di gate — sui gate logici del modello (RXX, RYY,
+   RZZ) o su un circuito transpilato in base hardware; se transpilato, con
+   quale livello di ottimizzazione (verificato un fattore $\sim3.3$ fra
+   default e ottimo: 10 CNOT vs 3 CNOT per passo di Trotter del dimero);
+b) come interpretare la percentuale fornita: come errore medio di gate
+   $\varepsilon$ (richiede conversione esplicita al parametro $\lambda$ di
+   Aer, $\lambda=2\varepsilon$ a 1 qubit, $\lambda=\tfrac43\varepsilon$ a 2
+   qubit) o come $\lambda$ direttamente;
+c) piattaforma hardware di riferimento per i valori di calibrazione reali;
+d) readout simmetrico (come nella slide 17 del corso) o asimmetrico (più
+   realistico).
+
+**Risposta ricevuta (02/09/2026):**
+
+> Confermo che usiamo solo errori di gate e di misura.
+> 1. Farei prima la transpilazione, aiuterà a ridurre i gate quindi va
+>    fatto.
+> 2. Riscala come dici
+> 3. Usa dei valori tipici che prendi guardando i valori di qualche chip di
+>    riferimento.
+> In generale rifarei il conto per vari valori dei parametri di errore.
+> Sull'errore di misura, parti simmetrico. Poi vedi se hai tempo di fare un
+> test asimmetrico, ma senza perderci troppo tempo.
+
+**Lettura operativa:**
+
+- (a) **Transpilare**, motivato esplicitamente da "aiuterà a ridurre i
+  gate" — quindi il livello di ottimizzazione va scelto per **minimizzare**
+  il conteggio, non lasciato al default. Per il passo di Trotter del dimero
+  questo significa `optimization_level>=2` (3 CNOT), non il default (10
+  CNOT). Estensione diretta a trimero anello/catena quando si aprirà quella
+  fase: usare lo stesso criterio (livello che minimizza), non assumere che
+  il numero di CNOT sia lo stesso del dimero.
+- (b) **Confermata la conversione** $\varepsilon\to\lambda$ di Aer già
+  derivata — nessuna sorpresa, procedere come pianificato.
+- (c) **Nessuna piattaforma imposta**: scegliere un chip reale rappresentativo
+  e citarne i dati di calibrazione pubblicati. Aggiunta esplicita non
+  richiesta in precedenza: **il relatore chiede uno scan sui parametri di
+  errore** ("rifarei il conto per vari valori"), non un solo punto —
+  implica una griglia $(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$
+  o almeno una scansione 1D attorno al valore tipico, non un singolo
+  risultato a percentuali fisse.
+- (d) **Readout simmetrico come primo passo**, obbligatorio; l'asimmetrico è
+  **opzionale**, da fare solo se il tempo lo consente e senza investirci
+  sforzo eccessivo — non un requisito per la consegna.
+
+**Stato:** tutte le domande aperte sulla Parte 2 risolte. Prossimo passo:
+ricerca dei valori di calibrazione reali (fonti citabili), poi
+implementazione con transpilazione ottimizzata e scan sui parametri di
+errore.
+
+Non è stato necessario scegliere: per l'anello sono stati completati sia
+il VQE con DM (Fase 5) sia Trotter e correlazioni dinamiche — il filone
+anello è ora chiuso a tutti i livelli (teoria esatta, VQE senza/con DM,
+Trotter, correlazioni). Vedi `scheda_progetto_tesi.md` e
+`log_decisioni.md` per il dettaglio.
+
+**Domanda aperta residua, per la catena aperta:** replicare lo stesso
+percorso completo (Fase 5 con DM, poi Trotter, poi correlazioni
+dinamiche) usato per l'anello — non ci sono più alternative di priorità
+da chiedere al relatore, è l'ultimo filone rimasto per chiudere N=3 con lo
+stesso livello di completezza. Un solo punto tecnico da confermare (non
+al relatore, ma come primo checkpoint della prossima sessione): il punto
+di lavoro $(b,D)$ per la Fase 5 della catena, dato che la struttura del
+termine DM ($D_{12}=-D_{23}$, forzata dalla riflessione $P_{13}$) è già
+nota e non richiede una scelta fra opzioni come per l'anello. Vedi
+`prompt_nuova_chat_trimero_catena.md`.

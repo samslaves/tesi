@@ -1,0 +1,238 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codifica e lingua ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+
+% ---------- Matematica ----------
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{nicematrix}
+
+% ---------- Impaginazione ----------
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\title{Parte 2, Passo 1 --- costruzione del modello di rumore\\
+\large Dall'operatore densità al \texttt{NoiseModel} di Qiskit}
+\author{Samuele \\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\tableofcontents
+
+\bigskip
+\noindent Questo documento deriva, passo per passo, tutto ciò che serve per costruire
+il modello di rumore del dimero: dal motivo per cui uno stato puro non basta più, fino
+alla formula esatta che converte l'errore medio di gate riportato nelle calibrazioni
+pubblicate nel parametro che Qiskit vuole in ingresso. Segue la stessa notazione delle
+slide del corso (\texttt{7Physical\_\allowbreak implementation.pdf}), citate dove serve.
+
+\section{Perché serve l'operatore densità}
+
+In un sistema chiuso lo stato è un vettore $\ket{\psi}$ e l'evoluzione è unitaria:
+$\ket{\psi(t)}=U(t)\ket{\psi(0)}$. Questo smette di bastare quando il sistema $S$ (i
+nostri qubit) interagisce con un ambiente $E$ che non osserviamo (il resto del
+dispositivo, i suoi gradi di libertà termici, l'apparato di misura). Lo stato
+composito $SE$ resta puro, ma non lo è più lo stato del solo $S$: per descriverlo si
+deve tracciare via l'ambiente,
+\begin{equation}
+\rho^S = \Tr_E\!\big[\rho^{SE}\big],
+\end{equation}
+e $\rho^S$ così ottenuto è in generale uno stato \emph{misto}. Questo è esattamente il
+meccanismo della decoerenza discusso a lezione: se due stati del sistema si
+correlano con stati ortogonali dell'ambiente, l'informazione di fase fra di essi va
+persa localmente, anche se il sistema composito resta in uno stato puro.
+
+Un esempio minimo, utile a fissare le idee: sia $\ket{\Psi}=\alpha\ket{0_A0_E}+
+\beta\ket{1_A0_B}$ (spin $A$ correlato con un secondo sistema $B$ tramite
+l'entanglement). Tracciando via $B$,
+\begin{equation}
+\rho^A = \Tr_B\ket{\Psi}\bra{\Psi} = |\alpha|^2\ket{0_A}\bra{0_A} +
+|\beta|^2\ket{1_A}\bra{1_A},
+\end{equation}
+che è diagonale: tutta l'informazione sulla fase relativa fra $\alpha$ e $\beta$ è
+sparita da $\rho^A$, pur essendo lo stato globale $\ket{\Psi}$ perfettamente puro e
+coerente. Da qui in avanti lavoriamo quindi con $\rho$, non più con $\ket{\psi}$; in
+Qiskit questo corrisponde a passare da \texttt{Statevector} a
+\texttt{DensityMatrix}/\texttt{AerSimulator(method="density\_matrix")}.
+
+\section{Operazioni quantistiche e operatori di Kraus}
+\label{sec:kraus}
+
+Un'evoluzione non unitaria di $\rho$ (dovuta all'accoppiamento con $E$) si scrive in
+generale come un'operazione quantistica
+\begin{equation}
+\mathcal E(\rho) = \sum_k E_k\,\rho\,E_k^\dagger, \qquad
+\sum_k E_k^\dagger E_k = \mathbb{I},
+\label{eq:kraus}
+\end{equation}
+dove gli $E_k$ sono gli \emph{operatori di Kraus} del canale. La condizione di
+completezza $\sum_k E_k^\dagger E_k=\mathbb{I}$ garantisce $\Tr[\mathcal E(\rho)]=1$
+per ogni $\rho$ normalizzato, cioè che $\mathcal E(\rho)$ resti un operatore densità
+legittimo. Questa è la forma generale da cui discendono tutti i canali di rumore usati
+a lezione (defasamento, rilassamento, depolarizzazione): cambia solo la scelta degli
+$E_k$.
+
+\emph{Nota terminologica}: nella tesi si useranno sempre $\varepsilon$ per l'errore
+medio di gate (quantità sperimentale, da randomized benchmarking) e $\lambda$ per il
+parametro del canale depolarizzante di Qiskit (quantità che entra nella
+Sez.~\eqref{eq:kraus}) --- non sono la stessa cosa, si veda la Sez.~\ref{sec:eps-lambda}.
+
+\section{Il canale depolarizzante}
+\label{sec:depol}
+
+\subsection{Un qubit}
+
+Il canale depolarizzante a un qubit sostituisce lo stato, con probabilità $\lambda$,
+con lo stato massimamente misto $\mathbb{I}/2$, lasciandolo inalterato con probabilità
+$1-\lambda$:
+\begin{equation}
+\mathcal E(\rho) = (1-\lambda)\,\rho + \lambda\,\frac{\mathbb{I}}{2}.
+\end{equation}
+Usando $\mathbb{I} = (\rho+X\rho X+Y\rho Y+Z\rho Z)/4$ per ogni $\rho$ normalizzato
+(identità standard per un singolo qubit, si veda Nielsen \& Chuang, citata anche nella
+slide del corso), si riscrive come combinazione dello stato originale e dei tre stati
+ruotati da un errore di Pauli:
+\begin{align}
+\mathcal E(\rho) &= (1-\lambda)\rho + \lambda\,\frac{\rho+X\rho X+Y\rho Y+Z\rho Z}{4}
+= \Big(1-\tfrac{3\lambda}{4}\Big)\rho +
+\frac{\lambda}{4}\big(X\rho X+Y\rho Y+Z\rho Z\big).
+\end{align}
+In forma di Kraus (Eq.~\eqref{eq:kraus}) questo è esattamente un canale a 4 operatori,
+\begin{equation}
+E_0=\sqrt{1-\tfrac{3\lambda}{4}}\,\mathbb{I},\quad
+E_1=\sqrt{\tfrac{\lambda}{4}}\,X,\quad
+E_2=\sqrt{\tfrac{\lambda}{4}}\,Y,\quad
+E_3=\sqrt{\tfrac{\lambda}{4}}\,Z,
+\label{eq:kraus-depol-1q}
+\end{equation}
+e si verifica direttamente che $\sum_k E_k^\dagger E_k=\mathbb{I}$ (verificato
+numericamente per diversi valori di $\lambda$, residuo a precisione macchina).
+
+\subsection{$n$ qubit}
+
+La stessa costruzione si generalizza a $n$ qubit sostituendo lo stato mescolato con
+l'identità sull'intero spazio a $d=2^n$ dimensioni:
+\begin{equation}
+\mathcal E(\rho) = (1-\lambda)\,\rho + \lambda\,\frac{\mathbb{I}}{2^n}.
+\label{eq:depol-nqubit}
+\end{equation}
+È questo il canale che useremo per gli errori di gate: $n=1$ per i gate a un qubit
+($R_z$, $\sqrt X$, $X$), $n=2$ per i CNOT.
+
+\section{Errore medio di gate $\varepsilon$ e parametro $\lambda$}
+\label{sec:eps-lambda}
+
+Le calibrazioni pubblicate dai produttori di hardware non riportano $\lambda$: riportano
+un \emph{errore medio di gate} $\varepsilon$, misurato con tecniche di randomized
+benchmarking. Serve quindi la relazione fra le due quantità, che deriviamo qui invece
+di darla per buona.
+
+\subsection{Fedeltà media di un canale}
+
+La fedeltà media di un'operazione quantistica $\mathcal E$ rispetto all'identità è
+definita come la media, su tutti gli stati puri $\ket\psi$ dello spazio a $d$
+dimensioni (con la misura di Haar), della sovrapposizione fra lo stato in ingresso e
+quello in uscita:
+\begin{equation}
+F_\text{avg}(\mathcal E) = \int d\psi\;\bra\psi\,\mathcal E(\ket\psi\bra\psi)\,\ket\psi .
+\end{equation}
+L'errore medio di gate è per definizione il suo complemento, $\varepsilon \equiv
+1-F_\text{avg}$.
+
+\subsection{Calcolo per il canale depolarizzante}
+
+Per il canale depolarizzante a $n$ qubit, Eq.~\eqref{eq:depol-nqubit}, il calcolo si fa
+esplicitamente. Per ogni stato puro $\ket\psi$ normalizzato,
+\begin{equation}
+\bra\psi\,\mathcal E(\ket\psi\bra\psi)\,\ket\psi =
+(1-\lambda)\underbrace{\bra\psi\psi\rangle\langle\psi\ket\psi}_{=1} +
+\lambda\,\bra\psi\frac{\mathbb{I}}{d}\ket\psi =
+(1-\lambda) + \frac{\lambda}{d},
+\end{equation}
+dove si è usato $\bra\psi\mathbb{I}\ket\psi=1$. Il risultato non dipende da
+$\ket\psi$: l'integrale su $\psi$ è quindi banale, e
+\begin{equation}
+F_\text{avg} = (1-\lambda) + \frac{\lambda}{d} = 1-\lambda\Big(1-\frac1d\Big)
+= 1-\lambda\,\frac{d-1}{d}.
+\end{equation}
+Quindi
+\begin{equation}
+\boxed{\;\varepsilon = 1-F_\text{avg} = \lambda\,\frac{d-1}{d}\;}, \qquad d=2^n.
+\label{eq:eps-lambda}
+\end{equation}
+
+\subsection{Conversione per 1 e 2 qubit}
+
+Invertendo l'Eq.~\eqref{eq:eps-lambda} per i due casi che useremo:
+\begin{align}
+n=1,\ d=2:&\quad \varepsilon = \lambda\cdot\frac12 \;\Longrightarrow\; \lambda = 2\varepsilon, \\[4pt]
+n=2,\ d=4:&\quad \varepsilon = \lambda\cdot\frac34 \;\Longrightarrow\; \lambda = \frac43\,\varepsilon.
+\end{align}
+Sono le due conversioni confermate dal relatore e già verificate numericamente
+(\texttt{depolarizing\_\allowbreak error} di Qiskit Aer riproduce $\varepsilon$ a
+precisione macchina se alimentato con $\lambda=2\varepsilon$ o
+$\lambda=\tfrac43\varepsilon$,
+controllato contro \texttt{qiskit.quantum\_info.\allowbreak average\_gate\_fidelity},
+non solo contro la formula).
+
+\section{Errore di lettura (readout)}
+
+Il secondo canale confermato riguarda la misura, non l'evoluzione: con probabilità $p$
+il risultato letto è quello sbagliato. Seguendo la notazione della slide del corso, i
+proiettori ideali $P_0=\ket0\bra0$, $P_1=\ket1\bra1$ vengono sostituiti da versioni
+``deformate'',
+\begin{equation}
+\pi_0 = (1-p)\,P_0 + p\,P_1, \qquad \pi_1 = (1-p)\,P_1 + p\,P_0,
+\end{equation}
+che nel caso simmetrico (stessa probabilità di errore per $0\to1$ e $1\to0$, la scelta
+richiesta dal relatore come primo passo) corrispondono alla matrice di confusione
+\begin{equation}
+\begin{NiceArray}{cc}[first-row,first-col]
+ & \ket0\ \text{letto} & \ket1\ \text{letto} \\
+\ket0\ \text{vero} & 1-p & p \\
+\ket1\ \text{vero} & p & 1-p
+\end{NiceArray}
+\end{equation}
+che è l'oggetto che si passa direttamente a \texttt{ReadoutError} in Qiskit Aer.
+
+\section{Cosa non entra in questo modello}
+
+Le slide del corso presentano anche il canale di defasamento (\emph{phase damping},
+$T_2$) e quello di rilassamento (\emph{amplitude damping}, $T_1$), ciascuno costruito
+allo stesso modo a partire da un'interazione esplicita con un ambiente a due livelli.
+Per decisione del relatore questi due canali sono esclusi dallo scope della tesi: il
+modello di rumore userà solo i due canali derivati sopra (gate, Sez.~\ref{sec:depol};
+readout, sezione precedente). Li si menziona qui solo per completezza, non perché
+verranno implementati.
+
+\section{Verso il codice: la struttura del \texttt{NoiseModel}}
+
+Con le Eq.~\eqref{eq:eps-lambda} e la matrice di confusione della sezione precedente,
+la costruzione del modello in Qiskit è diretta: si converte l'$\varepsilon_{1q}$ del
+chip scelto in $\lambda_{1q}=2\varepsilon_{1q}$ e lo si applica ai gate a un qubit
+($R_z$, $\sqrt X$, $X$); si converte l'$\varepsilon_{2q}$ in
+$\lambda_{2q}=\tfrac43\varepsilon_{2q}$ e lo si applica al CNOT; si costruisce la
+matrice di confusione dal $p_\text{readout}$ del chip e la si applica alla misura
+finale. Il limite di rumore nullo ($\lambda_{1q}=\lambda_{2q}=p_\text{readout}=0$) deve
+riprodurre esattamente i risultati della Parte 1 --- è il primo controllo da fare prima
+di usare il modello su un circuito completo, e va rifatto ogni volta che si cambia
+qualcosa a monte nella pipeline.
+
+\section{Prossimo passo}
+
+Applicare questo \texttt{NoiseModel}, con valori di calibrazione reali e citabili, alla
+stima VQE del ground state con termine DM (Passo 2 della pipeline).
+
+\end{document}

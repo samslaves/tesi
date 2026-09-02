@@ -2981,3 +2981,224 @@ Entrambe le relazioni pronte per l'invio. Nessuna nuova analisi tecnica: solo
 distillazione narrativa di risultati già stabiliti e verificati nelle fasi
 precedenti. Prossimo passo, se confermato dal relatore: adottare un punto di
 lavoro unico per la catena; altrimenti Parte 2 resta l'unico filone aperto.
+
+## Aggiornamento — apertura Parte 2 (rumore): scope, infrastruttura Qiskit verificata, prima lacuna colmata
+
+Aperta la Parte 2 (sistemi quantistici aperti). Scope fissato dal relatore:
+**solo due canali**, errori di gate (1 qubit / 2 qubit distinti) ed errore di
+readout — niente $T_1$/$T_2$, error mitigation, QEC per ora. Corrisponde
+esattamente ai riquadri "Gate errors" e "Measurement errors" della slide 17
+di `7Physical_implementation.pdf` ("Qiskit: noise models"); notazione di
+riferimento presa da lì. Percentuali di lavoro confermate dal relatore:
+$\varepsilon_{1q}=10^{-3}$, $\varepsilon_{2q}=10^{-2}$, $p_{\text{readout}}=10^{-2}$
+(indicative, da confrontare con documentazione di macchine reali).
+
+Pipeline da ripercorrere sul dimero, stesso ordine di Parte 1: VQE+DM →
+quantum simulation (Trotter) → correlazioni dinamiche, con rumore.
+
+**Nota per igiene del mount**: i due "PDF" del corso nel Project
+(`6Applications.pdf`, `7Physical_implementation.pdf`) sono in realtà archivi
+ZIP di immagini di pagina (una JPEG + un `.txt` per slide), non PDF veri —
+vanno letti con `zipfile`, non `pypdf`/lettura PDF standard.
+
+### Ambiente verificato
+
+`qiskit 2.5.2` + `qiskit-aer 0.17.2` installabili via pip
+(`--break-system-packages`). Smoke test superato: `NoiseModel` +
+`depolarizing_error` + `ReadoutError` su `AerSimulator(method="density_matrix")`
+su un Bell state, $\mathrm{Tr}(\rho^2)=0.984$ — coerente con l'aspettativa
+qualitativa (canale depolarizzante riduce la purezza).
+
+**Convenzione del canale depolarizzante in Aer verificata dalla docstring**:
+$$E(\rho)=(1-\lambda)\rho+\lambda\,\mathrm{Tr}[\rho]\,\frac{\mathbb I}{2^n}$$
+identica alla slide 14 del corso. **Attenzione**: $\lambda$ (parametro Aer)
+non coincide con l'errore medio di gate $\varepsilon$ pubblicato dai
+costruttori (da randomized benchmarking): $\varepsilon=\lambda\,(d-1)/d$ con
+$d=2^n$, quindi $\lambda=2\varepsilon$ a 1 qubit e $\lambda=\tfrac43\varepsilon$
+a 2 qubit. Passare $\varepsilon$ direttamente a `depolarizing_error`
+sottostimerebbe il rumore. **Domanda posta al relatore** (vedi
+`domande_relatore.md`, sezione Parte 2): se il valore fornito va inteso come
+$\varepsilon$ (con conversione esplicita) o direttamente come $\lambda$.
+
+Canali disponibili in Aer oltre ai due richiesti (non usati ora, per
+riferimento futuro): `thermal_relaxation_error` ($T_1,T_2$),
+`amplitude_damping_error`, `phase_damping_error`, `pauli_error`,
+`kraus_error` (Kraus arbitrari — ponte diretto col formalismo
+$\rho_t=\sum_k E_k\rho_0E_k^\dagger$ degli appunti Kraus/Lindblad del
+relatore, già in log), `PauliLindbladError`, `coherent_unitary_error`.
+
+### Scoperta numerica: dove attaccare il rumore non è una scelta binaria
+
+Verificato sul passo elementare di Trotter del dimero (`trotter_dimero.py`,
+un passo, $J=1,b=0.35,D=0.80$): il conteggio di gate a 2 qubit dipende
+fortemente da *come* si arriva alla base hardware.
+
+| modalità | gate a 2 qubit / passo |
+|---|---|
+| gate logici (RXX, RYY, 3×RZZ) | 5 |
+| transpilato, `optimization_level` 0/1 | 10 CNOT |
+| transpilato, `optimization_level` 2/3 | **3 CNOT** |
+
+Il valore 3 coincide col minimo già dimostrato in `circuito_compatto_teoria_e_limiti.tex`
+(2 CNOT impossibili, verificato con due algoritmi indipendenti, filone aperto
+in risposta a una domanda del relatore sul conteggio gate). Rapporto
+peggiore/migliore $\approx 10/3$: con $\varepsilon_{2q}=1\%$ e $N\sim100$–$200$
+passi (i valori già usati in Parte 1), la probabilità di attraversare l'intera
+evoluzione senza alcun errore a 2 qubit va da valori sotto l'1% fino a
+praticamente nulla, a seconda della scelta — non un dettaglio implementativo.
+Implica una struttura di errore totale con un $N$ ottimo:
+$$\epsilon_{\text{tot}}(N)\simeq \frac{a}{N} + g\,\varepsilon_{2q}N
+\quad\Longrightarrow\quad N^*=\sqrt{\frac{a}{g\,\varepsilon_{2q}}}$$
+con $g$ = gate a 2 qubit per passo — risultato atteso centrale della Parte 2,
+$a$ (coefficiente dell'errore di Trotter per il dimero) ancora da misurare.
+
+Anche questo posto come domanda al relatore (mail inviata, in attesa di
+risposta): rumore sui gate logici del modello o sul circuito transpilato in
+base hardware (raccomandazione motivata verso quest'ultima: è l'unica scelta
+che dà significato quantitativo al vantaggio di gate di RBS su $W$ già
+documentato in `scelta_ansatz_RBS_vs_W.tex` — meno CNOT, meno canali di
+rumore).
+
+### Lacuna colmata: `circuito_correlazioni_dimero.py`
+
+Segnalato in una sessione precedente come mancante (anello e catena avevano
+il modulo, il dimero viveva solo dentro `circuito_correlazioni_tutte.ipynb`,
+non importabile). Prodotto in un'altra chat (`circuito_correlazioni_dimero.py`,
+`validate_circuito_correlazioni_dimero.py`, `risultati_circuito_correlazioni_dimero.md`),
+**verificato in ambiente in questa sessione**, non solo letto:
+
+- **Validazione eseguita pulita.** Residui coerenti con solo errore di
+  Trotter, crescenti con $t$ a $N$ fisso ($1.7\times10^{-3}$ a $t=0.5$ →
+  $1.1\times10^{-2}$ a $t=5.0$ su $C_{21}^{xx}$, $N=200$). Zeri a $t=0$ per
+  le combinazioni attese (siti diversi, una sola componente $y$) a
+  precisione macchina ($\sim10^{-16}$–$10^{-17}$). Convergenza in $N$:
+  rapporto tra errori successivi raddoppiando $N$ da 10 a 320 converge
+  esattamente a 2.00, coerente con Trotter al prim'ordine.
+- **Mappatura sito↔qubit riverificata indipendentemente**, non presa per
+  buona. Il test con lo stato fondamentale del test 2 è risultato **cieco**
+  ($\langle Z_1\rangle=\langle Z_2\rangle=-0.0347$, quasi-simmetria che non
+  discrimina nulla — stesso tipo di rischio già documentato per la catena).
+  Rifatto con uno stato asimmetrico ad hoc ($\langle Z_1\rangle=0.811\neq
+  \langle Z_2\rangle=0.650$): combacia esattamente con `SITE_TO_QUBIT={1:1,2:0}`
+  dichiarata nel modulo (sito1→qubit1, sito2→qubit0, Famiglia 1).
+- **Nessun bug trovato** in `circuito_correlazioni_dimero.py` né nel file di
+  validazione, a parte un commento (non funzionale) sbagliato: la riga di
+  test `(1,"y",1,"x")` dichiara "deve coincidere col precedente" mentre la
+  relazione vera, verificata con un terzo metodo indipendente
+  (`scipy.linalg.expm` diretto, nessuna formula spettrale), è
+  un'**antisimmetria**: $C_{11}^{xy}(t)=-C_{11}^{yx}(t)$ esattamente
+  ($xy+yx\sim10^{-16}$). Da correggere il commento, non il codice.
+
+**Collisione di convenzione con `trotter_dimero.py`: confermata reale, ma
+non tocca questo modulo.** Verificato alla fonte: `dimer_exact.py` (riga 9,
+"la label 'ZI' agisce con Z sul qubit 1") implica sito1→qubit1, sito2→qubit0
+(Famiglia 1); `trotter_dimero.py` (riga 3, dichiarata esplicitamente,
+"spin 1 -> qubit 0, spin 2 -> qubit 1") è Famiglia 2 — opposte per davvero,
+non un falso allarme. Ma `circuito_correlazioni_dimero.py` **non importa
+`trotter_dimero.py`**: costruisce $U(t)$ da sé, esponenziando $H_1,H_2$ presi
+da `dimer_exact.py` come matrici dense (`scipy.linalg.expm`) e applicandoli
+come un unico `UnitaryGate` opaco a 2 qubit — stessa convenzione dello stato
+iniziale, internamente coerente, confermato dal test con stato asimmetrico.
+
+**Implicazione aperta per il seguito, non un difetto**: $U(t)$ in questo
+modulo è un gate opaco, non decomposto in `rz`/`rxx`/`ryy`/`rzz` come in
+`trotter_dimero.py` — un rumore per-gate nominato non si aggancia finché non
+viene transpilato. Isolato e transpilato a parte: sintetizza sempre a **3
+CNOT per passo**, a qualunque `optimization_level` (il sintetizzatore KAK di
+Qiskit per un `UnitaryGate` isolato a 2 qubit trova da solo la forma
+ottimale, a differenza della sequenza di rotazioni esplicite dove serve
+`optimization_level>=2` per arrivarci) — coerente col minimo già stabilito.
+Da decidere: agganciare il rumore qui via transpile (eredita il 3-CNOT), o
+riscrivere $U(t)$ con i gate espliciti di `trotter_dimero.py` per controllo
+diretto su quale gate riceve quale errore — stessa domanda di cui sopra,
+ora concreta su un file specifico.
+
+### File in arrivo nel Project (caricati dall'utente dopo questa verifica)
+
+| file | stato |
+|---|---|
+| `circuito_correlazioni_dimero.py` | verificato in ambiente, nessun bug |
+| `validate_circuito_correlazioni_dimero.py` | verificato in ambiente, un commento da correggere (non funzionale) |
+| `risultati_circuito_correlazioni_dimero.md` | sintesi, mirror dei documenti "risultati" già in uso per anello/catena |
+
+### Mail inviata al relatore
+
+Chiarimenti richiesti prima di proseguire (testo completo scambiato in chat,
+non ancora salvato come file a parte): dove attaccare l'errore di gate
+(logico / transpilato default / transpilato ottimo — vedi tabella sopra),
+come interpretare la percentuale ($\varepsilon$ vs $\lambda$ di Aer),
+piattaforma di riferimento per i valori di calibrazione, readout simmetrico
+o asimmetrico, conferma dell'esclusione di $T_1$/$T_2$. In attesa di
+risposta.
+
+### Stato
+
+Parte 2 aperta, scope fissato, ambiente verificato, prima lacuna (modulo
+correlatori del dimero) colmata e verificata indipendentemente. **Prossimo
+passo**: in attesa della risposta del relatore sui punti della mail;
+in parallelo, ricerca dei valori di calibrazione reali (fonti da citare,
+nessun numero a memoria) e, se utile, preparazione dell'infrastruttura
+`NoiseModel` parametrica rispetto alle scelte ancora aperte, così che la
+risposta del relatore si traduca in un cambio di parametro.
+
+## Aggiornamento — risposta del relatore su rumore (Parte 2): tutte le domande aperte risolte
+
+Risposta ricevuta (02/09/2026) alle quattro domande della mail (dove attaccare
+il rumore di gate, come interpretare la percentuale, quale piattaforma,
+readout simmetrico o no). Testo completo e lettura operativa in
+`domande_relatore.md`, sezione 12. In sintesi, quattro decisioni chiuse:
+
+**(a) Transpilare, e farlo per minimizzare i gate — non un default qualsiasi.**
+Il relatore motiva esplicitamente la scelta con "aiuterà a ridurre i gate
+quindi va fatto": non basta transpilare, va fatto con il livello di
+ottimizzazione che minimizza il conteggio. Per il passo di Trotter del
+dimero questo risolve l'ambiguità già isolata in questa sessione
+(`optimization_level` di default: 10 CNOT/passo; `optimization_level>=2`:
+3 CNOT/passo, sintesi KAK, coincide col minimo già dimostrato in
+`circuito_compatto_teoria_e_limiti.tex`) a favore della seconda: **3 CNOT
+per passo di Trotter è il numero da usare per il dimero.** Da applicare con
+lo stesso criterio (minimizzare, non assumere il default) quando si
+estenderà a trimero anello/catena — il conteggio minimo per quei circuiti
+non è stato ancora misurato con questo criterio specifico (solo il conteggio
+empirico via `transpile(optimization_level=3)` già in
+`trimero_anello_circuito_compatto.tex`/`trimero_catena_circuito_compatto.tex`,
+che però era stato fatto per un motivo diverso — mostrare che il circuito
+compresso nasconde la scalata in $N$, non per la Parte 2).
+
+**(b) Conversione $\varepsilon\to\lambda$ confermata**, nessuna sorpresa:
+$\lambda=2\varepsilon$ a 1 qubit, $\lambda=\tfrac43\varepsilon$ a 2 qubit
+(da $\varepsilon=\lambda(d-1)/d$, $d=2^n$), come già derivato dalla docstring
+di `depolarizing_error` di Aer.
+
+**(c) Nessuna piattaforma imposta.** Scegliere un chip reale rappresentativo
+e citarne i dati di calibrazione pubblicati. **Novità non anticipata**: il
+relatore chiede esplicitamente uno **scan sui parametri di errore**
+("rifarei il conto per vari valori dei parametri di errore"), non un singolo
+punto a percentuali fisse — implica una griglia o almeno una scansione 1D
+su $(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$, coerente con la
+struttura $N^*=\sqrt{a/(g\varepsilon_{2q})}$ già derivata in questa sessione
+(l'$N$ ottimo dipende dal valore di $\varepsilon_{2q}$ scelto: uno scan sui
+parametri di errore è anche l'unico modo di mostrare come si sposta $N^*$).
+
+**(d) Readout simmetrico obbligatorio come primo passo; asimmetrico opzionale**,
+da fare solo se resta tempo, senza investirci sforzo sproporzionato — non
+un requisito per la consegna.
+
+### File aggiornati di conseguenza
+
+- `domande_relatore.md`: aggiunta sezione 12 (Parte 2), domanda e risposta
+  integrali, lettura operativa punto per punto.
+- `scheda_progetto_tesi.md`: allineato lo scope della Parte 2 — tolta la
+  menzione generica di $T_1$/$T_2$ come argomento della tesi, sostituita con
+  la dichiarazione esplicita dei due soli canali confermati (gate, readout)
+  e l'esclusione dichiarata di $T_1$/$T_2$.
+
+### Stato
+
+Nessuna domanda aperta residua sull'impostazione della Parte 2. Prossimo
+passo: (1) ricerca dei valori di calibrazione reali su un chip rappresentativo,
+fonti citabili, nessun numero a memoria; (2) implementazione del NoiseModel
+con transpilazione a gate minimizzati (3 CNOT/passo per il dimero) e scan sui
+parametri di errore, non un singolo punto; (3) verifica end-to-end di tutta
+la pipeline (VQE, U(t), correlatori) prima di introdurre il rumore, per non
+propagare errori di stadi precedenti nella parte con rumore.

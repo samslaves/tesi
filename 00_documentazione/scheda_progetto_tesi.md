@@ -85,7 +85,9 @@ $$H = b(s_{z1}+s_{z2}) + J\,\vec s_1\!\cdot\!\vec s_2 + D(s_{x1}s_{z2}-s_{z1}s_{
 - Si passa al **operatore densità** $\rho$ (stati misti): non si conosce esattamente
   lo stato, ma una distribuzione di probabilità su stati diversi; perdita di
   informazione per interazione con l'ambiente (decoerenza).
-- Effetti $T_1$ (rilassamento), $T_2$ (decoerenza), errori di gate e di lettura.
+- **Due soli canali** (confermato dal relatore, 02/09/2026): errori di **gate**
+  (1 e 2 qubit, canale depolarizzante) ed errore di **lettura** (readout).
+  $T_1$ (rilassamento) e $T_2$ (decoerenza) **esclusi** dalla tesi.
 
 ## Obiettivo
 - **Parte 1:** riprodurre il dimero (N=2), estenderlo a N=3, trovare lo stato
@@ -286,3 +288,41 @@ completo.
 **Prossimo passo:** da decidere fra completare la Fase 5 per la catena
 (chiudere il parallelismo con l'anello) o aprire il fronte Trotter/correlazioni
 per N=3.
+
+## Aggiornamento — anello: Trotter, correlazioni dinamiche e tool esplorativo completati; filone anello chiuso
+
+Risolto nei fatti quanto lasciato aperto sopra: per l'anello sono stati
+completati, in sessioni successive, sia la simulazione quantistica
+(Trotter, mirror del dimero con Trotter interno annidato per i tre bond
+che condividono i qubit) sia le correlazioni dinamiche (circuito Hadamard
+test, scan sistematico delle 81 combinazioni siti×componenti, chiusura con
+VQE reale). **Il filone anello è ora chiuso a tutti i livelli**: teoria
+esatta, VQE senza DM, VQE con DM (Fase 5), Trotter, correlazioni
+dinamiche. Vedi `log_decisioni.md` per la cronologia completa e i file
+prodotti (`trotter_trimero_anello.py`,
+`circuito_correlazioni_trimero_anello.py`,
+`quantum_simulation_trimero_anello_teoria.tex`/`_applicazione.tex`,
+`trimero_anello_quantum_simulation.tex`, e i restanti documenti di
+catalogazione/simmetria per l'anello).
+
+Due sviluppi ulteriori, successivi alla chiusura tecnica del filone:
+
+- **Relazione VQE anello, narrativa L-BFGS-B**: derivazione del bound
+  spettrale sull'errore di fidelity, applicazione numerica al punto di
+  lavoro confermato, rassegna della letteratura L-BFGS-B — dettagli
+  implementativi spostati in un tex a parte (riferimento personale, non
+  parte della tesi), relazione principale semplificata ai soli risultati.
+- **Tool interattivo "video e foto" delle correlazioni (anello)**: celle
+  ipywidgets in entrambi i notebook delle correlazioni (`_tutte`, `_vqe`)
+  più un tool HTML standalone (algebra 8×8 riportata in JavaScript,
+  verificata a precisione di macchina contro il calcolo classico Python;
+  dati precalcolati per preparazione esatta e VQE; palette CVD-safe; tema
+  chiaro/scuro) — pubblicato come pagina condivisibile e come file
+  scaricabile.
+
+**Prossimo passo:** aprire il filone catena aperta con lo stesso livello di
+completezza raggiunto per l'anello — Fase 5 (VQE con DM, struttura del
+termine DM già nota: $D_{12}=-D_{23}$ forzato dalla riflessione $P_{13}$,
+nessuna scelta Opzione A/B come per l'anello), poi Trotter e correlazioni
+dinamiche per la catena. Vedi `prompt_nuova_chat_trimero_catena.md` per il
+piano operativo dettagliato.

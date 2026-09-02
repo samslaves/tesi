@@ -1,0 +1,147 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codifica e lingua ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+
+% ---------- Matematica ----------
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+
+% ---------- Impaginazione ----------
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Parte 2 --- rumore quantistico sul dimero\\
+\large Panoramica della pipeline (vista a 2000 piedi)}
+\author{Samuele \\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Questo documento è una mappa, non una derivazione: serve a vedere in un colpo
+d'occhio come è strutturata la Parte 2 (sistema aperto, dimero) prima di entrare nel
+dettaglio di ciascun passo. Scope, canali di rumore e decisioni operative sono quelli
+confermati dal relatore (risposta del 2 settembre 2026, \texttt{domande\_relatore.md},
+sez.\ 12) e seguono la terminologia delle sue slide (\texttt{7Physical\_implementation.pdf}).
+\end{abstract}
+
+\tableofcontents
+
+\section{Da dove partiamo}
+
+La Parte 1 (sistema chiuso) è completa sul dimero: Hamiltoniana esatta, VQE con termine
+DM, evoluzione temporale $e^{-iHt}$ via Suzuki--Trotter, e correlazioni dinamiche
+$C_{ij}^{\alpha\beta}(t)$ tramite un circuito di tipo Hadamard test. Tutto lavora su uno
+stato \emph{puro} $\ket{\psi}$ che evolve unitariamente: non c'è interazione con
+l'ambiente, non c'è rumore.
+
+La Parte 2 ripercorre esattamente la stessa catena di stadi --- preparazione dello stato
+fondamentale, evoluzione temporale, misura dei correlatori --- ma la accompagna con due
+sorgenti di rumore realistiche, quelle di un dispositivo quantistico vero. Non si
+introduce fisica nuova nell'Hamiltoniana: si aggiunge un modello di come un computer
+quantistico reale esegue (in modo imperfetto) gli stessi circuiti già scritti.
+
+\section{Cosa cambia: da $\ket{\psi}$ a $\rho$}
+
+Il rumore accoppia il sistema a un ambiente che non osserviamo. Uno stato puro non basta
+più a descrivere il sistema una volta che tracciamo via i gradi di libertà
+dell'ambiente: serve l'operatore densità $\rho$, e l'evoluzione non è più unitaria pura
+ma un'operazione quantistica più generale. Il prossimo documento (teoria del Passo 1)
+richiama questo formalismo dal punto dove serve; qui basta sapere che da questo momento
+in poi si lavora con $\rho$ al posto di $\ket{\psi}$, e che in Qiskit questo corrisponde
+a usare \texttt{AerSimulator(method="density\_matrix")} invece del simulatore
+statevector.
+
+\section{I passi della pipeline}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cll@{}}
+\toprule
+\# & Passo & Cosa cambia rispetto alla Parte 1 \\
+\midrule
+1 & Modello di rumore & nuovo: nessun analogo in Parte 1 \\
+2 & VQE con termine DM, rumoroso & stesso ansatz, simulatore a $\rho$ \\
+3 & Quantum simulation (Trotter), rumorosa & stesso circuito, compilato per passo \\
+4 & Correlazioni dinamiche, rumorose & stesso Hadamard test, readout incluso \\
+5 & Scan sui parametri di rumore & nuovo: nessun analogo in Parte 1 \\
+\bottomrule
+\end{tabular}
+\caption{I cinque passi della Parte 2. I passi 2--4 sono mirror dei corrispondenti
+stadi di Parte 1; i passi 1 e 5 sono propri della Parte 2.}
+\end{table}
+\FloatBarrier
+
+\subsection{Passo 1 --- costruzione del modello di rumore}
+
+Il relatore ha confermato due soli canali (slide 17 del corso): errore di gate
+(canale depolarizzante, separato a 1 e 2 qubit) ed errore di lettura (readout).
+$T_1$/$T_2$ sono esclusi esplicitamente. Il compito di questo passo è tradurre dati di
+calibrazione reali --- pubblicati per un chip esistente --- in un oggetto
+\texttt{NoiseModel} di Qiskit, passando dal formalismo a operatori di Kraus richiamato
+a lezione. Qui ci si ferma a livello di orientamento: il dettaglio teorico è nel
+prossimo documento (\S~\ref{sec:prossimo}).
+
+\subsection{Passo 2 --- VQE con termine DM, sotto rumore}
+
+Si ripete la stima del ground state con lo stesso ansatz PMA-2q.3 già validato in Parte
+1 (fedeltà 1 nel caso ideale), ma il circuito viene ora eseguito su un simulatore a
+operatore densità con il \texttt{NoiseModel} del Passo 1 agganciato. L'osservabile
+d'interesse è quanto l'energia stimata e la fedeltà rispetto al ground state esatto si
+allontanano dal caso ideale.
+
+\subsection{Passo 3 --- quantum simulation (Trotter), sotto rumore}
+\label{subsec:passo3}
+
+Stesso circuito di Suzuki--Trotter di Parte 1. Qui c'è un'insidia tecnica verificata
+esplicitamente: se si transpila \emph{l'intero} circuito a un livello di ottimizzazione
+alto, Qiskit riconosce che gli $N$ passi identici formano nel complesso un unico
+unitario a 2 qubit e li collassa in un circuito a costo \emph{costante}, indipendente da
+$N$. Questo distruggerebbe silenziosamente proprio il compromesso che vogliamo
+studiare (più passi $\Rightarrow$ meno errore di Trotter ma più rumore accumulato). La
+soluzione è transpilare una volta il singolo passo al suo costo minimo (3 CNOT, già
+dimostrato in \texttt{circuito\_compatto\_teoria\_e\_limiti.tex}) e poi ripetere il
+blocco già compilato $N$ volte, senza ritranspilare il circuito completo.
+
+\subsection{Passo 4 --- correlazioni dinamiche, sotto rumore}
+
+Stesso circuito Hadamard test di Parte 1 (ancilla + 2 qubit di registro), ora con
+rumore su tutti i suoi ingredienti: preparazione dello stato, blocco $U(t)$ ripetuto
+(Passo 3), e infine la misura sull'ancilla, che include anche l'errore di lettura del
+Passo 1.
+
+\subsection{Passo 5 --- scan sui parametri di rumore}
+
+Il relatore chiede esplicitamente di non fermarsi a un solo punto: si ripete il conto
+del Passo 4 (o già del Passo 3) al variare di $(\varepsilon_{1q},\varepsilon_{2q},
+p_\text{readout})$, per vedere come si sposta il numero di passi ottimale $N^*$ che
+minimizza l'errore totale --- risultato di un compromesso fra errore di Trotter
+(diminuisce con $N$) e rumore accumulato (cresce con $N$).
+
+\section{Cosa resta fuori}
+
+Per completezza, dichiarato esplicitamente per non lasciarlo implicito: rilassamento e
+defasamento ($T_1$, $T_2$) sono esclusi per decisione del relatore, anche se compaiono
+nelle sue slide come canali standard; il readout asimmetrico è opzionale, da fare solo
+se resta tempo; le reti neurali (NQS) restano fuori scope come in Parte 1.
+
+\section{Il prossimo documento}
+\label{sec:prossimo}
+
+Teoria del Passo 1: dal formalismo a operatore densità e agli operatori di Kraus, al
+canale depolarizzante e all'errore di lettura, fino alla conversione fra l'errore medio
+di gate $\varepsilon$ (quello riportato nelle calibrazioni pubblicate) e il parametro
+$\lambda$ che Qiskit vuole in ingresso.
+
+\end{document}

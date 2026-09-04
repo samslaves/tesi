@@ -1,0 +1,172 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+% --- palette ---
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+% --- titoli di sezione ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.7em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.5em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}VQE con termine DM sotto rumore --- Passo 2, Parte 2}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+% --- box riutilizzabili ---
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}VQE con termine DM sotto rumore --- Passo 2\\[0.2em]
+\Large\normalfont\color{softgray}Energia e fedeltà rumorose, punto di lavoro test 2}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.2em}
+
+File: \texttt{vqe\_dm\_rumoroso\_dimero.py}, \texttt{validate\_vqe\_dm\_rumoroso\_dimero.py}.
+Punto di lavoro: $b/J=0.35$, $D/J=0.80$, $J=1$ (``test 2''). Modello di
+rumore: \texttt{noise\_model\_dimero.py} (Passo 1).
+
+\section*{Metodologia}
+\addcontentsline{toc}{section}{Metodologia}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.3em]
+\item \textbf{Scelta di modellazione dichiarata}: si riusano i parametri
+dell'ansatz PMA-2q$\cdot$3 già ottimizzati nel caso ideale
+(\texttt{ground\_state\_test2.npz}), \emph{senza} rioptimizzare sotto
+rumore. Il Passo 2 misura quindi quanto degrada un risultato VQE ideale
+se eseguito su hardware rumoroso --- non la convergenza di un VQE
+noise-aware (variante diversa, estensione naturale se resterà tempo).
+\item \textbf{Fedeltà per uno stato misto.} La fedeltà di Uhlmann fra due
+operatori densità è $F(\rho,\sigma)=\big(\Tr\sqrt{\sqrt\rho\,\sigma\,\sqrt\rho}\,\big)^2$.
+Quando uno dei due è puro, $\sigma=\ket\psi\bra\psi$, si semplifica: usando
+$\sqrt\sigma=\sigma$ (proiettore) e $\sigma\rho\,\sigma=(\bra\psi\rho\ket\psi)\,\sigma$,
+\begin{keyeq}
+\centering
+$F(\rho,\ket\psi\bra\psi) = \bra\psi\rho\ket\psi$
+\end{keyeq}
+--- niente radice quadrata di matrice da calcolare, solo un valore di
+aspettazione. Verificata contro \texttt{qiskit.quantum\_info.state\_fidelity}
+su uno stato misto casuale (non il caso VQE, dove l'infedeltà è troppo
+piccola per essere un test stringente).
+\item \textbf{Energia rumorosa}: $E=\Tr[\rho H]$, stesso calcolo già usato
+nella verifica del Passo 1.
+\end{itemize}
+
+\section*{Verifica: limite di rumore nullo}
+\addcontentsline{toc}{section}{Verifica: limite di rumore nullo}
+
+\begin{okbox}{Limite di rumore nullo verificato}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$F$ (registrata, Parte 1) & $0.999999999984$\\
+$F$ (ricalcolata, rumore nullo) & $0.999999999984$\\
+$|\Delta F|$ & $6.66\times10^{-16}$\\
+$E$ (rumore nullo) & $-3.57321145$ (identico al registrato)\\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{okbox}
+
+\section*{Risultato: rumore di riferimento (\texttt{ibm\_torino})}
+\addcontentsline{toc}{section}{Risultato}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$E$ (rumoroso) & $-3.50164605$\\
+scostamento da $E_0$ esatto & $+0.071565$\\
+$F$ (rumorosa) & $0.98500601$\\
+perdita di fedeltà $1-F$ & $0.014994$\\
+CNOT nel circuito & $2$ (invariato rispetto al caso ideale)\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Circa l'1.5\% di perdita di fedeltà per un ansatz a soli 2 CNOT
+--- coerente con l'ordine di grandezza di $\lambda_{2q}\approx5\times10^{-3}$
+per gate coinvolto.
+
+\section*{Scan su $\varepsilon_{2q}$}
+\addcontentsline{toc}{section}{Scan}
+
+A parità di $\varepsilon_{1q}=2.9\times10^{-4}$ e
+$p_\text{readout}=2.3\times10^{-2}$: degradazione monotona sia in energia
+sia in fedeltà, come atteso.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$\varepsilon_{2q}$ & $E$ & $F$ \\
+\midrule
+$0$ & $-3.53740090$ & $0.99251106$ \\
+$1\times10^{-3}$ & $-3.52797412$ & $0.99053235$ \\
+$3.8\times10^{-3}$ (riferimento) & $-3.50164605$ & $0.98500601$ \\
+$8\times10^{-3}$ & $-3.46233882$ & $0.97675530$ \\
+$1.5\times10^{-2}$ & $-3.39731982$ & $0.96310762$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\needspace{6\baselineskip}
+\section*{Prossimo passo}
+\addcontentsline{toc}{section}{Prossimo passo}
+
+Passo 3: quantum simulation (Trotter) sotto rumore. Qui entra per la prima
+volta la strategia di transpilazione per blocco decisa nella sessione
+precedente (compilare una volta il singolo passo, ripeterlo $N$ volte senza
+ritranspilare) --- finora non necessaria (il VQE non ha passi ripetuti),
+diventa cruciale da questo punto in poi.
+
+\end{document}

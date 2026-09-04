@@ -1,0 +1,184 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- il filo conduttore}
+\input{preambolo_dimero}
+
+\title{\bfseries Il dimero di spin: che cosa abbiamo fatto, e perché\\[2pt]
+\large Documento 0 --- il filo conduttore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Questa serie di documenti racconta il lavoro svolto sul sistema più piccolo del
+progetto --- due spin $1/2$ accoppiati --- seguendo l'ordine in cui è stato
+effettivamente fatto, non l'ordine in cui lo si dedurrebbe dalla teoria. Ogni
+affermazione numerica riportata è stata ricalcolata eseguendo il codice del
+progetto, non ripresa da documenti precedenti. La teoria compare solo dove serve
+a capire perché un passo viene dopo l'altro: nessuna derivazione, solo il
+risultato che motiva la scelta successiva. Il dimero non è un caso di studio a
+sé: è il banco di prova su cui è stato messo a punto ogni strumento poi
+riapplicato a $N=3$.
+\end{abstract}
+
+\section{Perché due spin}
+
+Due spin $1/2$ danno uno spazio di Hilbert di dimensione $4$. È piccolo abbastanza
+da poter essere diagonalizzato esattamente --- a mano, in forma chiusa --- e
+grande abbastanza da contenere tutti gli ingredienti fisici che contano:
+entanglement, un incrocio di livelli al variare del campo, e la possibilità di
+rompere una simmetria per anticiparlo.
+
+Questo è precisamente ciò che serve per validare un metodo. Ogni volta che il
+calcolo quantistico produce un numero, esiste un numero esatto con cui
+confrontarlo. Quando poi lo stesso codice viene esteso a $N=3$, dove la forma
+chiusa diventa più laboriosa, si sa già che gli strumenti funzionano perché sono
+stati verificati dove la risposta era nota.
+
+\messaggio{Il dimero non serve a scoprire fisica nuova: serve a stabilire che il
+metodo dà la risposta giusta là dove la risposta giusta la conosciamo già.}
+
+\section{I quattro passi, e come si incastrano}
+
+Il lavoro si articola in quattro blocchi, ciascuno con un proprio documento. Non
+sono argomenti indipendenti messi in fila: ognuno consuma l'output del
+precedente.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  scatola/.style={draw,rounded corners=3pt,minimum height=1.45cm,
+                  minimum width=3.0cm,align=center,font=\small,thick},
+  freccia/.style={-{Stealth[length=3mm]},thick,gray}]
+
+\node[scatola,draw=blu,fill=blu!8]      (A) at (0,0)    {\textbf{1. Sistema}\\[1pt]
+   spettro esatto\\ ruolo del termine DM};
+\node[scatola,draw=verdes,fill=verdes!8](B) at (5.0,0)  {\textbf{2. VQE}\\[1pt]
+   stato fondamentale\\ scelta dell'ansatz};
+\node[scatola,draw=arancio,fill=arancio!10](C) at (10.0,0){\textbf{3. Dinamica}\\[1pt]
+   $e^{-iHt}$ via Trotter\\ errore vs.\ passi};
+\node[scatola,draw=rossos,fill=rossos!8](D) at (15.0,0) {\textbf{4. Correlatori}\\[1pt]
+   ancilla, 36 combinazioni\\ contenuto spettrale};
+
+\draw[freccia] (A) -- node[above,font=\scriptsize,text=black]{riferimento}
+                        node[below,font=\scriptsize,text=black]{esatto} (B);
+\draw[freccia] (B) -- node[above,font=\scriptsize,text=black]{stato}
+                        node[below,font=\scriptsize,text=black]{iniziale} (C);
+\draw[freccia] (C) -- node[above,font=\scriptsize,text=black]{$U(t)$}
+                        node[below,font=\scriptsize,text=black]{nel circuito} (D);
+\end{tikzpicture}}
+\caption{La catena di dipendenze. Lo spettro esatto del passo 1 è il metro con
+cui si giudica il VQE; lo stato fondamentale del passo 2 è lo stato di partenza
+dell'evoluzione temporale; l'evoluzione del passo 3 è un blocco interno al
+circuito dei correlatori. Un errore in un passo si propaga silenziosamente a
+tutti i successivi: è la ragione per cui ogni blocco è stato validato
+separatamente prima di passare al seguente.}
+\end{figure}
+
+\FloatBarrier
+
+\section{L'Hamiltoniana, e il solo pezzo di teoria che serve ricordare}
+
+Il modello è un dimero di Heisenberg isotropo in campo, con l'aggiunta di un
+termine antisimmetrico di Dzyaloshinskii--Moriya (DM):
+\begin{equation}
+H = \underbrace{J\,(X_1X_2+Y_1Y_2+Z_1Z_2)}_{\text{scambio isotropo}}
+  + \underbrace{b\,(Z_1+Z_2)}_{\text{campo}}
+  + \underbrace{D\,(X_1Z_2-Z_1X_2)}_{\text{termine DM}}.
+\label{eq:H}
+\end{equation}
+Ogni spin $1/2$ si mappa direttamente su un qubit: nessuna trasformazione
+fermionica, nessun mapping intermedio. Questo è il motivo per cui i sistemi
+molecolari di spin sono un banco di prova naturale per l'hardware quantistico
+attuale --- il costo di rappresentazione è minimo.
+
+L'unico fatto teorico che serve tenere a mente in tutta la serie è il seguente.
+Con $D=0$, l'Hamiltoniana commuta con la magnetizzazione totale
+$M=(Z_1+Z_2)/2$: i suoi autostati hanno un valore definito di $M$, e stati con
+$M$ diverso non possono mescolarsi. Con $D\neq0$ questo cade. Tutto ciò che
+segue --- la forma dello spettro, il fallimento di un ansatz, la struttura dei
+correlatori --- discende da questa singola frase.
+
+\messaggio{Il termine DM non aggiunge complicazione per il gusto di aggiungerla:
+rompe una simmetria, e la rottura è il filo che collega i quattro documenti.}
+
+\section{I due punti di lavoro usati}
+
+Il sistema ha tre parametri, $(J,b,D)$; fissando $J=1$ come unità restano
+$b/J$ e $D/J$. Nel corso del lavoro sono stati usati due punti distinti, per
+ragioni diverse. Sono dichiarati qui una volta per tutte, così che nelle figure
+dei documenti successivi non ci sia ambiguità.
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{2.9cm}p{3.4cm}p{2.4cm}p{5.6cm}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Nome} & \textbf{Parametri} & \textbf{Dove è usato} & \textbf{Perché quello} \\
+\midrule
+Scansione in campo & $D/J\in\{0,\,0.2\}$, $b/J$ variabile
+  & Documenti 1 e 2 & Serve vedere l'incrocio, quindi $b$ deve variare \\
+Punto ``test 2'' & $b/J=0.35$, $D/J=0.80$
+  & Documento 4 & Stato fondamentale non banale, termine DM ben acceso \\
+Punto dinamico & $b/J=-0.18$, $D/J=1$
+  & Documento 3 & Oscillazioni non monocromatiche, leggibili \\
+\bottomrule
+\end{tabular}
+\caption{I punti di lavoro. Il punto dinamico e il punto ``test 2'' sono
+diversi, e volutamente: per la dinamica serve un segnale con più frequenze
+visibili, condizione che non coincide con quella di uno stato fondamentale
+interessante. Un punto unico è possibile, ma renderebbe una delle due figure
+meno informativa.}
+\end{table}
+
+\FloatBarrier
+
+\section{Come sono state ottenute le cifre di questi documenti}
+
+Tre criteri, applicati in modo uniforme.
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=3pt]
+\item \textbf{Nessun numero preso per buono dalla teoria.} Ogni valore riportato
+proviene dall'esecuzione del codice. Dove una formula analitica esiste, viene
+usata come controllo indipendente, non come sorgente.
+
+\item \textbf{Due metodi indipendenti dove è possibile.} Per esempio i
+correlatori sono calcolati sia con il circuito quantistico sia con
+l'esponenziale di matrice diretto, che non condivide con il primo nemmeno una
+riga di codice.
+
+\item \textbf{Le discrepanze si riportano, non si smussano.} Dove il circuito e
+il riferimento esatto differiscono, la differenza è mostrata e attribuita a una
+causa specifica (tipicamente il numero finito di passi di Trotter), non
+nascosta scegliendo una scala che la renda invisibile.
+\end{enumerate}
+
+\verifica{Come prima applicazione del criterio: lo spettro numerico ottenuto
+diagonalizzando la matrice $4\times4$ coincide con la formula analitica
+$E(S,M)=2JS(S{+}1)-3J+2bM$ su tutta la griglia in $b$, con scarto massimo
+$8.9\times10^{-16}$ --- precisione macchina. Ogni riferimento ``esatto'' usato
+nel seguito poggia su questo controllo.}
+
+\section{Che cosa non c'è in questa serie}
+
+Per onestà di scope, tre esclusioni esplicite:
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Il rumore.} Tutti i risultati qui sono a simulazione ideale:
+vettore di stato esatto, nessun errore di gate, nessun conteggio finito. Il
+sistema aperto verrà trattato quando studieremo il sistema come sistema
+aperto, in sviluppo separato.
+\item \textbf{L'estensione a $N=3$.} Anello e catena aperta hanno documenti
+propri; qui compaiono solo come destinazione degli strumenti messi a punto.
+\item \textbf{Le derivazioni.} Dove un risultato analitico serve, viene citato e
+usato.
+\end{itemize}
+
+\end{document}

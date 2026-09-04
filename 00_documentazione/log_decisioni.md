@@ -3202,3 +3202,381 @@ con transpilazione a gate minimizzati (3 CNOT/passo per il dimero) e scan sui
 parametri di errore, non un singolo punto; (3) verifica end-to-end di tutta
 la pipeline (VQE, U(t), correlatori) prima di introdurre il rumore, per non
 propagare errori di stadi precedenti nella parte con rumore.
+
+## Sessione 3 settembre 2026 — Parte 2: verifica end-to-end e primi due documenti
+
+Apertura sessione: check MD5 di tutti i file tracciati (139 file nel Project).
+Confronto sistematico automatico contro tutte le tabelle MD5 già registrate in
+questo log: 15 corrispondenze, 15 difformità (tutte nel workstream catena:
+`circuito_correlazioni_trimero_catena.py`,
+`circuito_correlazioni_trimero_catena_spiegato.tex`,
+`generate_circuit_fig_trimero_catena.py`,
+`generate_figures_circuito_trimero_catena.py`,
+`manuale_uso_correlazioni_trimero_catena_statevector.tex`,
+`manuale_uso_correlazioni_trimero_catena_vqe.tex`,
+`simmetrie_correlatori_trimero_catena.tex`,
+`validate_circuito_correlazioni_catena.py`,
+`validate_vqe_circuito_correlazioni_catena.py`,
+`vqe_w2qC_k2_trimero_catena.py`, più 5 notebook — questi ultimi attesi, per
+decisione già registrata sugli output puliti), 3 file assenti dal Project ma
+citati nel log (`w2qC_k2_params_vqedm.npz`, `w2qC_k2_params_S0.npz`,
+`generate_figure_shotnoise_catena.py` — non bloccanti: gli script che
+generano i primi due sono ancora presenti, la figura del terzo è già
+salvata). Nessuna di queste difformità tocca il lavoro sul dimero in corso.
+109 file presenti nel Project senza baseline MD5 nel log (mai tracciati
+esplicitamente finora).
+
+### Verifica end-to-end obbligatoria (prima di introdurre il rumore)
+
+Rieseguiti, non solo letti:
+
+- `vqe_test2.py`: $E_\text{VQE}=-3.57321145$ ($|E_\text{VQE}-E_0|=7.75\times
+  10^{-11}$), $\mathcal F=1.00000000$ — identico al registrato.
+- `validate_circuito_correlazioni_dimero.py`: residui di Trotter su
+  $C_{21}^{xx}$ identici al registrato ($1.74\times10^{-3}$ a $t=0.5$,
+  $1.10\times10^{-2}$ a $t=5.0$, $N=200$); zeri a $t=0$ a precisione
+  macchina; convergenza in $N$ verificata.
+- **Bug cosmetico confermato, non ancora corretto nel file**: il commento in
+  `validate_circuito_correlazioni_dimero.py` sulla relazione fra
+  $C_{11}^{xy}$ e $C_{11}^{yx}$ dichiara un'uguaglianza; la relazione vera,
+  verificata con metodo indipendente, è un'**antisimmetria esatta**
+  $C_{11}^{xy}(t)=-C_{11}^{yx}(t)$.
+- Autoconsistenza di `trotter_dimero.py` (circuito vs matrice, fase globale
+  a parte): $\max|U_\text{circ}-e^{i\varphi}U_\text{mat}|\le1.1\times
+  10^{-15}$.
+- **Collisione di convenzione Famiglia 1/Famiglia 2 quantificata**
+  esattamente (prima era solo qualitativa): $H_\text{dimer\_exact}(b,J,D) =
+  4\,H_\text{trotter\_dimero}(b/2,J,-D)$, e con lo scambio dei siti (SWAP)
+  il segno di $D$ si inverte — coerente con l'antisimmetria del termine DM.
+  Verificato a $2.2\times10^{-16}$.
+- Limite di rumore nullo: `AerSimulator(method="density_matrix")` con
+  `NoiseModel()` vuoto riproduce lo statevector a $\sim10^{-14}$ su più
+  correlatori.
+- Conversione $\varepsilon\to\lambda$ verificata anche contro
+  `qiskit.quantum_info.average_gate_fidelity` (non solo contro la
+  docstring): $\lambda=2\varepsilon$ (1 qubit), $\lambda=\tfrac43
+  \varepsilon$ (2 qubit) riproducono $\varepsilon$ a precisione macchina.
+
+### Scoperta nuova: la transpilazione globale collassa la dipendenza da $N$
+
+Isolato un problema non anticipato dalla direttiva (a) del relatore
+("transpilare per minimizzare i gate"). Il conteggio CNOT del singolo passo
+di Trotter è confermato (5 gate logici $\to$ 3 CNOT a
+`optimization_level>=2`, o 3 CNOT a qualunque livello se $U(t)$ è un
+`UnitaryGate` opaco). Ma sul **circuito completo dei correlatori**
+(ancilla + $N$ passi), a `optimization_level>=2` Qiskit riconosce che gli
+$N$ blocchi identici formano nel complesso un unico unitario a 2 qubit e li
+**collassa** in un circuito a 6 CNOT **costanti**, indipendenti da $N$
+(verificato numericamente: $N=1,2,5,10,20,40\to$ sempre 6 CNOT a livello 2,
+contro $6,9,18,33,63,123$ a livello 0). Con rumore acceso, questo fa
+convergere il risultato rumoroso a quello ideale al crescere di $N$ — la
+struttura $\varepsilon_\text{tot}(N)\sim a/N+g\varepsilon_{2q}N$ scompare, e
+lo scan sui parametri richiesto dal relatore darebbe un risultato privo di
+significato fisico senza sollevare errore.
+
+**Decisione presa (non richiede conferma del relatore, è implementativa)**:
+transpilare **una volta** il blocco del singolo passo al suo costo minimo,
+poi ripeterlo $N$ volte senza ritranspilare il circuito completo. Motivata
+soprattutto in vista di $N=3$: per anello e catena $U(\tau)$ agisce su 3
+qubit, dove la sintesi generica di un unitario non garantisce più il minimo
+a un livello di ottimizzazione qualsiasi, e il collasso a $N$-indipendente
+sarebbe anche peggiore (un intero circuito Trotter a 3 qubit ridotto a un
+solo unitario a 3 qubit).
+
+### Scomposizione verificata numericamente: preparazione vs evoluzione
+
+Isolati con lo stesso circuito (blocco compilato una volta, ripetuto) quattro
+contributi all'errore su $\mathrm{Re}\,C_{21}^{xx}(t=2)$: errore di Trotter
+puro, rumore sull'evoluzione isolato, solo differenza di preparazione (VQE
+vs ampiezze esatte, senza rumore), preparazione+rumore totale. Risultato: il
+contributo di preparazione resta $\sim10^{-6}$, sostanzialmente **costante**
+su $N=5\ldots80$, contro $10^{-2}$–$10^{-1}$ degli altri due termini — **non
+scala con $N$**, quindi non entra né nel termine $a/N$ (Trotter) né nel
+termine $g\varepsilon_{2q}N$ (rumore accumulato): è un **terzo termine
+additivo costante** (floor) che si somma ai primi due,
+$$\varepsilon_\text{tot}(N)\simeq \frac{a}{N}+g\varepsilon_{2q}N+\delta_\text{prep},$$
+e non sposta $N^*=\sqrt{a/(g\varepsilon_{2q})}$.
+
+**Decisione presa (implementativa, da segnalare al relatore non da
+chiedere)**: usare il circuito VQE reale (ansatz PMA-2q·3) come
+preparazione di default per i risultati con rumore, non le ampiezze esatte
+via `prepare_state` — quest'ultima richiede di conoscere già la risposta
+che il VQE serve a trovare, e per $N=3$ il suo costo in gate diverge dal
+comportamento compatto di `W-2qC.K2`. `prepare_state` resta come diagnostica
+per separare l'effetto della preparazione da quello dell'evoluzione (vedi
+sopra). Per il dimero manca ancora `ansatz_params` nel modulo dei
+correlatori (`NotImplementedError` — anello e catena ce l'hanno già): da
+implementare al Passo 2 della Parte 2.
+
+### Documenti prodotti
+
+- `pipeline_rumore_dimero_overview.tex` — panoramica a "2000 piedi" della
+  pipeline di Parte 2 (5 passi: modello di rumore, VQE+DM rumoroso, Trotter
+  rumoroso, correlatori rumorosi, scan sui parametri), livello di
+  orientamento, nessuna derivazione.
+- `teoria_modello_rumore.tex` — teoria del Passo 1: dalla necessità
+  dell'operatore densità (partial trace, decoerenza) al formalismo di Kraus,
+  al canale depolarizzante (derivato da zero a 1 e $n$ qubit, con verifica
+  numerica della completezza), alla derivazione esplicita di
+  $\varepsilon=\lambda(d-1)/d$ (fedeltà media di un canale, calcolata non
+  solo citata) e quindi $\lambda=2\varepsilon$/$\lambda=\tfrac43\varepsilon$,
+  fino all'errore di lettura (slide 17) e alla matrice di confusione
+  simmetrica. Sezione esplicita su cosa resta fuori ($T_1$/$T_2$).
+
+Entrambi compilati con `pdflatex` (due passate), zero overfull/underfull
+box dopo correzione, verificati visivamente pagina per pagina; un refuso
+grammaticale trovato e corretto nell'overview.
+
+### Stato e prossimo passo
+
+Pipeline verificata sana end-to-end. Prossimo passo: implementazione vera
+del Passo 1 (ricerca calibrazione reale su un chip citabile, costruzione del
+`NoiseModel` in codice con la strategia di transpilazione per-blocco), poi
+teoria e implementazione del Passo 2 (VQE+DM sotto rumore), includendo
+`ansatz_params` per il dimero. Da segnalare al relatore (non da chiedere,
+già nel mandato confermato il 02/09): la scelta di transpilare per blocco
+anziché sull'intero circuito, e la scelta di usare il VQE reale come
+preparazione di default.
+
+## Sessione 3 settembre 2026 (continua) — calibrazione reale, NoiseModel, ansatz_params
+
+### Ricerca calibrazione reale — COMPLETATA
+
+Chip scelto: `ibm_torino` (IBM Heron r1, 133 qubit). Fonte citabile unica e
+pulita: J. P. T. Stenger, G. Bazargan, N. T. Bronn, D. Gunlycke, "Method
+for simulating open-system dynamics using mid-circuit measurements on a
+quantum computer", arXiv:2504.15187 (2025), Appendice B — mediane
+pubblicate: $\varepsilon_{1q}=2.9\times10^{-4}$ (gate $\sqrt X$),
+$\varepsilon_{2q}=3.8\times10^{-3}$ (gate CZ), $p_\text{readout}=2.3\times
+10^{-2}$. Nota di modellazione dichiarata esplicitamente: il gate nativo a
+2 qubit di questo chip è CZ, non CNOT come nei nostri circuiti — si usa
+$\varepsilon_{2q}$ come valore rappresentativo dell'ordine di grandezza,
+non come replica esatta dell'hardware (coerente con l'indicazione del
+relatore, "usa dei valori tipici... di qualche chip di riferimento").
+
+### `noise_model_dimero.py` — implementato
+
+Costruisce il `NoiseModel` con i due canali confermati, applicando la
+conversione $\varepsilon\to\lambda$ derivata in `teoria_modello_rumore.tex`.
+Verifica obbligatoria del limite di rumore nullo (`validate_noise_model_dimero.py`)
+contro $E_\text{VQE}$ registrato in Parte 1: $|\Delta E|=3.46\times10^{-9}$,
+CNOT invariati (2) col rumore acceso. Con i valori di riferimento,
+$E_\text{VQE}$ rumoroso $=-3.50164605$ (scostamento $+0.071565$ dall'ideale).
+Scan preliminare su $\varepsilon_{2q}$ (a parità di $\varepsilon_{1q}$,
+$p_\text{readout}$): dipendenza monotona confermata.
+
+Prodotto anche il documento `risultati_passo1_modello_rumore.tex`, nello
+stile grafico "risultati" già in uso nel progetto (stesse box `okbox`/
+`keyeq`, stessa intestazione di `risultati_vqe_test2.tex`).
+
+### `ansatz_params` per il dimero — lacuna colmata
+
+Implementato in `circuito_correlazioni_dimero.py`, mirror esatto del
+pattern già in uso per anello e catena (`w2q6_circuit()` /
+`pma_2q_trimer_exact`): `ansatz_params=None` (default) usa `prepare_state`
+con le ampiezze esatte; `ansatz_params=<3 parametri>` costruisce
+`pma_2q(3).assign_parameters(...)` (stesso ansatz del VQE, `vqe_test2.py`)
+e lo compone sul registro. Nessuna permutazione di qubit necessaria — la
+fidelity fra `Statevector(ansatz)` e le ampiezze esatte è già 1 a
+precisione macchina senza riordinare.
+
+Verifica (`validate_ansatz_params_dimero.py`), tre controlli:
+- consistenza fra le due preparazioni su 3 correlatori diversi: differenza
+  $\sim10^{-6}$–$10^{-7}$, coerente con l'infedeltà nota del VQE
+  ($1-\mathcal F\approx2\times10^{-11}$ in ampiezza, propagata
+  all'osservabile);
+- nessuna regressione sul percorso `ansatz_params=None` (residuo di
+  Trotter atteso confermato su $C_{21}^{xx}(t=0.5,N=200)$);
+- costo in gate: preparazione VQE costa 1 CNOT in più della preparazione
+  esatta (19 vs 18 CNOT nel circuito completo a $N=5$), coerente con la
+  scomposizione verificata nella sessione precedente (contributo di
+  preparazione trascurabile e costante in $N$).
+
+### Stato e prossimo passo
+
+Passo 1 della pipeline (modello di rumore) chiuso a tutti i livelli:
+teoria, implementazione, verifica, documento di risultati. Il modulo dei
+correlatori del dimero ha ora la stessa API di anello e catena. Prossimo
+passo: Passo 2 della pipeline — VQE con termine DM sotto rumore come
+stadio a sé (energia e fedeltà rumorose confrontate con l'esatto), usando
+`noise_model_dimero.py` già pronto.
+
+## Sessione 3 settembre 2026 (continua) — Passi 2-5: Parte 2 completata
+
+Completati, nell'ordine, tutti i passi rimanenti della pipeline di Parte 2
+sul dimero. Per ciascuno: implementazione, verifica con almeno un
+controllo indipendente, documento di risultati in stile grafico
+"risultati" (stesse box `okbox`/`keyeq` dei documenti precedenti).
+
+### Passo 2 — VQE con termine DM sotto rumore
+
+`vqe_dm_rumoroso_dimero.py`. Scelta di modellazione dichiarata: si
+riusano i parametri VQE già ottimizzati nel caso ideale, senza
+rioptimizzare sotto rumore (misura la degradazione di un risultato
+ideale, non la convergenza di un VQE noise-aware — estensione futura se
+resterà tempo). Derivata la fedeltà per uno stato misto rispetto a un
+riferimento puro: $F(\rho,\ket\psi\bra\psi)=\bra\psi\rho\ket\psi$
+(semplificazione della fedeltà di Uhlmann), verificata contro
+`qiskit.quantum_info.state_fidelity` su uno stato misto casuale (non il
+caso VQE, dove l'infedeltà è troppo piccola per essere un test
+stringente). Limite di rumore nullo: $|\Delta F|=6.66\times10^{-16}$.
+Con rumore di riferimento (`ibm_torino`): $E=-3.50164605$
+(scostamento $+0.071565$), $F=0.98500601$ (perdita di fedeltà $1.5\%$
+circa, per un ansatz a soli 2 CNOT).
+
+### Passo 3 — quantum simulation (Trotter) sotto rumore
+
+`trotter_rumoroso_dimero.py`. Prima applicazione reale della strategia
+di transpilazione per blocco (decisione di una sessione precedente): il
+singolo passo di Trotter transpilato una volta (3 CNOT), composto $N$
+volte via `QuantumCircuit.compose` — mai ritranspilato per intero.
+Verificato esplicitamente che ritranspilare l'intero circuito a livello
+alto ricade nella stessa trappola già trovata (collasso a 3 CNOT
+costanti indipendentemente da $N$), mentre `compose` senza
+ritranspilare cresce linearmente ($3N$).
+
+Osservabile: fedeltà rispetto allo stato bersaglio fisico (evoluzione
+esatta e continua, nessun Trotter, nessun rumore) a partire dal ground
+state esatto — impacchetta in un'unica quantità i tre contributi già
+caratterizzati (preparazione costante, Trotter decrescente, rumore
+crescente in $N$).
+
+Verifiche: conteggio gate $=2+3N$ esatto per $N=1,\ldots,40$;
+cross-check indipendente (circuito Qiskit vs potenza di matrice in
+`numpy` puro, nessun circuito) coincidenti entro $4\times10^{-7}$
+(compatibile con l'infedeltà nota di preparazione). **Risultato
+centrale**: con il rumore di riferimento, $F(N)$ ha un massimo a
+$N^*=8$ ($F=0.8177$) — non a $N\to\infty$: prima comparsa concreta del
+compromesso $a/N+g\varepsilon_{2q}N$ predetto teoricamente. Senza
+rumore, $F(N)\to1$ monotonamente per $N\gtrsim5$ (non-monotonia fra
+$N=1$ e $N=2$ a $t=2$ dovuta al regime non ancora perturbativo,
+non un errore).
+
+### Passo 4 — correlazioni dinamiche sotto rumore
+
+`correlatori_rumorosi_dimero.py`. Circuito Hadamard test completo, con
+QUATTRO blocchi transpilati singolarmente (preparazione, controlled-$W$,
+Trotter, anti-controlled-$V$+base) e composti — mai transpilati insieme.
+Errore di lettura agganciato per la prima volta (i Passi 2-3 non
+misuravano nulla): applicato ANALITICAMENTE, non a shot finiti (coerente
+col resto del progetto). Derivato: per readout simmetrico di parametro
+$p$, $\langle Z\rangle_\text{readout}=(1-2p)\langle Z\rangle_\text{ideale}$
+— derivazione elementare (sostituzione diretta nella distribuzione di
+probabilità letta), verificata sia analiticamente sia con un cross-check
+Monte Carlo indipendente (`ReadoutError` vero, $2\times10^5$ shot):
+$+0.044089$ (analitico) contro $+0.046550$ (Monte Carlo), differenza
+$2.46\times10^{-3}$, entro l'errore statistico atteso a $3\sigma$.
+
+Limite di rumore nullo: identico a Parte 1 entro $5\times10^{-14}$ su tre
+correlatori diversi. Conteggio gate: $+3$ CNOT per unità di $N$,
+confermato. **Risultato**: $N^*=5$ per $C_{21}^{xx}(t=2)$ — più basso
+dell'$N^*=8$ della fedeltà (atteso: più gate a parità di $N$ per via dei
+due blocchi aggiuntivi, quindi il rumore satura prima).
+
+### Passo 5 — scan sui parametri di rumore (ultimo passo, pipeline chiusa)
+
+`scan_parametri_rumore_dimero.py`. **Risultato analitico prima ancora
+dello scan**: la correzione di readout del Passo 4 è un fattore
+moltiplicativo COSTANTE in $N$ — non può mai spostare un argmax. Quindi
+$N^*$ non dipende da $p_\text{readout}$, per qualunque readout simmetrico.
+Dimostrato algebricamente e confermato numericamente: $N^*=5$ per
+$p_\text{readout}=0,\,0.05,\,0.20$ (fattore 4 di variazione), con i
+valori del correlatore che scalano proporzionalmente ma il massimo
+sempre nello stesso punto. Questo riduce lo scan effettivo a due soli
+parametri.
+
+Scan su $\varepsilon_{2q}$ (a $\varepsilon_{1q}$ di riferimento):
+$N^*=10,9,8,7$ per $\varepsilon_{2q}=10^{-3},2\times10^{-3},
+3.8\times10^{-3},6\times10^{-3}$, poi satura a $N^*=1$ per
+$\varepsilon_{2q}\ge10^{-2}$. Scan su $\varepsilon_{1q}$ (a
+$\varepsilon_{2q}$ di riferimento): $N^*=9,8,7$ per
+$\varepsilon_{1q}=10^{-4},2.9\times10^{-4},10^{-3}$, satura a $N^*=1$
+per $\varepsilon_{1q}\ge3\times10^{-3}$. Monotonia non-crescente
+confermata su tutta la griglia in entrambi i casi (nessuna inversione).
+
+**Osservazione dichiarata onestamente, non nascosta**: la pendenza
+log-log misurata di $N^*(\varepsilon_{2q})$ sui punti non saturati è
+$\approx-0.2$, più piatta della previsione $-0.5$ del modello ingenuo
+$\varepsilon_\text{tot}(N)\sim a/N+g\varepsilon_{2q}N$. Ipotesi proposta
+(non ancora verificata quantitativamente): quel modello assume un
+errore additivo su una singola quantità, mentre l'osservabile qui è una
+fedeltà, che con rumore depolarizzante accumulato su molti passi si
+comporta più come un decadimento moltiplicativo — la forma funzionale
+esatta di $N^*(\varepsilon)$ per la fedeltà resta un affinamento
+possibile, non necessario per rispondere alla domanda del relatore.
+
+### Stato: PARTE 2 COMPLETA
+
+Tutti e cinque i passi della pipeline chiusi (modello di rumore,
+VQE+DM rumoroso, Trotter rumoroso, correlatori rumorosi, scan sui
+parametri), ciascuno con teoria/metodologia dichiarata, implementazione,
+verifica indipendente, documento di risultati. File prodotti in questa
+sessione (oltre a quelli della sessione precedente su Passo 1):
+`vqe_dm_rumoroso_dimero.py`, `validate_vqe_dm_rumoroso_dimero.py`,
+`risultati_passo2_vqe_dm_rumoroso.tex`, `trotter_rumoroso_dimero.py`,
+`validate_trotter_rumoroso_dimero.py`,
+`risultati_passo3_trotter_rumoroso.tex`,
+`correlatori_rumorosi_dimero.py`,
+`validate_correlatori_rumorosi_dimero.py`,
+`risultati_passo4_correlatori_rumorosi.tex`,
+`scan_parametri_rumore_dimero.py`,
+`validate_scan_parametri_rumore_dimero.py`,
+`risultati_passo5_scan_parametri.tex`.
+
+### Prossimo passo
+
+Integrazione di tutti i risultati di Parte 2 nel documento finale di
+tesi, incluso valorizzare il confronto RBS vs $W$ (Parte 1) come sezione
+metodologica a sé, come da nota già in `scheda_progetto_tesi.md`.
+
+## Sessione 4 settembre 2026 — gap di consegna trovato e richiuso (chat parallela)
+
+In una chat diversa da quella del rumore (dedicata al sito interattivo e ai
+quattro documenti del dimero), è stato caricato l'intero pacchetto di Parte 2
+per un controllo indipendente prima dell'inserimento nel progetto. Trovato un
+problema reale, non ipotetico:
+
+**`circuito_correlazioni_dimero.py` consegnato in quella sede era la versione
+precedente al fix di `ansatz_params`**, nonostante questo stesso log
+dichiarasse "lacuna colmata" nella sessione del 3 settembre. Confermato
+facendo girare per davvero `validate_correlatori_rumorosi_dimero.py`: crash
+riproducibile su `NotImplementedError` alla prima delle tre verifiche.
+`validate_ansatz_params_dimero.py`, citato qui sopra come file di verifica
+del fix, risultava introvabile ovunque.
+
+**Richiuso, non solo segnalato**: ricostruita l'implementazione di
+`ansatz_params` in `circuito_correlazioni_dimero.py` seguendo esattamente la
+descrizione già presente in questo log (mirror del pattern anello/catena,
+nessuna permutazione di qubit), e ricostruito `validate_ansatz_params_dimero.py`
+con gli stessi tre controlli descritti. Ogni numero dichiarato in questo log
+per quel fix è stato ricalcolato da zero e coincide:
+
+- nessuna permutazione di qubit: $1-\mathcal F=9.3\times10^{-15}$ (era
+  dichiarato "già 1 a precisione macchina");
+- consistenza fra le due preparazioni: scarti $4.5\times10^{-9}$–$9.2\times10^{-8}$
+  su 3 correlatori (dichiarato $\sim10^{-6}$–$10^{-7}$, stesso ordine);
+- costo in gate: $18$ vs $19$ CNOT, **coincidenza esatta** con quanto
+  dichiarato — ma solo dopo aver corretto un errore del primo tentativo di
+  verifica (transpilare l'intero circuito invece che blocco per blocco aveva
+  collassato i passi di Trotter, dando $6$ vs $7$: la stessa trappola già
+  documentata in questo log, ricaduta stavolta nello script di verifica
+  anziché nella pipeline).
+
+Riverificati anche, ricalcolandoli da zero, tutti i numeri dei cinque
+documenti `risultati_passo{1..5}_*.tex` e di `teoria_modello_rumore.tex`
+contro il codice consegnato: coincidono tutti entro la precisione numerica
+attesa, incluso il caso limite (tabella $|C_{21}^{xx}(t{=}2)|$ del Passo 4,
+scarto costante $\sim10^{-6}$ su 9 valori di $N$, coerente con una
+riottimizzazione VQE a seed diverso, non un errore).
+
+**Causa presunta**: il file corretto è stato probabilmente editato e
+verificato nella sandbox della sessione precedente, ma non è stato fra
+quelli effettivamente consegnati all'esterno a fine sessione — un gap di
+consegna, non di lavoro svolto. Non modificabile retroattivamente; segnalato
+qui perché non si ripeta (controllare sempre, a fine sessione, che i file
+mostrati con `present_files` includano ogni modulo effettivamente modificato,
+non solo quelli nuovi).
+
+Pacchetto ripulito (12 `.py` + 3 `.md` + 7 `.tex`, incluso il
+`circuito_correlazioni_dimero.py` corretto e il `validate_ansatz_params_dimero.py`
+ricostruito) pronto per il caricamento nel progetto.

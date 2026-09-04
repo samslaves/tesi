@@ -1,0 +1,204 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- Guida ai metodi di calcolo}
+\input{preambolo_dimero}
+
+\title{\bfseries Dove viene davvero ciascun numero\\[2pt]
+\large Guida ai metodi di calcolo (A, B, C) --- riferimento tecnico separato dalle slides}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+Questo documento non fa parte della serie di slides (Documenti 0--4). Le
+cinque slides sono scritte come se ogni risultato provenisse da un circuito
+quantistico realmente simulato, porta per porta. Qui è documentato con
+precisione dove è davvero così e dove no --- verificato eseguendo il codice
+di questa sessione, non dedotto a occhio.
+
+\section{Le tre categorie}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=4pt]
+\item \textbf{A --- Esatto.} Algebra lineare diretta sulla matrice di $H$:
+diagonalizzazione (\texttt{np.linalg.eigh}) o esponenziale di matrice
+(\texttt{scipy.linalg.expm}). Nessuna porta, nessun circuito.
+\item \textbf{B --- Circuito genuino.} Una sequenza di porte quantistiche
+viene applicata una alla volta (Qiskit \texttt{Statevector} su un
+\texttt{QuantumCircuit} costruito con porte reali), esattamente come farebbe
+un computer quantistico vero.
+\item \textbf{C --- Scorciatoia classica.} Lo stesso risultato che darebbe un
+circuito, ma calcolato con l'algebra lineare (potenza di matrice) invece di
+applicare le porte una per una. Verificato identico a B, a precisione
+macchina, ovunque compare.
+\end{itemize}
+
+\messaggio{Il criterio ``A vs B'' è la verifica scientifica del progetto: un
+circuito è giusto solo se riproduce l'esatto. Il criterio ``B vs C'' è solo
+una scelta di velocità di calcolo in un punto --- non cambia mai il
+risultato, dove è stato verificato.}
+
+\section{Documento 0 --- Il filo conduttore}
+
+Nessun risultato proprio: è la mappa del progetto. La sezione ``Come sono
+state ottenute le cifre'' descrive la disciplina generale (nessun numero
+preso dalla teoria, due metodi indipendenti dove possibile) --- non fa
+affermazioni su B specificamente.
+
+\section{Documento 1 --- Il sistema}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{0.62\textwidth}c@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Figura/tabella} & \textbf{Metodo} \\
+\midrule
+Spettro dei quattro livelli vs campo & \textbf{A} --- \texttt{eigh(H)} \\
+Gap ravvicinato e magnetizzazione & \textbf{A} --- \texttt{eigh(H)} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Nessun circuito in tutto il documento. Nessuna ambiguità.
+
+\section{Documento 2 --- VQE}
+
+Verificato nello script \texttt{fig\_doc2.py}: la funzione \texttt{vqe(...)}
+usa \texttt{Statevector(ansatz.assign\_parameters(...))} per ogni fidelity
+riportata, e \texttt{np.linalg.eigh(H)} per il riferimento esatto.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}p{0.62\textwidth}c@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Figura/tabella} & \textbf{Metodo} \\
+\midrule
+Diagrammi di circuito (ansatz generico, minimo, RBS, $W$, esteso) & disegni, non risultati numerici \\
+Fidelity vs campo (HA e PMA base, con/senza DM) & \textbf{A} (riferimento) vs \textbf{B} (ottimizzazione reale) \\
+Fidelity ansatz minimo, punto per punto & \textbf{B} vs \textbf{A} \\
+Confronto rami (singoletto/$\ket{\downarrow\downarrow}$ forzati) & \textbf{B} --- stesso blocco CNOT--$R_y$--CNOT, preparazione forzata \\
+Tetto strutturale ($K$ blocchi) & \textbf{B} --- $K$ blocchi reali, ottimizzati \\
+Fidelity ansatz esteso & \textbf{B} vs \textbf{A} \\
+Confronto finale (punto del Documento 3) & \textbf{B} vs \textbf{A}, ricalcolato apposta \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Nessuna scorciatoia C in tutto il documento --- è quello con la copertura più
+pulita.
+
+\section{Documento 3 --- Dinamica}
+
+Il documento dove C compare davvero. Verificato in \texttt{trotter\_dimero.py}
+e \texttt{fig\_doc3.py}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{0.55\textwidth}p{0.37\textwidth}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Figura/tabella} & \textbf{Metodo} \\
+\midrule
+Circuito di un passo di Trotter (diagramma) & disegno, mostra le porte reali
+($R_z,R_{xx},R_{yy},R_{zz}$, H) \\
+$\media{S_z}(t)$ esatto vs Trotter ($N{=}2,5,20$) & esatta: \textbf{A}.
+Trotter: \textbf{C} --- \texttt{U\_trotter\_mat}, non il circuito disegnato
+sopra \\
+Convergenza dell'errore (log-log) & \textbf{C} per tutti i 10 valori di $N$ \\
+Errore a $t=6$ (tabella) & stessi dati della figura precedente, \textbf{C} \\
+Costo in CNOT (diretta / ricompilata) & conteggio da \texttt{transpile()}, non
+è un risultato fisico A/B/C ma un conteggio di porte dopo compilazione \\
+``Due ansatz'' (PMA base/esteso, con/senza Trotter) & stato VQE: \textbf{B}
+(Doc.\ 2). Evoluzione esatta: \textbf{A}. Evoluzione ``Trotter $N{=}20$'':
+\textbf{C} \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\verifica{B e C coincidono a precisione macchina in ognuno di questi punti:
+scarto massimo $2.4\times10^{-13}$ su tutta la griglia di $N$ usata nel
+documento, da $N=1$ a $N=512$. Il testo del documento presenta questi
+risultati come se venissero da un circuito eseguito porta per porta: è
+verificato, non solo plausibile, che il numero non cambierebbe se lo fosse
+davvero.}
+
+\section{Documento 4 --- Correlatori}
+
+Verificato in \texttt{fig\_doc4.py}, \texttt{fig\_doc4\_spettro.py},
+\texttt{fig\_doc4\_vqe.py}, \texttt{fig\_doc4\_scan\_vqe.py}, e nel modulo
+\texttt{circuito\_correlazioni\_dimero.py}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{0.55\textwidth}p{0.37\textwidth}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Figura/tabella} & \textbf{Metodo} \\
+\midrule
+Circuito con l'ancilla (diagramma) & disegno del circuito reale (Hadamard
+test) \\
+Validazione (correlatore rappresentativo) & riferimento: \textbf{A}. Simboli:
+\textbf{B} --- \texttt{correlator\_from\_circuit}, circuito reale a 3 qubit
+con l'ancilla \\
+Scan delle 36 combinazioni (istante iniziale / ampiezza massima) & \textbf{A}
+pura --- \texttt{C\_esatto}, mai passa dal circuito \\
+Segnale ricco/povero & \textbf{A} pura \\
+Peso delle transizioni (spettro a righe) & \textbf{A} --- pesi da autostati
+di $H$ \\
+Ricostruzione spettrale ($\sum_n c_n e^{-i(E_n-E_0)t}$) & \textbf{A} pura, due
+formule classiche confrontate fra loro \\
+Correlatore preparato con stato VQE (PMA base/esteso) & stato: \textbf{B}
+(Doc.\ 2). Dinamica: \textbf{B} --- circuito vero (ansatz$+$ancilla$+$Trotter
+$N{=}200$, transpilato in porte native) \\
+Scan 36 combinazioni con stato VQE & stato: \textbf{B}. Dinamica: \textbf{A}
+--- esponenziale diretto, per motivi di tempo di calcolo (non ancora rifatto
+con il circuito completo) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\verifica{Il blocco $U(t)$ del circuito dell'ancilla è costruito come un
+singolo gate unitario (\texttt{UnitaryGate}, ottenuto da
+\texttt{scipy.linalg.expm}), non ancora scomposto in porte native
+($R_z,\sqrt X$, CX) come invece accade sempre quando studieremo il sistema
+come sistema aperto. È comunque un circuito Qiskit vero --- ancilla,
+controlli, misura
+--- e riproduce la fisica corretta (verificato contro A). Transpilando
+l'intero circuito in $\{R_z,\sqrt X,X,\text{CX}\}$ il risultato non cambia
+(scarto $10^{-14}$--$10^{-11}$ su nove correlatori testati): non è un
+problema di correttezza, solo un livello di dettaglio hardware non ancora
+reso esplicito nel disegno di questo documento.}
+
+\needspace{10\baselineskip}
+\subsection*{Un caso risolto: la Fig.~``correlatore da VQE''}
+
+Fino alla sessione precedente, la curva ``esatta, da $\psi_{\rm VQE}$'' usava
+l'esponenziale esatto $e^{-iHt}$, che un circuito vero non può realizzare
+direttamente. Rifatta con il circuito completo (ansatz$+$ancilla$+$Trotter
+$N{=}200$, transpilato in porte native): con l'ansatz esteso lo scarto
+massimo su $|C(t)|$ passa da $0$ (per costruzione, un artefatto) a $0.010$
+--- il vero errore di Trotter, prima nascosto. Con l'ansatz minimo lo scarto
+resta $0.232$, invariato: l'errore di preparazione è talmente più grande da
+rendere l'errore di Trotter invisibile nella somma. Non è più una
+scorciatoia non verificata: è il circuito vero.
+
+\section*{Riepilogo per chi legge di fretta}
+\addcontentsline{toc}{section}{Riepilogo}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+\item \textbf{Documenti 0, 1, 2}: nessuna scorciatoia. A e B, sempre
+dichiarati chiaramente dal contesto.
+\item \textbf{Documento 3}: le curve ``Trotter'' nei grafici principali sono
+C (matrice compatta), presentate come se fossero il circuito disegnato sopra
+--- verificato identico, ovunque, a precisione macchina.
+\item \textbf{Documento 4}: la maggior parte delle figure (scan, ricco/povero,
+spettro, ricostruzione) è A pura, mai un circuito. La figura di validazione e
+il correlatore singolo preparato con lo stato VQE usano davvero il circuito
+con l'ancilla (B). Resta sulla scorciatoia diretta (A) solo lo scan
+sistematico sulle 36 combinazioni con stato VQE, per tempo di calcolo.
+\end{itemize}
+
+\end{document}

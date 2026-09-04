@@ -326,3 +326,55 @@ termine DM già nota: $D_{12}=-D_{23}$ forzato dalla riflessione $P_{13}$,
 nessuna scelta Opzione A/B come per l'anello), poi Trotter e correlazioni
 dinamiche per la catena. Vedi `prompt_nuova_chat_trimero_catena.md` per il
 piano operativo dettagliato.
+
+## Aggiornamento 3 settembre 2026 — Parte 2 avviata: verifica end-to-end e primi documenti
+
+Pipeline di Parte 1 sul dimero (VQE, $U(t)$ via Trotter, correlatori)
+riverificata end-to-end e confermata sana prima di introdurre il rumore
+(dettaglio numerico completo in `log_decisioni.md`). Trovato e da tenere a
+mente: transpilare l'**intero** circuito dei correlatori a un livello di
+ottimizzazione alto collassa gli $N$ passi di Trotter in un circuito a
+costo costante, cancellando silenziosamente la dipendenza da $N$ che serve
+allo scan sui parametri di rumore richiesto dal relatore — evitato
+transpilando una volta il singolo passo e ripetendo il blocco compilato.
+
+Prodotti i primi due documenti della Parte 2:
+`pipeline_rumore_dimero_overview.tex` (panoramica dei 5 passi della
+pipeline) e `teoria_modello_rumore.tex` (teoria del Passo 1: operatore
+densità, operatori di Kraus, canale depolarizzante, conversione
+$\varepsilon\leftrightarrow\lambda$, errore di lettura).
+
+**Prossimo passo:** implementazione del Passo 1 (ricerca calibrazione reale
+su un chip citabile, `NoiseModel` in codice), poi Passo 2 (VQE con termine
+DM sotto rumore), che richiede prima di implementare `ansatz_params` per il
+modulo dei correlatori del dimero (ancora mancante, a differenza di anello
+e catena).
+
+## Aggiornamento 3 settembre 2026 (continua) — PARTE 2 COMPLETA sul dimero
+
+Tutti e cinque i passi della pipeline di Parte 2 (sistema aperto, dimero)
+sono chiusi: modello di rumore (Passo 1), VQE con termine DM sotto rumore
+(Passo 2), quantum simulation Trotter sotto rumore (Passo 3), correlazioni
+dinamiche sotto rumore (Passo 4), scan sui parametri di errore (Passo 5).
+Dettaglio numerico completo di ciascun passo in `log_decisioni.md`;
+documenti di risultati dedicati per ciascun passo
+(`risultati_passo{1..5}_*.tex`).
+
+**Risultati centrali:**
+- Punto di riferimento (`ibm_torino`, calibrazione reale citata):
+  $N^*=8$ sulla fedeltà di Trotter, $N^*=5$ sui correlatori dinamici —
+  prima comparsa concreta, non solo prevista, del compromesso
+  Trotter/rumore richiesto dal relatore.
+- Risultato analitico: $N^*$ è **indipendente da $p_\text{readout}$**
+  (la correzione di readout è un fattore moltiplicativo costante in $N$,
+  non può spostare un massimo) — dimostrato e verificato numericamente,
+  ha ridotto lo scan effettivo a soli $\varepsilon_{1q},\varepsilon_{2q}$.
+- Scan: $N^*$ monotono non-crescente in entrambi i parametri di gate,
+  satura a $N^*=1$ oltre una soglia di rumore. Pendenza log-log osservata
+  più piatta della previsione ingenua $N^*\propto1/\sqrt{\varepsilon_{2q}}$
+  — dichiarato come osservazione aperta, non forzato un fit scorretto.
+
+**Prossimo passo:** integrazione di tutti i risultati di Parte 2 nel
+documento finale di tesi; valorizzare il confronto RBS vs $W$ (Parte 1,
+`scelta_ansatz_RBS_vs_W.tex`) come sezione metodologica a sé, come da nota
+precedente in questo stesso file.

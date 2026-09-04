@@ -315,3 +315,44 @@ di lavoro $(b,D)$ per la Fase 5 della catena, dato che la struttura del
 termine DM ($D_{12}=-D_{23}$, forzata dalla riflessione $P_{13}$) è già
 nota e non richiede una scelta fra opzioni come per l'anello. Vedi
 `prompt_nuova_chat_trimero_catena.md`.
+
+## Nota informativa (non una domanda) — due scelte implementative per la Parte 2
+
+Da segnalare al relatore nel prossimo scambio, non da porre come domanda
+aperta: due dettagli implementativi emersi verificando la pipeline prima di
+introdurre il rumore.
+
+1. **Transpilazione per blocco, non sull'intero circuito.** La direttiva
+   "transpilare per minimizzare i gate" va applicata al singolo passo di
+   Trotter, compilato una volta e ripetuto $N$ volte — transpilando l'intero
+   circuito a un livello di ottimizzazione alto, Qiskit collassa gli $N$
+   passi identici in un circuito a costo costante, eliminando la dipendenza
+   da $N$ che serve allo scan sui parametri di errore.
+2. **VQE reale come preparazione di default sotto rumore**, non le ampiezze
+   esatte: verificato numericamente che il contributo della preparazione
+   all'errore totale è una costante additiva, indipendente da $N$, che non
+   sposta il numero di passi ottimale $N^*$ ma ne fissa il pavimento minimo
+   raggiungibile.
+
+Entrambe rientrano nello scope già confermato il 02/09/2026 (sez. 12); non
+richiedono una risposta, solo una comunicazione a valle.
+
+## Nota informativa (non una domanda) — Parte 2 completata sul dimero
+
+Da comunicare al relatore, non una domanda aperta: tutti e cinque i passi
+della pipeline di Parte 2 (rumore sul dimero) sono completi, con lo scan
+sui parametri di errore che rispondeva esplicitamente alla sua richiesta
+del 02/09/2026 ("rifarei il conto per vari valori dei parametri di
+errore... vedere come si sposta $N^*$").
+
+Due risultati che potrebbero interessargli in particolare:
+1. **$N^*$ non dipende dall'errore di lettura**, per un readout
+   simmetrico — risultato analitico (la correzione di readout è un
+   fattore costante in $N$), non solo empirico.
+2. Al punto di calibrazione scelto (`ibm_torino`), $N^*=8$ sulla fedeltà
+   di Trotter e $N^*=5$ sui correlatori dinamici: il numero ottimale di
+   passi dipende dall'osservabile che si sta calcolando, non solo dal
+   livello di rumore del dispositivo.
+
+Non richiede una risposta; utile per orientare la discussione quando si
+passerà alla stesura del capitolo finale.

@@ -9,6 +9,10 @@
 \usepackage{amsmath,amssymb}
 \usepackage{mathtools}
 \usepackage{nicematrix}
+\usepackage{xcolor}
+\definecolor{amber}{HTML}{C68A00}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,calc}
 
 % ---------- Impaginazione ----------
 \usepackage[a4paper,margin=2.7cm]{geometry}
@@ -20,6 +24,7 @@
 
 \newcommand{\ket}[1]{\lvert #1 \rangle}
 \newcommand{\bra}[1]{\langle #1 \rvert}
+\newcommand{\braket}[1]{\langle #1 \rangle}
 \newcommand{\Tr}{\operatorname{Tr}}
 
 \title{Parte 2, Passo 1 --- costruzione del modello di rumore\\
@@ -39,6 +44,7 @@ pubblicate nel parametro che Qiskit vuole in ingresso. Segue la stessa notazione
 slide del corso (\texttt{7Physical\_\allowbreak implementation.pdf}), citate dove serve.
 
 \section{Perché serve l'operatore densità}
+\label{sec:decoerenza}
 
 In un sistema chiuso lo stato è un vettore $\ket{\psi}$ e l'evoluzione è unitaria:
 $\ket{\psi(t)}=U(t)\ket{\psi(0)}$. Questo smette di bastare quando il sistema $S$ (i
@@ -52,26 +58,257 @@ deve tracciare via l'ambiente,
 e $\rho^S$ così ottenuto è in generale uno stato \emph{misto}. Questo è esattamente il
 meccanismo della decoerenza discusso a lezione: se due stati del sistema si
 correlano con stati ortogonali dell'ambiente, l'informazione di fase fra di essi va
-persa localmente, anche se il sistema composito resta in uno stato puro.
+persa localmente, anche se il sistema composito resta in uno stato puro. Il resto di
+questa sezione ricostruisce il meccanismo passo per passo, perché è la ragione
+profonda per cui da qui in avanti si userà sempre $\rho$ al posto di $\ket\psi$.
 
-Un esempio minimo, utile a fissare le idee: sia $\ket{\Psi}=\alpha\ket{0_A0_E}+
-\beta\ket{1_A0_B}$ (spin $A$ correlato con un secondo sistema $B$ tramite
-l'entanglement). Tracciando via $B$,
+\subsection{Il meccanismo, passo per passo}
+
+Il qubit $A$ parte in una sovrapposizione coerente,
+$\ket{\phi}_A=\alpha\ket0_A+\beta\ket1_A$: $\alpha$ e $\beta$ hanno una fase relativa
+ben definita, ed è proprio questa fase a rendere possibile l'interferenza (per
+esempio, le frange di un esperimento di tipo Ramsey). Prima di ogni interazione con
+l'ambiente, lo stato composito è un semplice prodotto, $\ket\phi_A\otimes\ket0_E$.
+
+L'accoppiamento con l'ambiente è un'evoluzione unitaria sul sistema congiunto $AE$ ---
+non introduce nulla di non unitario di per sé. Il punto cruciale è \emph{cosa fa}
+questa unitaria. Supponiamo che agisca sui due stati della base come
 \begin{equation}
-\rho^A = \Tr_B\ket{\Psi}\bra{\Psi} = |\alpha|^2\ket{0_A}\bra{0_A} +
-|\beta|^2\ket{1_A}\bra{1_A},
+U\ket{0}_A\ket{0}_E = \ket{0}_A\ket{0}_E, \qquad\qquad
+U\ket{1}_A\ket{0}_E = \ket{1}_A\ket{1}_E,
+\label{eq:interazione-che-distingue}
 \end{equation}
-che è diagonale: tutta l'informazione sulla fase relativa fra $\alpha$ e $\beta$ è
-sparita da $\rho^A$, pur essendo lo stato globale $\ket{\Psi}$ perfettamente puro e
-coerente. Da qui in avanti lavoriamo quindi con $\rho$, non più con $\ket{\psi}$; in
+cioè l'ambiente ``risponde in modo diverso'' a seconda del ramo di $A$ (resta $\ket0_E$
+se $A$ è $\ket0_A$, passa a $\ket1_E$ se $A$ è $\ket1_A$).
+
+\paragraph{Passo 1 --- distribuire il prodotto.} Scriviamo esplicitamente lo stato
+iniziale, distribuendo $\ket\phi_A$ sul prodotto tensoriale:
+\begin{equation}
+\ket\phi_A\otimes\ket0_E = \big(\alpha\ket0_A+\beta\ket1_A\big)\otimes\ket0_E
+= \alpha\,\ket0_A\ket0_E + \beta\,\ket1_A\ket0_E.
+\label{eq:step1}
+\end{equation}
+
+\paragraph{Passo 2 --- applicare $U$ termine per termine.} $U$ è un operatore lineare
+sullo spazio congiunto $\mathcal H_A\otimes\mathcal H_E$, quindi si distribuisce sulla
+somma dell'Eq.~\eqref{eq:step1} esattamente come farebbe su qualunque combinazione
+lineare:
+\begin{equation}
+U\ket\phi_A\ket0_E = U\big(\alpha\ket0_A\ket0_E+\beta\ket1_A\ket0_E\big)
+= \alpha\,U\ket0_A\ket0_E + \beta\,U\ket1_A\ket0_E.
+\label{eq:step2}
+\end{equation}
+Sostituendo l'azione di $U$ data dall'Eq.~\eqref{eq:interazione-che-distingue} in
+ciascuno dei due termini:
+\begin{equation}
+U\ket\phi_A\ket0_E = \alpha\,\ket0_A\ket0_E + \beta\,\ket1_A\ket1_E \;\equiv\; \ket\Psi.
+\label{eq:step3}
+\end{equation}
+Questo è lo stato entangled già anticipato nel \S~\ref{sec:decoerenza}: $A$ ed $E$ non
+sono più scrivibili come un prodotto $(\cdots)_A\otimes(\cdots)_E$, perché il
+coefficiente di $\ket0_A$ è agganciato a $\ket0_E$ e quello di $\ket1_A$ a $\ket1_E$.
+
+\paragraph{Passo 3 --- scrivere l'operatore densità del sistema congiunto.} Per
+definizione, $\rho^{AE}=\ket\Psi\bra\Psi$. Espandiamo esplicitamente il prodotto,
+usando la linearità del bra $\bra\Psi=\alpha^*\bra{0_A0_E}+\beta^*\bra{1_A1_E}$:
+\begin{align}
+\rho^{AE} &= \big(\alpha\ket{0_A0_E}+\beta\ket{1_A1_E}\big)
+             \big(\alpha^*\bra{0_A0_E}+\beta^*\bra{1_A1_E}\big) \notag\\
+&= |\alpha|^2\,\ket{0_A}\bra{0_A}\otimes\ket{0_E}\bra{0_E}
+ + \alpha\beta^*\,\ket{0_A}\bra{1_A}\otimes\ket{0_E}\bra{1_E} \notag\\
+&\quad + \alpha^*\beta\,\ket{1_A}\bra{0_A}\otimes\ket{1_E}\bra{0_E}
+ + |\beta|^2\,\ket{1_A}\bra{1_A}\otimes\ket{1_E}\bra{1_E}.
+\label{eq:step4}
+\end{align}
+Quattro termini: due ``diagonali'' (con $|\alpha|^2$ e $|\beta|^2$) e due
+``incrociati'' (con $\alpha\beta^*$ e $\alpha^*\beta$) --- questi ultimi sono
+esattamente il termine di interferenza che porta l'informazione di fase relativa.
+
+\paragraph{Passo 4 --- tracciare via l'ambiente.} Serve prima un fatto generale sulla
+traccia parziale, utile oltre questo esempio: per operatori fattorizzati $X$ (su $A$)
+e $Y$ (su $E$),
+\begin{equation}
+\Tr_E\big[X\otimes Y\big] = X\cdot\Tr[Y].
+\label{eq:fattorizzazione-traccia}
+\end{equation}
+Questo si vede subito dalla definizione della traccia parziale,
+$\Tr_E[Z]=\sum_e(\mathbb I_A\otimes\bra{e_E})\,Z\,(\mathbb I_A\otimes\ket{e_E})$, somma
+su una base ortonormale $\{\ket{e_E}\}$ di $E$: per $Z=X\otimes Y$,
+\begin{equation}
+(\mathbb I_A\otimes\bra{e_E})(X\otimes Y)(\mathbb I_A\otimes\ket{e_E})
+= X\otimes\bra{e_E}Y\ket{e_E} = X\cdot\bra{e_E}Y\ket{e_E},
+\end{equation}
+(il secondo fattore è ora uno scalare), e sommando su $e$ si ottiene
+$X\cdot\sum_e\bra{e_E}Y\ket{e_E}=X\cdot\Tr[Y]$, cioè l'Eq.~\eqref{eq:fattorizzazione-traccia}.
+
+Applichiamo l'Eq.~\eqref{eq:fattorizzazione-traccia} a ciascuno dei quattro termini
+dell'Eq.~\eqref{eq:step4} (qui $X$ è l'operatore su $A$, $Y$ quello su $E$):
+\begin{align}
+\Tr_E\big[\ket{0_A}\bra{0_A}\otimes\ket{0_E}\bra{0_E}\big]
+  &= \ket{0_A}\bra{0_A}\cdot\underbrace{\Tr[\ket{0_E}\bra{0_E}]}_{=\braket{0_E|0_E}=1}
+  = \ket{0_A}\bra{0_A}, \label{eq:termine-a}\\
+\Tr_E\big[\ket{0_A}\bra{1_A}\otimes\ket{0_E}\bra{1_E}\big]
+  &= \ket{0_A}\bra{1_A}\cdot\underbrace{\Tr[\ket{0_E}\bra{1_E}]}_{=\braket{1_E|0_E}}
+  = \ket{0_A}\bra{1_A}\cdot\braket{1_E|0_E}, \label{eq:termine-b}\\
+\Tr_E\big[\ket{1_A}\bra{0_A}\otimes\ket{1_E}\bra{0_E}\big]
+  &= \ket{1_A}\bra{0_A}\cdot\underbrace{\Tr[\ket{1_E}\bra{0_E}]}_{=\braket{0_E|1_E}}
+  = \ket{1_A}\bra{0_A}\cdot\braket{0_E|1_E}, \label{eq:termine-c}\\
+\Tr_E\big[\ket{1_A}\bra{1_A}\otimes\ket{1_E}\bra{1_E}\big]
+  &= \ket{1_A}\bra{1_A}\cdot\underbrace{\Tr[\ket{1_E}\bra{1_E}]}_{=\braket{1_E|1_E}=1}
+  = \ket{1_A}\bra{1_A}, \label{eq:termine-d}
+\end{align}
+dove si è usata l'identità generale $\Tr[\ket a\bra b]=\braket{b|a}$ (traccia di un
+proiettore/operatore di rango 1). Ora entra l'ipotesi di ortogonalità: $\ket0_E$ e
+$\ket1_E$ sono ortogonali, quindi $\braket{1_E|0_E}=\braket{0_E|1_E}=0$, e i termini
+incrociati delle Eq.~\eqref{eq:termine-b}--\eqref{eq:termine-c} si annullano
+identicamente. Sommando i quattro termini con i rispettivi coefficienti
+$|\alpha|^2,\alpha\beta^*,\alpha^*\beta,|\beta|^2$ dell'Eq.~\eqref{eq:step4}:
+\begin{equation}
+\rho^A = |\alpha|^2\ket{0_A}\bra{0_A} + \alpha\beta^*\cdot0 + \alpha^*\beta\cdot0
++ |\beta|^2\ket{1_A}\bra{1_A} = |\alpha|^2\ket{0_A}\bra{0_A}+|\beta|^2\ket{1_A}\bra{1_A}.
+\label{eq:rhoA-finale}
+\end{equation}
+Il termine di interferenza non è stato tralasciato o approssimato: è sparito
+esattamente, moltiplicato per un fattore letteralmente zero. È questo il passaggio
+matematico preciso dietro la frase ``l'informazione di fase va persa'': la fase
+relativa fra $\alpha$ e $\beta$ viveva nei coefficienti $\alpha\beta^*,\alpha^*\beta$
+dell'Eq.~\eqref{eq:step4}, e la traccia parziale li elimina quando (e solo quando)
+gli stati d'ambiente a cui sono agganciati sono ortogonali.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  >=Stealth, font=\small,
+  box/.style={draw, rounded corners=2pt, minimum height=7mm, minimum width=26mm, align=center},
+  lbl/.style={font=\footnotesize, gray}
+]
+ 
+  \node[box, fill=teal!10] (prep) at (0,0) {$\ket{\phi}_A\otimes\ket{0}_E$};
+
+ 
+  \node[box, fill=amber!12] (U1) at (4.3,1.4) {$U$: l'ambiente\\[-1pt]\emph{distingue} i rami};
+  \node[box, fill=teal!10] (b0) at (8.6,2.1) {$\ket{0_A}\ket{0_E}$};
+  \node[box, fill=teal!10] (b1) at (8.6,0.7) {$\ket{1_A}\ket{1_E}$};
+  \node[lbl] at (8.6,-0.05) {$\braket{0_E|1_E}=0$ (ortogonali)};
+  \node[align=center] at (11.6,1.4) {\textbf{entanglement}\\coerenza persa\\localmente in $A$};
+
+ 
+  \node[box, fill=amber!12] (U2) at (4.3,-1.9) {$U'$: l'ambiente\\[-1pt]\emph{non distingue} i rami};
+  \node[box, fill=teal!10] (c0) at (8.6,-1.2) {$\ket{0_A}\ket{0_E}$};
+  \node[box, fill=teal!10] (c1) at (8.6,-2.6) {$\ket{1_A}\ket{0_E}$};
+  \node[lbl] at (8.6,-3.35) {stesso $\ket{0_E}$ in entrambi};
+  \node[align=center] at (11.6,-1.9) {\textbf{nessun entanglement}\\prodotto $\phi_A\otimes\ket{0_E}$\\coerenza intatta};
+
+  \draw[->] (prep) -- (U1);
+  \draw[->] (prep) -- (U2);
+  \draw[->] (U1) -- (b0);
+  \draw[->] (U1) -- (b1);
+  \draw[->] (U2) -- (c0);
+  \draw[->] (U2) -- (c1);
+\end{tikzpicture}
+\caption{Stessa preparazione iniziale, due interazioni diverse con l'ambiente. In
+alto: l'ambiente ``impara'' il ramo di $A$ finendo in stati ortogonali --- tracciarlo
+via cancella la coerenza da $\rho^A$ (Eq.~\eqref{eq:rhoA-finale}). In basso:
+l'ambiente risponde allo stesso modo qualunque sia il ramo --- non si forma
+entanglement, e $A$ resta un prodotto puro e coerente. È specificamente la
+distinguibilità (ortogonalità) a causare la decoerenza, non l'interazione in sé.}
+\label{fig:decoerenza-branching}
+\end{figure}
+
+Il ramo inferiore della Fig.~\ref{fig:decoerenza-branching} è il caso opposto: se
+l'ambiente non distinguesse i rami ($U'\ket0_A\ket0_E=\ket0_A\ket0_E$ e
+$U'\ket1_A\ket0_E=\ket1_A\ket0_E$, stesso $\ket0_E$ in entrambi), il Passo 2
+darebbe $U'\ket\phi_A\ket0_E=\ket\phi_A\otimes\ket0_E$ --- ancora un prodotto, nessun
+entanglement --- e la traccia parziale del Passo 4 lascerebbe $\rho^A$ puro, con i
+termini incrociati moltiplicati per $\braket{0_E|0_E}=1$ anziché $0$. La Fig.~\ref{fig:bloch-shrink}
+traduce l'Eq.~\eqref{eq:rhoA-finale} nel linguaggio della sfera di Bloch (slide 16 del
+corso): uno stato puro sta sulla superficie, uno stato misto strettamente dentro.
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[>=Stealth, font=\small]
+ 
+  \draw[thick] (0,0) circle (1.8);
+  \draw[->, thick, teal!70!black] (0,0) -- (1.27,1.27);
+  \filldraw[teal!70!black] (1.27,1.27) circle (1.6pt);
+  \node[align=center] at (0,-2.4) {stato puro\\$\|\mathbf r\|=1$, sulla superficie};
+
+  \draw[->,very thick] (2.6,0) -- (3.6,0);
+
+ 
+  \begin{scope}[xshift=6.6cm]
+    \draw[thick, gray!60] (0,0) circle (1.8);
+    \draw[->, thick, amber!85!black] (0,0) -- (0.7,0.7);
+    \filldraw[amber!85!black] (0.7,0.7) circle (1.6pt);
+    \node[align=center] at (0,-2.4) {stato misto (decoerenza)\\$\|\mathbf r\|<1$, all'interno};
+  \end{scope}
+\end{tikzpicture}
+\caption{La decoerenza vista sulla sfera di Bloch: la perdita di coerenza tra
+$\ket0_A$ e $\ket1_A$ accorcia il vettore di Bloch di $\rho^A$, portandolo dalla
+superficie (stato puro) verso il centro (stato misto). Il caso limite $\mathbf r=0$
+è lo stato massimamente misto $\mathbb I/2$.}
+\label{fig:bloch-shrink}
+\end{figure}
+
+\FloatBarrier
+\subsection{Perdita \emph{locale}, non globale}
+
+Un punto da non fraintendere: la fase non è distrutta in senso assoluto, è solo sparita
+da qualunque descrizione che ignori $E$. Lo stato globale $\ket\Psi_{AE}$ resta
+perfettamente puro e coerente --- se in linea di principio si potesse invertire
+l'interazione (evoluzione unitaria inversa su tutto $AE$), si riavrebbe $A$
+esattamente come prima. In pratica l'ambiente ha troppi gradi di libertà per essere
+controllato o invertito: la coerenza è persa per ogni scopo pratico, pur non essendolo
+in linea di principio. È per questo che si parla di \emph{operazione quantistica}
+$\mathcal E(\rho)=\sum_k E_k\rho E_k^\dagger$ (\S~\ref{sec:kraus}) invece che di
+evoluzione unitaria: l'universo intero evolve unitariamente, ma la parte che si
+osserva no.
+
+Il significato operativo è diretto: un esperimento di interferenza condotto sul solo
+$A$ (per esempio, frange di Ramsey) userebbe proprio il termine fuori diagonale di
+$\rho^A$ --- se quel termine è zero, non c'è interferenza da osservare, esattamente
+come ci si aspetta da una miscela statistica classica.
+
+\subsection{Approfondimento: il caso generale, decoerenza parziale}
+
+L'esempio sopra è un caso limite (ambiente perfettamente distinguibile). In generale
+l'ambiente finisce in due stati normalizzati $\ket{E_0},\ket{E_1}$ non necessariamente
+ortogonali, $\ket\Psi=\alpha\ket{0_A}\ket{E_0}+\beta\ket{1_A}\ket{E_1}$. Ripetendo il
+calcolo della traccia parziale senza assumere l'ortogonalità (verificato numericamente
+prima di scriverlo qui, non solo per analogia),
+\begin{equation}
+\rho^A_{01} = \alpha\beta^*\,\braket{E_1|E_0}, \qquad\text{ossia}\qquad
+\boxed{\;\rho^A_{01} = \alpha\beta^*\, s\;}, \qquad s\equiv\braket{E_1|E_0},
+\end{equation}
+dove $\rho^A_{01}=\bra{0_A}\rho^A\ket{1_A}$ è il termine di coerenza. Due casi limite,
+entrambi verificati:
+\begin{itemize}[leftmargin=1.3em,itemsep=0.15em]
+\item $s=1$ (stesso stato d'ambiente, $\ket{E_0}=\ket{E_1}$): $\rho^A_{01}=\alpha\beta^*$,
+coerenza intatta --- nessuna decoerenza, coerente con il ramo inferiore di
+Fig.~\ref{fig:decoerenza-branching};
+\item $s=0$ (stati ortogonali): $\rho^A_{01}=0$, decoerenza completa --- il caso
+già visto sopra.
+\end{itemize}
+Il caso generale $0<|s|<1$ è una \textbf{decoerenza parziale}: la coerenza residua è
+suppressa esattamente del fattore $s$. Questo è precisamente il meccanismo dietro il
+canale di \emph{phase damping} delle slide del corso (\S~\ref{sec:cosa-non-entra}),
+dove $s=1-p=e^{-t/T_2}$ cresce con continuità da $1$ (nessuna decoerenza, $t=0$) a $0$
+($t\to\infty$) --- lo stesso principio di questa sezione, reso continuo nel tempo
+anziché discreto in due soli casi.
+
+Da qui in avanti lavoriamo quindi con $\rho$, non più con $\ket{\psi}$; in
 Qiskit questo corrisponde a passare da \texttt{Statevector} a
 \texttt{DensityMatrix}/\texttt{AerSimulator(method="density\_matrix")}.
 
 \section{Operazioni quantistiche e operatori di Kraus}
 \label{sec:kraus}
 
-Un'evoluzione non unitaria di $\rho$ (dovuta all'accoppiamento con $E$) si scrive in
-generale come un'operazione quantistica
+Un'evoluzione non unitaria di $\rho$ --- non $U\rho U^\dagger$ per nessuna $U$ su $A$
+da solo, ma qualcosa di più generale --- è esattamente ciò che si è visto accadere nel
+\S~\ref{sec:decoerenza}: l'evoluzione congiunta $AE$ era unitaria (Passo 2), eppure
+$\rho^A$ è passato da puro a misto (Passo 4), cosa che nessuna unitaria applicata al
+solo $A$ potrebbe mai produrre. Questa evoluzione, dovuta all'accoppiamento con $E$, si
+scrive in generale come un'operazione quantistica
 \begin{equation}
 \mathcal E(\rho) = \sum_k E_k\,\rho\,E_k^\dagger, \qquad
 \sum_k E_k^\dagger E_k = \mathbb{I},
@@ -83,6 +320,41 @@ per ogni $\rho$ normalizzato, cioè che $\mathcal E(\rho)$ resti un operatore de
 legittimo. Questa è la forma generale da cui discendono tutti i canali di rumore usati
 a lezione (defasamento, rilassamento, depolarizzazione): cambia solo la scelta degli
 $E_k$.
+
+\subsection{Cosa si intende per ``canale''}
+
+Il termine viene, per analogia diretta, dalla teoria classica dell'informazione di
+Shannon: un canale di comunicazione prende un segnale in ingresso, lo fa passare
+attraverso un mezzo fisico (un cavo, l'aria, una fibra ottica) che può introdurre
+rumore o perdita, e restituisce un segnale in uscita, in generale degradato. In
+informazione quantistica si prende in prestito la stessa immagine: si manda dentro
+uno stato $\rho$, il ``mezzo'' (l'ambiente, l'imperfezione del gate, il tempo che
+passa) agisce su di esso, e ne esce uno stato $\mathcal E(\rho)$ --- di solito più
+misto di quello che è entrato.
+
+Tecnicamente, un \textbf{canale quantistico} è la mappa $\mathcal E$ nella sua
+interezza --- non i singoli $E_k$, ma l'intera trasformazione $\rho\mapsto\mathcal
+E(\rho)$. Perché sia fisicamente sensata (mandi dentro uno stato quantistico
+legittimo, ne esca uno altrettanto legittimo, anche se $\rho$ è solo metà di un
+sistema più grande ed entangled con l'altra metà) deve soddisfare due condizioni:
+\emph{completa positività} e \emph{preservazione della traccia}
+($\Tr[\mathcal E(\rho)]=1$, esattamente la condizione di completezza
+dell'Eq.~\eqref{eq:kraus} qui sopra). Un teorema di Kraus garantisce il viceversa:
+\emph{ogni} mappa con queste due proprietà si può sempre scrivere nella forma
+dell'Eq.~\eqref{eq:kraus} --- ecco perché si parla di ``operatori di Kraus \emph{del
+canale}'': per un dato canale $\mathcal E$ (per esempio quello depolarizzante,
+\S~\ref{sec:depol}), gli $E_k$ sono l'insieme specifico di operatori che lo
+rappresentano in quella forma; canali diversi (depolarizzante, defasamento,
+rilassamento) corrispondono a scelte diverse di $\{E_k\}$, ma condividono tutti la
+stessa struttura generale.
+
+La distinzione utile per il resto di questo documento è: un \textbf{gate ideale} è
+un'unitaria, $\rho\mapsto U\rho U^\dagger$ --- un caso particolarissimo dell'
+Eq.~\eqref{eq:kraus} con un solo operatore di Kraus, $E_0=U$ (e infatti
+$E_0^\dagger E_0=U^\dagger U=\mathbb I$ soddisfa da solo la completezza). Un
+\textbf{canale} è la versione generale, che include anche quello che il gate fa
+\emph{male}: è letteralmente l'oggetto che useremo per rappresentare ``il gate $R_z$
+reale, con il suo errore'' al posto di ``il gate $R_z$ ideale''.
 
 \emph{Nota terminologica}: nella tesi si useranno sempre $\varepsilon$ per l'errore
 medio di gate (quantità sperimentale, da randomized benchmarking) e $\lambda$ per il
@@ -208,6 +480,7 @@ richiesta dal relatore come primo passo) corrispondono alla matrice di confusion
 che è l'oggetto che si passa direttamente a \texttt{ReadoutError} in Qiskit Aer.
 
 \section{Cosa non entra in questo modello}
+\label{sec:cosa-non-entra}
 
 Le slide del corso presentano anche il canale di defasamento (\emph{phase damping},
 $T_2$) e quello di rilassamento (\emph{amplitude damping}, $T_1$), ciascuno costruito

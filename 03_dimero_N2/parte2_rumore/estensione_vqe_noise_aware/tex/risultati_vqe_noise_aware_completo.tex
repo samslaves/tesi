@@ -1,0 +1,509 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+% --- palette ---
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnred}{HTML}{9E3B3B}
+\definecolor{warnredbg}{HTML}{FBEDED}
+
+% --- titoli di sezione ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}VQE noise-aware sul dimero --- resoconto completo}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+% --- box riutilizzabili ---
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnredbg, colframe=warnred!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{warnred}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}VQE noise-aware sul dimero\\[0.2em]
+\Large\normalfont\color{softgray}Resoconto completo: processo, risultati, considerazioni, conclusioni}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{vqe\_noise\_aware\_dimero.py},
+\texttt{validate\_vqe\_noise\_aware\_dimero.py}. Punto di lavoro:
+$b/J=0.35$, $D/J=0.80$, $J=1$ (``test 2''). Modello di rumore:
+\texttt{noise\_model\_dimero.py} (modello di rumore, calibrazione reale
+\texttt{ibm\_torino}, arXiv:2504.15187).
+
+\tableofcontents
+
+\section{Obiettivo e collocazione}
+
+Il VQE con termine DM sotto rumore, stadio della pipeline di rumore
+(Parte 2, già chiusa in tutti e
+cinque i passi) misura la \emph{degradazione} di un risultato ideale:
+l'ansatz PMA-2q$\cdot$3 è ottimizzato \textbf{senza} rumore in Parte 1,
+poi il circuito con quella ricetta viene eseguito su un simulatore
+\textbf{con} rumore acceso. Questo documento affronta la domanda
+complementare, lasciata esplicitamente aperta in \texttt{log\_decisioni.md}:
+
+\begin{keyeq}
+\centering
+Se il rumore è acceso già durante l'ottimizzazione variazionale --- come
+avverrebbe su un hardware reale, dove non esiste una versione ideale a
+cui accedere per calibrare l'ottimizzatore --- l'ottimizzatore converge a
+parametri diversi? Il risultato finale (energia, fedeltà) cambia?
+\end{keyeq}
+
+Questa è un'estensione \textbf{facoltativa} del VQE con termine DM
+sotto rumore, non uno step
+mancante della pipeline richiesta dal relatore. Lo scope è dichiarato
+esplicitamente e limitato a tre parti:
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.2em]
+\item rioptimizzare \textbf{solo} il VQE con termine DM sotto rumore;
+\item un \textbf{solo} controllo a valle: verificare se questo sposta
+$N^*=8$, il risultato centrale della quantum simulation (Trotter)
+sotto rumore;
+\item i correlatori dinamici sotto rumore ($N^*=5$) e lo scan sui
+parametri di rumore \textbf{non} vengono ritoccati qui --- l'estensione
+a questi due stadi si appoggia a un argomento di struttura, non a una riverifica
+numerica diretta (criterio di proporzionalità, vista la scadenza di
+laurea di settembre 2026).
+\end{enumerate}
+
+\section{Argomento fisico e previsione}
+
+Il canale di rumore usato (costruito nel modello di rumore) è
+depolarizzante, isotropo: riduce
+uniformemente la sfera di Bloch in ogni direzione, senza una direzione
+privilegiata. Per un canale di questo tipo, l'azione su uno stato puro
+$\ket{\psi(\theta)}$ preparato dall'ansatz si scrive schematicamente
+
+\begin{keyeq}
+\centering
+$\rho(\theta) = (1-\lambda)\,\ket{\psi(\theta)}\bra{\psi(\theta)} + \lambda\,\dfrac{\mathbf{1}}{d}$
+\end{keyeq}
+
+con $\lambda>0$ legato a $\varepsilon_{1q},\varepsilon_{2q}$ tramite le
+relazioni derivate in \texttt{teoria\_modello\_rumore.tex}, e $d=4$ per 2
+qubit. L'energia rumorosa diventa allora
+
+\begin{keyeq}
+\centering
+$E_\text{rumoroso}(\theta) = \Tr[\rho(\theta) H] = (1-\lambda)\,E_\text{ideale}(\theta) + \lambda\,\dfrac{\Tr[H]}{d}$
+\end{keyeq}
+
+cioè una trasformazione \textbf{affine} di $E_\text{ideale}(\theta)$ in
+funzione di $\theta$: il secondo termine non dipende da $\theta$, il
+primo è $E_\text{ideale}(\theta)$ moltiplicato per una costante positiva
+$1-\lambda$. Una trasformazione affine con coefficiente positivo non
+cambia la posizione del minimo: \textbf{lo stesso $\theta^*$ che minimizza
+$E_\text{ideale}$ minimizza anche $E_\text{rumoroso}$}. A questo si
+aggiunge una seconda osservazione, verificata indipendentemente (§4.1):
+il conteggio CNOT del circuito transpilato non dipende dai valori
+numerici dei parametri, quindi non c'è nemmeno una via indiretta (via
+costo in gate) per cui convenga spostarsi verso un $\theta$ diverso da
+quello ideale.
+
+\begin{keyeq}[title={Previsione dichiarata prima della verifica}]
+\centering
+$\theta^*_\text{rumore} \approx \theta^*_\text{ideale}$, nessun vantaggio
+misurabile a rioptimizzare sotto rumore rispetto al semplice riuso dei
+parametri ideali.
+\end{keyeq}
+
+Questa è una previsione, non un fatto acquisito: il resto del documento
+la mette alla prova numericamente.
+
+\subsection*{Perché un solo controllo a valle basta per i correlatori dinamici e lo scan sui parametri}
+
+La quantum simulation (Trotter) sotto rumore ha già dimostrato che il
+contributo della preparazione VQE è
+una costante additiva indipendente da $N$ nella fedeltà $F(N)$: non entra
+né nel termine che decresce con $N$ (errore di Trotter, $\sim a/N$) né in
+quello che cresce con $N$ (rumore accumulato, $\sim g\varepsilon_{2q}N$).
+I correlatori dinamici e lo scan sui parametri condividono la stessa
+struttura additiva e la stessa preparazione VQE, quindi lo stesso
+argomento si applica identico a tutti e tre gli stadi a valle: se il
+controllo su $N^*$ (quantum simulation Trotter sotto rumore) conferma che
+la preparazione noise-aware non cambia nulla, la stessa conclusione vale
+per i correlatori dinamici e lo scan sui parametri senza bisogno di
+ripetere il controllo lì. Se invece lo
+smentisse, si riaprirebbero anche quelli, perché la premessa che li
+chiudeva sarebbe caduta --- per questo il controllo numerico resta
+comunque necessario, non solo l'argomento.
+
+\section{Implementazione}
+
+\subsection{Formulazione del problema di ottimizzazione}
+
+L'ansatz è lo stesso PMA-2q$\cdot$3 di Parte 1 (blocco RBS-conservante il
+numero di eccitazioni, più due rotazioni $R_y$ indipendenti, 3 parametri).
+L'energia rumorosa, per un dato $\theta$, si calcola simulando il
+circuito su \texttt{AerSimulator(method="density\_matrix")} con il
+\texttt{NoiseModel} del modello di rumore agganciato:
+
+\begin{keyeq}
+\centering
+$E_\text{rumoroso}(\theta) = \Tr[\rho(\theta) H], \qquad \rho(\theta) = \mathcal{N}\!\big(\ket{\psi(\theta)}\bra{\psi(\theta)}\big)$
+\end{keyeq}
+
+dove $\mathcal N$ è il canale completo (depolarizzante 1q/2q + errore di
+lettura, se applicabile). Poiché la simulazione a operatore densità è
+\textbf{esatta} (nessun campionamento a shot finiti), $E_\text{rumoroso}(\theta)$
+è liscia in $\theta$: gli stessi ottimizzatori del caso ideale (COBYLA
+multistart + polish L-BFGS-B, \texttt{vqe\_test2.py}) restano applicabili
+senza modifiche concettuali.
+
+\subsection{Una trappola di transpilazione scoperta e corretta}
+
+Il primo tentativo di implementazione applicava all'ottimizzazione lo
+stesso principio già validato per il blocco di Trotter ripetuto nella
+quantum simulation Trotter sotto rumore: transpilare l'ansatz
+\textbf{una sola volta}, in forma parametrica
+(parametri simbolici, non ancora assegnati), e poi riusare
+\texttt{assign\_parameters} ad ogni valutazione dell'obiettivo --- per
+evitare di ritranspilare a ogni chiamata durante l'ottimizzazione.
+
+\begin{warnbox}{Verificato: qui questo principio non si applica}
+Con parametri simbolici, il transpilatore non può fondere le sequenze di
+rotazioni a 1 qubit il cui angolo dipende dal \emph{valore numerico} di
+$\theta$ (a differenza del blocco di Trotter, dove il blocco è
+letteralmente identico ad ogni ripetizione e non contiene parametri
+variazionali da ottimizzare). Il risultato è un circuito strutturalmente
+più rumoroso: transpilando \emph{prima} di assegnare i parametri si
+ottengono 19 \texttt{rz} + 14 \texttt{sx} contro gli 11 \texttt{rz} + 8
+\texttt{sx} che si ottengono transpilando \emph{dopo}, a parità di 2
+CNOT (Fig.~\ref{fig:bug}).
+\end{warnbox}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.62\linewidth]{figure/fig_bug_conteggio_gate.pdf}
+\caption{\textit{Conteggio dei gate nel circuito transpilato, a parità di
+parametri $\theta$, a seconda dell'ordine fra transpilazione e
+assegnazione dei parametri. Il conteggio CNOT resta invariato (2), ma i
+gate a singolo qubit quasi raddoppiano se si transpila prima
+dell'assegnazione: ogni gate rz/sx in più è un'ulteriore occasione di
+errore per il canale depolarizzante.}}
+\label{fig:bug}
+\end{figure}
+
+Conseguenza pratica osservata durante lo sviluppo: il VQE noise-aware con
+questa implementazione convergeva a un'energia $E\approx-3.4753$,
+\textbf{peggiore} del semplice riuso dei parametri ideali sotto rumore
+($E=-3.50164605$, versione originale del VQE con termine DM sotto
+rumore). Questo è di per sé un segnale
+inequivocabile di errore implementativo, non un risultato fisico: un
+ottimizzatore che valuta l'obiettivo rumoroso vero non può in linea di
+principio fare peggio di un punto ammissibile già noto ($\theta^*_\text{ideale}$
+è comunque un punto del dominio di ottimizzazione). La correzione
+--- transpilare \textbf{dopo} l'assegnazione dei parametri, ad ogni
+valutazione, coerentemente con \texttt{vqe\_dm\_rumoroso\_dimero.py} ---
+elimina la discrepanza (§4).
+
+Costo computazionale della scelta corretta: $\sim9\,\text{ms}$ per
+valutazione (transpilazione + simulazione a operatore densità),
+trascurabile rispetto al numero di valutazioni tipico di un multistart
+COBYLA ($R\times\text{maxiter}$ dell'ordine delle migliaia).
+
+\section{Verifica}
+
+\subsection{Invarianza del conteggio CNOT rispetto a \texorpdfstring{$\theta$}{theta}}
+
+Premessa fisica della previsione (§2): il conteggio CNOT del circuito
+transpilato (nell'ordine corretto, dopo l'assegnazione) non deve
+dipendere dai valori numerici di $\theta$. Verificato su 5 assegnazioni
+casuali indipendenti:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+\textbf{Prova} & \textbf{CNOT} & \textbf{Dettaglio gate}\\
+\midrule
+1--5 & $2$ (tutte) & $11$ \texttt{rz} $+\ 8$ \texttt{sx} $+\ 2$ \texttt{cx} (tutte)\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent CNOT $=2$ in tutte le prove, conteggio dei gate a 1 qubit anch'esso
+costante in questo campione: nessuna direzione del paesaggio dei
+parametri verso cui convenga spostarsi per ``risparmiare'' rumore.
+
+\subsection{Limite di rumore nullo}
+
+Il VQE noise-aware, eseguito con il \texttt{NoiseModel} spento, deve
+ritrovare l'ottimo esatto già noto da Parte 1:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$E_0$ (esatto, registrato Parte 1) & $-3.57321145$\\
+$E$ (noise-aware, rumore nullo) & $-3.57321145$\\
+$|\Delta E|$ & $1.32\times10^{-12}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Risultato principale: confronto energia e fedeltà sotto rumore}
+
+Risultato con il rumore di riferimento (\texttt{ibm\_torino}), multistart
+$R=6$ punti casuali $+\ 1$ seme uguale a $\theta^*_\text{ideale}$ (per
+garantire di non fare mai peggio del semplice riuso, vista la dispersione
+discussa in §4.4):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Riuso $\theta^*_\text{ideale}$ (VQE+DM rumoroso)} & \textbf{VQE noise-aware}\\
+\midrule
+$E$ (rumoroso) & $-3.50164605$ & $-3.50164616$\\
+$F$ (rumorosa) & $0.98500601$ & $0.98500602$\\
+CNOT & $2$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$\Delta E$ (noise-aware $-$ riuso ideale) & $-1.16\times10^{-7}$\\
+$\Delta F$ (noise-aware $-$ riuso ideale) & $+1.76\times10^{-8}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Scostamento sei ordini di grandezza più piccolo della scala
+fisica del problema (perdita di fedeltà $\sim1.5\times10^{-2}$ a rumore
+acceso): conferma diretta dell'argomento (§2), non solo entro la
+tolleranza attesa ma sostanzialmente a precisione numerica.
+
+Lo stesso confronto, ripetuto sull'intero scan di $\varepsilon_{2q}$ già
+usato nella verifica della versione originale, mostra le due curve
+sovrapposte su tutto il range esplorato (Fig.~\ref{fig:eps2q}):
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figure/fig_scan_eps2q_confronto.pdf}
+\caption{\textit{Energia e fedeltà rumorose in funzione di
+$\varepsilon_{2q}$ (a $\varepsilon_{1q}=2.9\times10^{-4}$,
+$p_\text{readout}=2.3\times10^{-2}$ fissati), confronto fra il riuso dei
+parametri ideali e la rioptimizzazione noise-aware. Le due curve sono
+indistinguibili a questa scala su tutto il range esplorato, dal rumore
+nullo a $\varepsilon_{2q}=1.5\times10^{-2}$ ($4\times$ il valore di
+riferimento).}}
+\label{fig:eps2q}
+\end{figure}
+
+\subsection{Robustezza del multistart: un'osservazione onesta}
+
+Un controllo diverso da quello atteso inizialmente: con $R=6$ punti di
+partenza casuali e \textbf{nessun} seme (stesso numero di restart
+della versione originale, applicato qui al VQE noise-aware), i risultati
+dipendono dal seme dell'RNG. Su 8 semi diversi, lo scarto dall'ottimo
+noto ($E=-3.50164616$) varia da $3.6\times10^{-6}$ (il migliore) a
+$6.7\times10^{-3}$ (il peggiore) --- una dispersione reale, dovuta al
+numero finito di restart in un paesaggio energetico con più minimi
+locali vicini fra loro, \textbf{non} imputabile al bug di transpilazione
+descritto in §3.2 (già corretto in questi test).
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.8\linewidth]{figure/fig_robustezza_multistart.pdf}
+\caption{\textit{Energie finali dei singoli restart COBYLA (rumore
+acceso), per tre configurazioni di multistart: $R=6$ senza seme (6
+punti), $R=6$+seme (7 punti, il seme è $\theta^*_\text{ideale}$),
+$R=20$ senza seme (20 punti). La linea tratteggiata è l'ottimo noto. Con
+soli 6 restart casuali il minimo trovato può restare a
+$\sim10^{-3}$--$10^{-2}$ dall'ottimo; con 20 restart il punto migliore si
+avvicina all'ottimo entro $3.6\times10^{-6}$.}}
+\label{fig:multistart}
+\end{figure}
+
+\begin{okbox}{Il seme non altera la conclusione fisica}
+Includere $\theta^*_\text{ideale}$ come uno dei punti di partenza del
+multistart garantisce che il risultato non sia mai peggiore del semplice
+riuso (per costruzione: è un punto ammissibile già valutato). Un
+multistart indipendente, più ampio ($R=20$, nessun seme), converge allo
+\textbf{stesso} ottimo rumoroso trovato con $R=6$+seme entro
+$2.6\times10^{-6}$ --- conferma che il risultato principale non è un
+artefatto del seme, ma una proprietà genuina del paesaggio energetico,
+coerente con l'argomento (§2) secondo cui $\theta^*_\text{rumore}\approx\theta^*_\text{ideale}$.
+\end{okbox}
+
+\subsection{Controllo a valle: \texorpdfstring{$N^*$}{N*} della quantum simulation (Trotter) sotto rumore}
+
+Ultimo controllo richiesto dallo scope (§1, punto 2): rieseguire lo scan
+di fedeltà della quantum simulation Trotter sotto rumore
+(\texttt{trotter\_rumoroso\_dimero.py}) usando
+$\theta^*_\text{noise-aware}$ al posto di $\theta^*_\text{ideale}$ come
+preparazione, per vedere se il massimo si sposta.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Parametri usati come preparazione} & $\boldsymbol{N^*}$ & $\boldsymbol{F(N^*)}$\\
+\midrule
+$\theta^*_\text{ideale}$ (versione originale, Trotter rumoroso) & $8$ & $0.817725$\\
+$\theta^*_\text{noise-aware}$ (qui) & $8$ & $0.817767$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figure/fig_F_vs_N_confronto.pdf}
+\caption{\textit{Sinistra: fedeltà $F(N)$ rispetto allo stato bersaglio
+fisico, rumore di riferimento acceso, con le due preparazioni a
+confronto --- il massimo resta a $N^*=8$ in entrambi i casi. Destra:
+scostamento $F_\text{noise-aware}-F_\text{ideale}$ in funzione di $N$,
+scala ingrandita ($\sim10^{-4}$): la differenza è visibile solo
+ingrandendo di quattro ordini di grandezza rispetto alla scala del
+pannello di sinistra, ed è più pronunciata a $N$ piccolo (dove la
+preparazione pesa relativamente di più sul numero totale di gate) che a
+$N$ grande.}}
+\label{fig:FvsN}
+\end{figure}
+
+\begin{okbox}{$N^*$ non si sposta}
+Il massimo di $F(N)$ resta a $N^*=8$, con lo stesso valore di fedeltà
+entro $4\times10^{-5}$. La previsione (b)--(c) di §2 è quindi confermata
+numericamente, non solo argomentata: il contributo di preparazione resta
+il termine costante (floor) già caratterizzato nella quantum
+simulation Trotter sotto rumore, indipendente
+da \emph{quale} versione dei parametri VQE (ideali o noise-aware) lo
+genera.
+\end{okbox}
+
+\section{Considerazioni}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.35em]
+\item \textbf{La previsione teorica (§2) è confermata, non solo
+plausibile.} L'argomento della trasformazione affine non era ovvio a
+priori che si traducesse in uno scostamento numerico trascurabile (poteva
+esistere un effetto del second'ordine, per esempio dovuto al fatto che il
+canale a 2 qubit non è esattamente descritto dal modello semplificato
+usato nella derivazione schematica di §2). Il controllo numerico mostra
+che l'effetto, se esiste, è ben al di sotto della precisione rilevante
+per la tesi ($\Delta E\sim10^{-7}$, sei ordini di grandezza sotto la
+scala fisica del problema).
+
+\item \textbf{Il bug scoperto (§3.2) è un caso utile da riportare in
+tesi.} È l'immagine speculare della ``trappola di transpilazione'' già
+nota per la quantum simulation Trotter sotto rumore (ritranspilare
+l'intero circuito di Trotter fonde gli
+$N$ blocchi, cancellando la dipendenza da $N$): lì il problema era
+transpilare troppo tardi (dopo aver composto tutti i blocchi); qui è
+transpilare troppo presto (prima di conoscere i valori numerici dei
+parametri variazionali). Il principio comune: \emph{la scelta di quando
+transpilare rispetto a quando si fissano i valori numerici non è neutra,
+va sempre verificata esplicitamente per ogni nuovo contesto d'uso, non
+assunta per analogia da un contesto precedente}.
+
+\item \textbf{Sul ruolo del seme nel multistart.} Includere un punto di
+partenza noto (qui: l'ottimo ideale di Parte 1) è una scelta pragmatica
+legittima quando quel punto è comunque disponibile, ma non deve
+mascherare che il paesaggio energetico rumoroso ha minimi locali
+raggiungibili con un numero insufficiente di restart casuali (Fig.~
+\ref{fig:multistart}). In un'esecuzione reale su hardware, senza accesso
+a una versione ideale precalcolata, servirebbe un $R$ più grande (o
+un'euristica di inizializzazione diversa) per raggiungere con
+confidenza lo stesso ottimo.
+
+\item \textbf{Limite dell'argomento (§2).} La derivazione della
+trasformazione affine è schematica (assume che il canale depolarizzante
+a 2 qubit produca esattamente una miscela lineare stato-ideale/stato
+massimamente misto); il modello reale include anche l'errore di lettura
+e il fatto che il rumore agisce gate-per-gate lungo il circuito, non come
+un singolo canale applicato all'intero stato finale. La conferma
+numerica (§4.3) è quindi più forte della sola derivazione euristica, e va
+citata come tale in tesi: il risultato è verificato, non solo previsto.
+\end{itemize}
+
+\section{Conclusioni ed estensione ai correlatori dinamici e allo scan sui parametri}
+
+Il controllo numerico richiesto dallo scope conferma la previsione fisica
+di §2: per un canale depolarizzante isotropo, rioptimizzare l'ansatz
+PMA-2q$\cdot$3 sotto rumore non cambia in modo misurabile né l'energia/
+fedeltà del VQE+DM rumoroso ($\Delta E\sim10^{-7}$) né la posizione di
+$N^*$ della quantum simulation Trotter sotto rumore (invariato, $N^*=8$).
+Per l'argomento di struttura (§2.1), la stessa conclusione si estende ai
+correlatori dinamici sotto rumore ($N^*=5$) e allo scan sui parametri di
+rumore, che condividono l'identica preparazione VQE
+e l'identica struttura additiva
+$\varepsilon_\text{tot}(N)\simeq a/N+g\varepsilon_{2q}N+\delta_\text{prep}$:
+non riverificati numericamente qui per il criterio di proporzionalità
+dichiarato in §1, ma la premessa che li giustificava --- il floor di
+preparazione è costante e indipendente da $N$ --- non solo non è stata
+falsificata da questo controllo, è stata rinforzata.
+
+\begin{okbox}{Sintesi in una riga}
+Estensione facoltativa CHIUSA: rioptimizzare sotto rumore non serve a
+nulla di misurabile in questo problema, e questo è stato dimostrato, non
+solo assunto.
+\end{okbox}
+
+\needspace{6\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{vqe\_noise\_aware\_dimero.py} (implementazione, funzioni di
+ottimizzazione e di controllo), \texttt{validate\_vqe\_noise\_aware\_dimero.py}
+(i cinque controlli di §4), questo documento. Aggiornamento corrispondente
+in \texttt{log\_decisioni.md} (sessione 5 settembre 2026).
+
+\end{document}

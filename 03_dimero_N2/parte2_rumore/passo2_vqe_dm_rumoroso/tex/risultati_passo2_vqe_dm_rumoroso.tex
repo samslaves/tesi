@@ -77,9 +77,34 @@ rumore: \texttt{noise\_model\_dimero.py} (Passo 1).
 \item \textbf{Scelta di modellazione dichiarata}: si riusano i parametri
 dell'ansatz PMA-2q$\cdot$3 già ottimizzati nel caso ideale
 (\texttt{ground\_state\_test2.npz}), \emph{senza} rioptimizzare sotto
-rumore. Il Passo 2 misura quindi quanto degrada un risultato VQE ideale
-se eseguito su hardware rumoroso --- non la convergenza di un VQE
-noise-aware (variante diversa, estensione naturale se resterà tempo).
+rumore. Due domande diverse, da non confondere:
+\begin{itemize}[leftmargin=1.3em,itemsep=0.15em]
+\item \emph{degradazione di un risultato ideale} (quello che si fa qui):
+i parametri $\theta^*$ sono già stati trovati su un simulatore
+\textbf{senza} rumore (Parte 1); si costruisce il circuito con quella
+ricetta e lo si esegue su un simulatore \textbf{con} rumore. Domanda:
+quanto peggiora un risultato già buono se eseguito su hardware
+imperfetto?
+\item \emph{VQE noise-aware} (non fatto qui): rifare l'intero ciclo di
+ottimizzazione --- iterativo, decine o centinaia di valutazioni del
+circuito --- con il rumore acceso fin dall'inizio, così che
+l'ottimizzatore non veda mai un'energia pulita e converga (magari) a
+parametri diversi da $\theta^*$, potenzialmente più robusti al rumore
+specifico presente durante la ricerca. È lo scenario di un'esecuzione
+reale su hardware, dove non esiste una versione ideale a cui accedere
+per calibrare l'ottimizzazione.
+\end{itemize}
+La prima strada è più economica (nessuna rioptimizzazione) e isola una
+domanda pulita, senza mischiarla con ``l'ottimizzatore trova comunque un
+buon punto anche partendo da zero col rumore acceso''. Resta
+un'estensione naturale se resterà tempo. Nota a margine, non ancora
+verificata: il canale depolarizzante usato qui è isotropo (restringe la
+sfera di Bloch uniformemente in ogni direzione, Fig.~2 di
+\texttt{teoria\_modello\_rumore.tex}) --- un rumore di questo tipo è
+tipicamente poco compensabile riaggiustando i parametri, a differenza di
+un errore sistematico/coerente; ci si aspetterebbe quindi che un VQE
+noise-aware non cambi granché rispetto ai risultati di questo Passo, ma è
+una previsione da verificare, non un fatto acquisito.
 \item \textbf{Fedeltà per uno stato misto.} La fedeltà di Uhlmann fra due
 operatori densità è $F(\rho,\sigma)=\big(\Tr\sqrt{\sqrt\rho\,\sigma\,\sqrt\rho}\,\big)^2$.
 Quando uno dei due è puro, $\sigma=\ket\psi\bra\psi$, si semplifica: usando

@@ -1,0 +1,338 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+% --- palette ---
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnred}{HTML}{9E3B3B}
+\definecolor{warnredbg}{HTML}{FBEDED}
+
+% --- titoli di sezione ---
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Test di readout asimmetrico --- correlatori dinamici sotto rumore}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+% --- box riutilizzabili ---
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnredbg, colframe=warnred!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{warnred}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Test di readout asimmetrico\\[0.2em]
+\Large\normalfont\color{softgray}Correlatori dinamici sotto rumore --- processo, risultati, considerazioni}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{correlatori\_readout\_asimmetrico.py},
+\texttt{validate\_\allowbreak correlatori\_readout\_asimmetrico.py}. Punto di lavoro:
+$b/J=0.35$, $D/J=0.80$, $J=1$, $t=2$ (stesso correlatore di riferimento
+del Passo 4, $C_{21}^{xx}(t)$). Teoria completa in
+\texttt{teoria\_readout\_asimmetrico.tex}.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Il relatore ha chiesto esplicitamente (\texttt{domande\_relatore.md},
+sez.~12): \emph{``Sull'errore di misura, parti simmetrico. Poi vedi se hai
+tempo di fare un test asimmetrico, ma senza perderci troppo tempo''}. Il
+readout simmetrico è già stato usato ovunque nella pipeline, con il
+risultato che $N^*=5$ (correlatori dinamici, Passo 4) è dimostrato
+indipendente da $p_\text{readout}$ per qualunque valore simmetrico. Questo
+documento affronta la parte lasciata esplicitamente aperta: cosa succede
+quando il readout non è più simmetrico.
+
+La teoria (\texttt{teoria\_readout\_asimmetrico.tex}) ha già mostrato che
+l'argomento di invarianza usato per il caso simmetrico --- una pura
+riscalatura moltiplicativa del correlatore --- \textbf{non si estende
+automaticamente} al caso asimmetrico, perché introduce anche un offset
+additivo costante nel piano complesso che non commuta con l'operazione di
+modulo. La domanda del relatore ha quindi una risposta aperta a priori,
+non scontata: questo documento la chiude numericamente.
+
+\section{Metodologia}
+
+\subsection{Formula applicata}
+
+Per ogni $N$, il correlatore complesso rumoroso viene corretto con la
+formula generale derivata nella teoria,
+\begin{keyeq}
+\centering
+$C_\text{readout}(N) = \alpha\,C_\text{ideale}(N) + \beta(1+i), \qquad
+\alpha = 1-p_{01}-p_{10}, \qquad \beta = p_{10}-p_{01}$
+\end{keyeq}
+al posto della correzione simmetrica $(1-2p)$ già in uso. Il limite
+$p_{01}=p_{10}=p$ deve riprodurre esattamente il ramo simmetrico --- primo
+controllo, non un'assunzione.
+
+\subsection{Ricerca di valori reali: cosa è stato trovato}
+\label{sec:ricerca}
+
+La fonte di calibrazione già citata in tesi per \texttt{ibm\_torino}
+(Stenger \emph{et al.}, arXiv:2504.15187) riporta solo la mediana
+simmetrica $p_\text{readout}=2.3\times10^{-2}$, non la scomposizione in
+$p_{01}$ (\texttt{prob\_meas1\_prep0}) e $p_{10}$
+(\texttt{prob\_meas0\_prep1}). È stata condotta una ricerca esplicita di
+uno split realmente registrato per \texttt{ibm\_torino}: un solo paper
+(AbuGhanem, arXiv:2410.00916) presenta una tabella dedicata a
+\texttt{ibm\_torino} con i valori per-qubit, ma pubblicata come immagine
+non estraibile in forma testuale citabile con i numeri esatti. Nessun'
+altra fonte citabile riporta lo split per questo chip specifico.
+
+La ricerca ha invece trovato split reali, citabili, su \textbf{altri} chip
+IBM comparabili (stessa tecnologia, stesso ordine di grandezza di errore):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llccc@{}}
+\toprule
+\textbf{Fonte} & \textbf{Chip} & $\boldsymbol{p_{01}}$ & $\boldsymbol{p_{10}}$ & \textbf{Rapporto} $p_{10}/p_{01}$\\
+\midrule
+arXiv:2203.14756 & IBM-Quito, Q0 & $0.0132$ & $0.0468$ & $3.5\times$\\
+Documentazione IBM\footnotemark & qubit d'esempio & $0.0295$ & $0.0908$ & $3.1\times$\\
+arXiv:2504.12575 & ibmq\_montreal, Q0 & $0.008$ & $0.016$ & $2.0\times$\\
+\bottomrule
+\end{tabular}
+\end{center}
+\footnotetext{\url{https://docs.quantum.ibm.com/guides/get-qpu-information}, esempio numerico di backend properties (qubit 126).}
+
+\noindent A questi si aggiunge una conferma qualitativa generale, dalla
+stessa documentazione IBM: \emph{``\texttt{prob\_meas0\_prep1} is usually
+the dominant factor in the readout error due to relaxation during the
+measurement process''} --- cioè $p_{10}>p_{01}$ è la norma su hardware
+superconduttore reale, non un'eccezione, per il meccanismo fisico già
+discusso nella teoria (rilassamento $T_1$ durante la misura).
+
+\subsection{Scelta dei valori per il test}
+
+\begin{keyeq}[title={Scelta dichiarata}]
+\centering
+Rapporto $p_{10}:p_{01}=3$ (nel mezzo dell'intervallo $2$--$3.5\times$
+osservato sopra), \textbf{stessa media} già in uso $p_\text{readout}=2.3\times10^{-2}$:
+$$p_{01}=0.0115, \qquad p_{10}=0.0345$$
+\end{keyeq}
+Tenere fissa la media ha uno scopo preciso: isolare l'effetto
+\emph{dell'asimmetria in sé}, senza mescolarlo con un cambiamento della
+scala complessiva del rumore di lettura (che è già stato scansionato
+separatamente al Passo 5, nel caso simmetrico). Questi valori sono
+\textbf{illustrativi}: non sono lo split reale registrato per
+\texttt{ibm\_torino} (non disponibile in forma citabile, Sez.~\ref{sec:ricerca}),
+ma un rapporto rappresentativo tratto da calibrazioni IBM reali pubblicate
+su chip comparabili --- stesso trattamento già riservato a
+$\varepsilon_{2q}$ in \texttt{noise\_model\_dimero.py}.
+
+\section{Verifica}
+
+\begin{okbox}{Quattro controlli superati}
+\begin{itemize}[leftmargin=1.2em,itemsep=0.2em]
+\item \textbf{Limite di rumore nullo} ($p_{01}=p_{10}=0$): coincide col
+ramo originale (readout spento) a precisione macchina ($|\Delta|=0$ su
+tutti gli $N$ testati).
+\item \textbf{Limite simmetrico} ($p_{01}=p_{10}=p$): riproduce
+$N^*=5$ e gli stessi valori $C(N)$ già registrati per il caso simmetrico,
+a precisione macchina.
+\item \textbf{Cross-check Monte Carlo}: la formula analitica
+$\alpha\,C_\text{ideale}+\beta(1+i)$ coincide, entro $5\times10^{-3}$
+(compatibile con l'errore statistico atteso a $2\times10^5$ shot), con un
+\texttt{ReadoutError} vero e asimmetrico agganciato ad Aer --- due cammini
+di calcolo indipendenti per lo stesso risultato.
+\item \textbf{Risultato centrale}: $N^*=5$ non si sposta con lo split
+illustrativo, né con rapporti fino a $50\times$ (Sez.~\ref{sec:stress}).
+\end{itemize}
+\end{okbox}
+
+\section{Risultati}
+
+\subsection{Il correlatore rumoroso, simmetrico vs asimmetrico}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\linewidth]{figure/fig_correlatore_N_asimmetrico.pdf}
+\caption{\textit{Modulo del correlatore rumoroso $|C_{21}^{xx}(t{=}2,N)|$ in
+funzione di $N$, readout simmetrico ($p_{01}=p_{10}=0.023$) contro
+asimmetrico ($p_{01}=0.0115$, $p_{10}=0.0345$, stessa media). Il massimo
+resta a $N^*=5$ in entrambi i casi. Lo split asimmetrico alza
+sistematicamente $|C(N)|$ per $N\gtrsim3$: l'offset $\beta(1+i)$ si somma
+qui in modo prevalentemente costruttivo con $C_\text{ideale}(N)$ nella
+regione dove il correlatore è già ampio, non è un effetto casuale ma
+dipende dalla fase specifica di $C_\text{ideale}(N)$ per questo problema.}}
+\label{fig:corr_asimmetrico}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Configurazione di readout} & $\boldsymbol{N^*}$ & $\boldsymbol{|C(N^*)|}$\\
+\midrule
+Simmetrico ($p_{01}=p_{10}=0.023$) & $5$ & $0.2500$\\
+Asimmetrico illustrativo ($p_{01}=0.0115$, $p_{10}=0.0345$) & $5$ & $0.2775$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Stress test oltre il range realistico}
+\label{sec:stress}
+
+Per capire quanto il risultato $N^*=5$ sia vicino a un limite oppure
+robusto, il test è stato ripetuto a media fissa ($2.3\times10^{-2}$) con
+rapporti $p_{10}{:}p_{01}$ ben oltre l'intervallo realistico trovato in
+letteratura ($2$--$3.5\times$):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\textbf{Rapporto} $p_{10}{:}p_{01}$ & $\boldsymbol{p_{01}}$ & $\boldsymbol{p_{10}}$ & $\boldsymbol{N^*}$\\
+\midrule
+$1$ (simmetrico) & $0.0230$ & $0.0230$ & $5$\\
+$3$ (illustrativo) & $0.0115$ & $0.0345$ & $5$\\
+$5$ & $0.0077$ & $0.0383$ & $5$\\
+$10$ & $0.0042$ & $0.0418$ & $5$\\
+$20$ & $0.0022$ & $0.0438$ & $5$\\
+$50$ & $0.0009$ & $0.0451$ & $5$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.62\linewidth]{figure/fig_Nstar_vs_rapporto.pdf}
+\caption{\textit{$N^*$ in funzione del rapporto $p_{10}{:}p_{01}$ (scala
+log), a media fissa $2.3\times10^{-2}$. La linea resta piatta a $N^*=5$
+per quattro ordini di grandezza di rapporto, ben oltre il range
+realistico ($2$--$3.5\times$, Sez.~\ref{sec:ricerca}).}}
+\label{fig:Nstar_rapporto}
+\end{figure}
+
+\begin{okbox}{$N^*$ empiricamente molto più robusto del previsto dalla teoria}
+La teoria (\texttt{teoria\_readout\_asimmetrico.tex}) non garantiva
+l'invarianza di $N^*$ per $\beta\neq0$ --- il conto era genuinamente
+aperto. Numericamente, per \emph{questo} correlatore del dimero a questo
+punto di lavoro, $N^*=5$ risulta invariante non solo nel range realistico
+ma fino a un rapporto $50\times$, ben oltre qualunque asimmetria
+osservabile su hardware reale.
+\end{okbox}
+
+\section{Considerazioni}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.35em]
+\item \textbf{La domanda era genuinamente aperta, la risposta è
+empirica.} A differenza del caso simmetrico (dove l'invarianza di $N^*$ è
+un teorema, non serve verificarlo numericamente), qui la teoria lascia
+il risultato indeterminato: l'esito --- $N^*$ invariante, e con ampio
+margine --- è un fatto numerico specifico di questo correlatore e di
+questo punto di lavoro, non una conseguenza necessaria della struttura
+del problema. Non è detto che valga per un correlatore diverso, un $t$
+diverso, o un altro punto di lavoro $(b/J,D/J)$: è un risultato verificato
+qui, non un teorema generale.
+
+\item \textbf{Perché non ha ceduto anche a rapporti estremi.} Guardando
+la Fig.~\ref{fig:corr_asimmetrico}, l'offset $\beta(1+i)$ sposta la curva
+$C_\text{ideale}(N)$ in una direzione che, per questo correlatore, si
+allontana dall'origine più agli $N$ già vicini al picco che agli $N$
+lontani da esso --- l'effetto netto è di accentuare il picco esistente
+piuttosto che spostarlo. Questo non era garantito dalla teoria (che
+ammette anche il caso opposto, offset che appiattisce o sposta il
+massimo), ma è coerente con essa: la figura geometrica di
+\texttt{teoria\_readout\_asimmetrico.tex} (Fig.~1 di quel documento)
+mostrava entrambe le possibilità come geometricamente plausibili.
+
+\item \textbf{Nessun valore reale registrato per \texttt{ibm\_torino}
+esiste in forma citabile}, nonostante la ricerca esplicita
+(Sez.~\ref{sec:ricerca}). Questo è dichiarato con la stessa onestà con cui
+si dichiarano le altre scelte di modellazione della tesi: il risultato
+numerico qui presentato usa un rapporto rappresentativo, non lo split
+vero del chip citato altrove in tesi per gli altri parametri.
+
+\item \textbf{Criterio di proporzionalità rispettato.} Il relatore ha
+chiesto di non investire tempo eccessivo su questo punto opzionale: la
+teoria (un documento) più questo test numerico (uno script, una verifica,
+questo documento) chiudono la domanda con lo stesso livello di rigore
+degli altri passi della pipeline, senza aprire un'indagine sproporzionata
+rispetto alla natura facoltativa della richiesta.
+\end{itemize}
+
+\section{Conclusioni}
+
+Il test di readout asimmetrico richiesto dal relatore è chiuso: $N^*=5$
+(correlatori dinamici, Passo 4) non si sposta introducendo un'asimmetria
+$p_{01}\neq p_{10}$, né al punto illustrativo scelto (rapporto $3\times$,
+stessa media $2.3\times10^{-2}$) né a rapporti molto più estremi
+($50\times$) del range osservato su hardware IBM reale. Questo risultato
+non era garantito dalla teoria --- a differenza del caso simmetrico, dove
+l'invarianza è dimostrata analiticamente --- ed è quindi un fatto
+verificato, non assunto. Nessun valore reale per \texttt{ibm\_torino} è
+stato reperito in forma citabile per lo split asimmetrico; i valori usati
+sono dichiarati esplicitamente come illustrativi, coerenti con
+calibrazioni IBM reali su chip comparabili.
+
+\begin{okbox}{Sintesi in una riga}
+Il test opzionale del relatore è chiuso: l'asimmetria del readout non
+sposta $N^*$ per questo correlatore, verificato (non solo argomentato)
+ben oltre il range realistico.
+\end{okbox}
+
+\needspace{6\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{correlatori\_readout\_asimmetrico.py} (formula generale,
+cross-check Monte Carlo, ricerca di $N^*$),
+\texttt{validate\_correlatori\_readout\_asimmetrico.py} (i quattro
+controlli), questo documento. Vedi anche
+\texttt{teoria\_readout\_asimmetrico.tex} per la derivazione completa
+usata qui.
+
+\end{document}

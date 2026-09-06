@@ -3580,3 +3580,211 @@ non solo quelli nuovi).
 Pacchetto ripulito (12 `.py` + 3 `.md` + 7 `.tex`, incluso il
 `circuito_correlazioni_dimero.py` corretto e il `validate_ansatz_params_dimero.py`
 ricostruito) pronto per il caricamento nel progetto.
+
+## Sessione 5 settembre 2026 — chiusura Parte 2, verifica di consistenza completa, passaggio a nuova chat
+
+Prima di passare a una chat pulita per l'estensione VQE noise-aware,
+verifica sistematica dell'intero Project (216 file) invece di assumere
+coerenza fra quanto prodotto in questa chat e quanto effettivamente
+caricato dall'utente (anche in un'altra chat parallela, dedicata al sito
+interattivo e ai quattro documenti del dimero).
+
+### Controlli eseguiti
+
+- **Doppioni di contenuto**: confronto MD5 incrociato su tutti i 216 file,
+  zero coppie con contenuto identico sotto nomi diversi. Nessun doppione
+  reale.
+- **File estraneo trovato**: cartella `__pycache__` (bytecode Python
+  compilato, `.pyc`, generato eseguendo gli script in un'altra sessione e
+  finito per sbaglio nel Project). Nessun valore informativo — **da
+  eliminare**, segnalato all'utente, non ancora rimosso.
+- **Confronto contro le mie consegne precedenti**: 18 file nuovi rispetto
+  all'inizio di questa sessione, tutti riconosciuti (i moduli e i
+  documenti di Parte 2 prodotti qui). Nessun file della Parte 1 perso o
+  mancante.
+- **Incidente del 4 settembre (voce precedente in questo log) —
+  RIVERIFICATO E CONFERMATO CHIUSO**: esportati i file `.py` esattamente
+  come sono ora nel Project (non le copie di lavoro di questa sessione) e
+  rieseguiti `validate_ansatz_params_dimero.py` e
+  `validate_correlatori_rumorosi_dimero.py` da zero. Entrambi passano
+  tutti i controlli, numeri coincidenti con quanto dichiarato. Il fix è
+  operativo, non solo dichiarato.
+- **`teoria_modello_rumore.tex` e `risultati_passo2_vqe_dm_rumoroso.tex`**:
+  trovati nel Project in versioni precedenti alle mie più recenti (alla
+  prima mancavano la derivazione esplicita passo-passo della decoerenza,
+  le due figure TikZ, e la sottosezione sul significato di "canale"; alla
+  seconda mancava il confronto VQE ideale-degradato vs noise-aware).
+  Utente ha ricaricato le versioni aggiornate: confermato, dopo
+  normalizzazione dei terminatori di riga (CRLF vs LF, unica differenza
+  residua), che ora coincidono esattamente con le mie. Ricompilati
+  entrambi con `pdflatex` usando i file così come sono nel Project: zero
+  errori, zero overfull/underfull, 8 e 2 pagine rispettivamente, come
+  atteso.
+- **`log_decisioni.md`**: il Project era già più avanti della mia copia
+  locale (conteneva la voce sull'incidente del 4 settembre, che la mia
+  copia non aveva). Non sovrascritto: questa voce è aggiunta in coda a
+  quello che c'era già, non in sostituzione.
+- **Problema pre-esistente, non peggiorato**: le 15 difformità MD5 sul
+  workstream della catena (`*_trimero_catena*`) trovate all'apertura di
+  questa sessione restano identiche, nessun cambiamento nel frattempo. Non
+  toccate.
+
+### Stato consolidato di Parte 2 (dimero, rumore) — CHIUSA
+
+Tutti e cinque i passi completi e verificati: modello di rumore
+(calibrazione reale `ibm_torino`, arXiv:2504.15187) -> VQE+DM rumoroso ->
+Trotter rumoroso -> correlatori rumorosi -> scan sui parametri.
+Risultati centrali: $N^*=8$ (fedeltà di Trotter), $N^*=5$ (correlatori),
+$N^*$ dimostrato indipendente da $p_\text{readout}$. File completi (12
+`.py` + 3 `.md` + 7 `.tex`) tutti presenti e verificati nel Project.
+
+### Prossimo passo, in una nuova chat
+
+Estensione VQE noise-aware al Passo 2: rioptimizzare i parametri
+dell'ansatz PMA-2q$\cdot$3 con il rumore acceso durante l'ottimizzazione
+(non solo valutato a posteriori come nel Passo 2 originale), confrontare
+con l'energia/fedeltà già ottenute, e verificare (non assumere) se questo
+sposta $N^*$ al Passo 3. Previsione dichiarata ma non ancora verificata:
+effetto atteso trascurabile, perché il canale depolarizzante è isotropo e
+il conteggio CNOT dell'ansatz transpilato non dipende dai valori dei
+parametri (verificato: sempre 2 CNOT su 5 assegnazioni casuali di
+$\theta$, variano solo di $\pm1$ i gate $R_z$ a 1 qubit).
+
+File da produrre: `vqe_noise_aware_dimero.py`,
+`validate_vqe_noise_aware_dimero.py`,
+`risultati_vqe_noise_aware_dimero.tex` (stesso stile grafico degli altri
+`risultati_passo*.tex`). Cartella locale suggerita (fuori dal Project,
+che resta piatto): `tesi/dimero/parte2_rumore/estensione_vqe_noise_aware/`,
+sorella dei cinque `passoN_.../`, non annidata dentro `passo2_.../` --
+per lasciare chiaro che è un'estensione facoltativa, non uno step
+mancante della pipeline richiesta.
+
+### Da sistemare, non urgente
+
+- Rimuovere `__pycache__` dal Project.
+- ~~Le 15 difformità MD5 sulla catena restano aperte~~ **RISOLTO**, vedi
+  sezione successiva.
+
+## Chiarimento — le 15 difformità MD5 sulla catena: causa trovata, non un problema
+
+Riesaminate su richiesta esplicita dell'utente ("sono nel Project? si
+riesce a capire se sono stati inseriti dopo quelli registrati?").
+
+**Primo tentativo, scartato**: confronto dei timestamp del filesystem.
+Inconcludente — 134 file su 215 condividono lo stesso timestamp
+placeholder ("1979-12-31", marcatore generico di "file presente da prima
+di questa sessione", non un vero timestamp di caricamento), sia i file
+con MD5 conforme sia quelli difformi. Nessun potere discriminante.
+
+**Causa reale, trovata nel testo del log stesso**: subito sopra la
+tabella con quelle impronte (sezione "Correlatori dinamici per la catena
+aperta: mirror completo dell'anello"), il log dichiarava esplicitamente
+*"Non ancora caricati nel Project: MD5 [...] calcolati sui file come
+prodotti in sessione, da verificare di nuovo una volta caricati"* —
+verifica poi mai fatta.
+
+Verificato ora: per tutti e 10 i file `.py`/`.tex` della lista, l'MD5
+ricalcolato **dopo aver normalizzato i terminatori di riga (CRLF→LF)**
+coincide esattamente con quello registrato:
+
+| file | esito dopo normalizzazione CRLF |
+|---|---|
+| `circuito_correlazioni_trimero_catena.py` | coincide |
+| `circuito_correlazioni_trimero_catena_spiegato.tex` | coincide |
+| `generate_circuit_fig_trimero_catena.py` | coincide |
+| `generate_figures_circuito_trimero_catena.py` | coincide |
+| `manuale_uso_correlazioni_trimero_catena_statevector.tex` | coincide |
+| `manuale_uso_correlazioni_trimero_catena_vqe.tex` | coincide |
+| `simmetrie_correlatori_trimero_catena.tex` | coincide |
+| `validate_circuito_correlazioni_catena.py` | coincide |
+| `validate_vqe_circuito_correlazioni_catena.py` | coincide |
+| `vqe_w2qC_k2_trimero_catena.py` | coincide |
+
+Nessun contenuto diverso: il caricamento nel Project ha convertito i
+terminatori di riga (Unix→Windows o viceversa), cambiando l'MD5 senza
+toccare una sola parola. Stessa dinamica già osservata in questa sessione
+sui file propri di Parte 2.
+
+I restanti 5 file della lista originale (i notebook:
+`circuito_correlazioni_trimero_catena_tutte.ipynb`,
+`circuito_correlazioni_trimero_catena_vqe.ipynb`,
+`correlazioni_trimero_catena_esplorazione.ipynb`,
+`correlazioni_trimero_catena_simmetria.ipynb`,
+`quantum_simulation_trimero_catena_trotter.ipynb`) restano difformi per
+un motivo diverso ma **già documentato altrove in questo stesso log**
+("output puliti vs output eseguiti", decisione esplicita per limite di
+spazio, non un errore) — vedi la sezione "MD5 del notebook Trotter
+catena: la versione con output puliti è quella corretta".
+
+**Conclusione**: le 15 difformità non indicano né una versione più
+vecchia né un problema di consegna. Punto chiuso, nessuna azione
+richiesta.
+
+## Sessione 5 settembre 2026 — VQE noise-aware: previsione confermata, N* invariato
+
+Estensione facoltativa del Passo 2 completata (vedi "Prossimo passo, in
+una nuova chat" sopra). Scope dichiarato esplicitamente nel documento dei
+risultati: si rioptimizza solo il Passo 2, un solo controllo a valle su
+$N^*$ del Passo 3, Passo 4-5 non ritoccati (argomento di struttura, non
+riverifica diretta — criterio di proporzionalità dato il tempo prima
+della sessione di laurea di settembre).
+
+### Risultato
+
+$\Delta E=-1.16\times10^{-7}$, $\Delta F=+1.76\times10^{-8}$ fra VQE
+noise-aware e il semplice riuso di $\theta^*_\text{ideale}$ sotto rumore
+(Passo 2 originale) — entrambi ben sotto la soglia $10^{-4}$ attesa.
+$N^*=8$ confermato invariato al Passo 3 con i parametri noise-aware
+($F(N^*)=0.817767$ contro $0.817725$ dei parametri ideali). Previsione (a)
+di log_decisioni.md (canale isotropo → nessun vantaggio a rioptimizzare)
+confermata numericamente, non solo argomentata.
+
+### Trappola di transpilazione — variante scoperta (direzione opposta a quella nota)
+
+Un primo tentativo transpilava l'ansatz PMA-2q$\cdot$3 in forma
+PARAMETRICA (parametri simbolici) una sola volta, riusando poi
+`assign_parameters` ad ogni valutazione — stesso principio "transpila una
+volta, riusa molte volte" già valido per il blocco di Trotter ripetuto
+$N$ volte. Verificato che qui è SBAGLIATO: con parametri simbolici il
+transpilatore non può fondere le rotazioni a 1 qubit che dipendono dal
+valore numerico di $\theta$, producendo un circuito molto più rumoroso
+(19 `rz` + 14 `sx` contro 11 `rz` + 8 `sx`, a parità di 2 CNOT).
+Conseguenza pratica osservata: il VQE noise-aware con questo bug
+convergeva a un'energia PEGGIORE ($E\approx-3.475$) del semplice riuso
+dei parametri ideali sotto rumore ($E=-3.50164605$) — segnale del bug,
+non un risultato fisico (un ottimizzatore che valuta l'obiettivo vero non
+può fare peggio di un punto ammissibile già noto). Corretto transpilando
+DOPO l'assegnazione dei parametri, ad ogni valutazione dell'obiettivo:
+più costoso per valutazione ($\sim9\,\text{ms}$/eval, trascurabile per
+$R\times\text{maxiter}$ dell'ordine delle migliaia di valutazioni), ma
+l'unico che riproduce il conteggio di gate minimo già stabilito nella
+pipeline (coerente con `vqe_dm_rumoroso_dimero.py`).
+
+### Robustezza del multistart
+
+Con $R=6$ (stesso $R$ del Passo 2 originale) e nessun seme, il multistart
+può restare intrappolato in un minimo locale peggiore ($E\approx-3.4753$,
+osservato in una prova preliminare prima di aggiungere il seme). Il
+risultato principale include $\theta^*_\text{ideale}$ come uno dei punti
+di partenza del multistart ($R=6$ casuali + 1 seme). Verificato
+indipendentemente che non è un artefatto del seme: un multistart più
+ampio ($R=20$, nessun seme) converge allo stesso ottimo rumoroso entro
+$2.6\times10^{-6}$.
+
+### File prodotti
+
+`vqe_noise_aware_dimero.py`, `validate_vqe_noise_aware_dimero.py`,
+`risultati_vqe_noise_aware_dimero.tex` (compilato con `pdflatex`, due
+passate, zero overfull box, un underfull minore di badness 3058 non
+corretto — cosmetico, coerente con la soglia di tolleranza già in uso nel
+progetto). Verificato pagina per pagina.
+
+### Stato e prossimo passo
+
+Estensione facoltativa CHIUSA. Passo 4 e Passo 5 della pipeline restano
+non ritoccati per decisione esplicita (criterio di proporzionalità): la
+premessa che li giustificava (floor di preparazione costante in $N$) non
+è stata falsificata da questo controllo, anzi rinforzata dalla conferma
+su $N^*$ al Passo 3. Prossimo passo effettivo del progetto: chiudere N=3
+(correlatori dinamici della catena aperta, ancora mancanti — vedi stato
+generale del progetto), poi Parte 2 rumore per il trimero.

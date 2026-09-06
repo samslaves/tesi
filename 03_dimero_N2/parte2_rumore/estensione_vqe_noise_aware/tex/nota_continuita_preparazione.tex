@@ -48,8 +48,8 @@ sezione.}}
 
 \section{Il problema}
 
-Nei documenti dei risultati (\texttt{risultati\_vqe\_noise\_aware\_completo.tex},
-§\,``La spiegazione corretta: non struttura, continuità'') si afferma:
+Nei documenti dei risultati (\texttt{risultati\_vqe\_noise\_aware\_definitivo.tex},
+§\,``Perché il risultato generalizza: l'argomento di continuità'') si afferma:
 
 \begin{quote}
 $\theta^*_\text{noise-aware}$ è quasi indistinguibile da
@@ -163,7 +163,7 @@ La soluzione è la stessa tecnica già nota (transpilare l'ansatz
 i valori numerici) --- ma qui usata per lo scopo \emph{opposto} a quello
 per cui era stata scartata nell'ottimizzazione VQE noise-aware:
 \begin{itemize}[leftmargin=1.3em,itemsep=0.2em]
-\item nell'ottimizzazione (Passo 2), la transpilazione simbolica dà un
+\item nel VQE con termine DM sotto rumore, la transpilazione simbolica dà un
 circuito \emph{peggiore} (più rumoroso, più gate) --- per quello si
 transpila dopo aver assegnato i parametri, ad ogni valutazione;
 \item qui, per stimare una \textbf{derivata}, serve che la struttura del

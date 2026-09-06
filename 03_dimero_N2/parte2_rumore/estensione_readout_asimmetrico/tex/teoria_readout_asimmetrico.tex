@@ -75,8 +75,9 @@ e la correzione sull'osservabile $\langle Z\rangle$ risulta (derivata in
 \label{eq:simmetrico-noto}
 \end{equation}
 Un solo fattore \textbf{moltiplicativo}, indipendente da $N$. Su questa
-proprietà si è costruito l'intero argomento del Passo 5
-(\texttt{scan\_parametri\_rumore\_dimero.py}): se $N^*=\arg\max_N|C(N)|$ e
+proprietà si è costruito l'intero argomento dello scan sui parametri di
+rumore (Passo 5,
+\texttt{scan\_parametri\_rumore\_dimero.py}): se $N^*=\arg\max_N|C(N)|$ e
 $|C_\text{readout}(N)|=(1-2p)\,|C_\text{ideale}(N)|$, moltiplicare per una
 costante positiva non può mai spostare la posizione di un massimo --- da
 cui $N^*$ indipendente da $p$, per qualunque $p$ simmetrico. Questo
@@ -274,7 +275,7 @@ $\beta\to0$ deve ridare il caso invariante); quanto piccolo debba essere
 $|\beta|$ perché $N^*$ resti $5$ non è deducibile dalla sola
 Eq.~\eqref{eq:correlatore-affine} senza sostituire numeri --- dipende
 dalla forma specifica di $C_\text{ideale}(N)$ per il dimero, già nota
-dai dati del Passo 4.
+dai dati dei correlatori dinamici sotto rumore (Passo 4).
 
 \section{Origine fisica dell'asimmetria}
 \label{sec:origine-fisica}
@@ -313,7 +314,7 @@ punto opzionale.
 \section{Cosa non entra in questo modello}
 \label{sec:cosa-non-entra-asimmetria}
 
-Come per il Passo 1 (\texttt{teoria\_modello\_rumore.tex},
+Come per il modello di rumore (Passo 1, \texttt{teoria\_modello\_rumore.tex},
 Sez.~``Cosa non entra''), è utile essere espliciti su cosa questa
 estensione \emph{non} copre, per non lasciarlo implicito:
 \begin{itemize}[leftmargin=1.3em,itemsep=0.2em]

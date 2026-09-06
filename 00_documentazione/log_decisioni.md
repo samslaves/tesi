@@ -3788,3 +3788,331 @@ premessa che li giustificava (floor di preparazione costante in $N$) non
 su $N^*$ al Passo 3. Prossimo passo effettivo del progetto: chiudere N=3
 (correlatori dinamici della catena aperta, ancora mancanti — vedi stato
 generale del progetto), poi Parte 2 rumore per il trimero.
+
+## Sessione 5 settembre 2026 (continua) — correzione: l'estensione a Passo 4 non era rigorosa
+
+Individuato un errore nel ragionamento della sessione precedente
+(estensione VQE noise-aware), grazie a una domanda esplicita
+dell'utente: perché fermarsi al controllo su $N^*$ del Passo 3
+(Trotter) e non verificare direttamente anche il Passo 4
+(correlatori), visto che anche lì c'è un readout a valle?
+
+### L'errore, con precisione
+
+Ricontrollata la fonte della scomposizione additiva
+$\varepsilon_\text{tot}(N)\simeq a/N+g\varepsilon_{2q}N+\delta_\text{prep}$
+citata a sostegno dell'estensione (sessione "verifica end-to-end",
+sezione "Scomposizione verificata numericamente"): era stata
+verificata isolando quattro contributi sul **correlatore**
+$\mathrm{Re}\,C_{21}^{xx}(t=2)$ — una quantità del Passo 4, non del
+Passo 3. La sezione sul Passo 3 la cita poi come cosa "già
+caratterizzata", estendendola per analogia alla fedeltà di Trotter
+senza una derivazione indipendente per quella metrica. La sessione
+precedente ha quindi invertito silenziosamente la direzione
+dell'estensione: ha trattato il Passo 3 come l'origine dell'argomento
+e il Passo 4 come l'estensione per analogia, mentre è vero il
+contrario.
+
+C'è un secondo motivo, più sostanziale, per cui l'estensione non era
+comunque garantita: $N^*$ del Passo 4 è $\arg\max_N|C(N)|$, il
+**modulo** di un numero complesso — non una combinazione lineare
+additiva come una fedeltà. Il lavoro sul readout asimmetrico
+(sessione precedente, si veda sotto) ha mostrato concretamente che
+comporre una trasformazione con un'operazione di modulo non preserva
+in generale le proprietà di invarianza di una somma lineare. Non
+c'era quindi garanzia teorica che un contributo di preparazione
+"additivo e costante" per una fedeltà lo fosse anche per il modulo di
+un correlatore.
+
+### Controllo diretto eseguito (non più per analogia)
+
+Rieseguito $N^*=\arg\max_N|C_{21}^{xx}(t{=}2,N)|$ con
+$\theta^*_\text{ideale}$ e con $\theta^*_\text{noise-aware}$ come
+preparazione: $N^*=5$ in entrambi i casi, scostamento massimo
+$8\times10^{-5}$ su tutto lo scan di $N$ — un ordine di grandezza più
+piccolo persino dello scostamento già minuscolo osservato per la
+fedeltà di Trotter ($\sim10^{-4}$).
+
+**La spiegazione corretta**: non è la struttura additiva a garantire
+l'invarianza (non era comunque dimostrata per questa metrica), è la
+**continuità**: $\theta^*_\text{noise-aware}$ è quasi indistinguibile
+da $\theta^*_\text{ideale}$ ($\Delta E\sim10^{-7}$, già noto dalla
+sessione precedente), quindi qualunque funzione ragionevolmente liscia
+dello stato preparato — fedeltà, modulo di un correlatore, o altro —
+deve differire fra le due preparazioni di una quantità altrettanto
+minuscola, indipendentemente dalla struttura specifica della metrica.
+Garanzia più debole della struttura additiva (non esclude a priori
+una metrica patologica con ottimi molto ravvicinati), ma sufficiente
+per i due casi concretamente verificati.
+
+Uno spostamento in un altro modo: lo scan sui parametri di rumore
+(Passo 5) resta non riverificato punto per punto (criterio di
+proporzionalità), ma ora per la ragione corretta (continuità), non
+per quella originale (struttura additiva).
+
+### File aggiornati
+
+`vqe_noise_aware_dimero.py` (nuova funzione
+`controllo_N_star_correlatore`), `validate_vqe_noise_aware_dimero.py`
+(sesto controllo, con assert), `risultati_vqe_noise_aware_dimero.tex`
+e `risultati_vqe_noise_aware_completo.tex` (sezione di correzione
+completa, nuova figura di confronto del correlatore, scope e
+conclusioni aggiornati). Tutti ricompilati e rieseguiti con successo.
+
+### Stato
+
+L'estensione facoltativa VQE noise-aware resta CHIUSA nella sostanza
+(nessun cambiamento nei numeri), ma il ragionamento a supporto è ora
+corretto e verificato direttamente su entrambe le metriche a valle
+controllate (Trotter e correlatori), non più assunto per analogia fra
+l'una e l'altra.
+
+## Sessione 5 settembre 2026 (continua) — test di readout asimmetrico (correlatori, Passo 4)
+
+Affrontata la richiesta opzionale del relatore
+(`domande_relatore.md`, sez. 12): "parti simmetrico, poi vedi se hai
+tempo di fare un test asimmetrico, ma senza perderci troppo tempo".
+
+### Teoria
+
+Derivata la formula generale di correzione del readout per una
+matrice di confusione asimmetrica ($p_{01}\neq p_{10}$):
+$\langle Z\rangle_\text{readout}=\alpha\langle Z\rangle_\text{ideale}+\beta$,
+$\alpha=1-p_{01}-p_{10}$, $\beta=p_{10}-p_{01}$ — il caso simmetrico
+noto è il sottocaso $\beta=0$. Per il correlatore complesso, questo
+introduce una traslazione costante nel piano complesso,
+$C_\text{readout}(N)=\alpha\,C_\text{ideale}(N)+\beta(1+i)$, che **non**
+preserva in generale l'invarianza di $N^*=\arg\max_N|C(N)|$ dimostrata
+per il caso simmetrico (sommare una costante e prendere il modulo non
+commutano). Documento: `teoria_readout_asimmetrico.tex`.
+
+### Ricerca di valori reali
+
+Nessuno split reale citabile trovato per `ibm_torino` specificamente
+(l'unica tabella dedicata, arXiv:2410.00916, è un'immagine non
+estraibile). Trovati split reali su chip IBM comparabili: IBM-Quito
+($3.5\times$), esempio da documentazione IBM ($3.1\times$),
+ibmq\_montreal ($2.0\times$) — confermano che $p_{10}>p_{01}$ è la
+norma su hardware reale (rilassamento $T_1$ durante la misura).
+Scelta dichiarata **illustrativa**: rapporto $3\times$, stessa media
+$p_\text{readout}=2.3\times10^{-2}$ già in uso ($p_{01}=0.0115$,
+$p_{10}=0.0345$).
+
+### Risultato
+
+$N^*=5$ non si sposta, né al punto illustrativo né a rapporti fino a
+$50\times$ (stress test oltre il range realistico) — verificato, non
+garantito dalla teoria. Cross-check Monte Carlo (ReadoutError vero,
+asimmetrico) conferma la formula analitica entro l'errore statistico
+atteso.
+
+### File prodotti
+
+`teoria_readout_asimmetrico.tex`,
+`correlatori_readout_asimmetrico.py`,
+`validate_correlatori_readout_asimmetrico.py`,
+`risultati_readout_asimmetrico.tex`, più due figure. Cartella locale
+suggerita: `tesi/dimero/parte2_rumore/estensione_readout_asimmetrico/`,
+sorella di `estensione_vqe_noise_aware/`.
+
+### Stato
+
+Punto opzionale del relatore chiuso.
+
+## Sessione 5 settembre 2026 (continua) — quanto è generale "N* non cambia"? Un secondo punto di lavoro
+
+Domanda dell'utente, pertinente: l'affermazione "rioptimizzare sotto
+rumore non cambia $N^*$" vale per ogni punto di lavoro e valore dei
+parametri, o solo per quello testato finora ("test 2",
+$b/J=0.35$, $D/J=0.80$)?
+
+### Risposta onesta, prima di agire
+
+Distinti due livelli:
+- **Generale, dimostrato**: l'argomento del canale isotropo
+  ($E_\text{rumoroso}(\theta)=(1-\lambda)E_\text{ideale}(\theta)+\lambda\Tr[H]/d$,
+  trasformazione affine) vale per qualunque $\lambda>0$ e qualunque
+  $b/J,D/J$ — è un fatto matematico sulla struttura del canale, non
+  dipende dai valori numerici.
+- **Verificato solo in un punto**: la *dimensione* di $\Delta\theta$
+  fra $\theta^*_\text{ideale}$ e $\theta^*_\text{noise-aware}$, e se è
+  abbastanza piccola da non spostare un $N^*$ specifico, sono fatti
+  numerici controllati solo al punto "test 2".
+
+### Secondo punto di lavoro scelto: non arbitrario
+
+Su indicazione dell'utente, usato il punto già presente nella
+documentazione narrativa per la discussione
+(`dimero_03_dinamica.tex`): $b/J=-0.18$, $D/J=1$ ($J=1$) — scelto lì
+per la dinamica non monocromatica, con un termine DM cinque volte più
+forte e segno di $b$ opposto rispetto a "test 2". Già validato con lo
+stesso ansatz PMA-2q$\cdot$3 ($\mathcal F=1.000000$, tabella in
+`dimero_02_vqe.tex`).
+
+### Risultato
+
+Ripetuta l'intera catena (VQE ideale multistart su 10 seed — un solo
+seed non basta a questo punto per la fedeltà a precisione macchina —,
+VQE noise-aware, $N^*$ Trotter, $N^*$ correlatore):
+
+| Quantità | test 2 | secondo punto |
+|---|---|---|
+| $\Delta E$ | $-1.16\times10^{-7}$ | $-2.56\times10^{-8}$ |
+| $\Delta F$ | $+1.76\times10^{-8}$ | $+3.96\times10^{-9}$ |
+| $N^*$ Trotter (ideale→noise-aware) | $8\to8$ | $8\to8$ |
+| $N^*$ correlatore (ideale→noise-aware) | $5\to5$ | $3\to3$ |
+
+Osservazione importante: $N^*$ del correlatore **cambia** da un punto
+all'altro ($5\to3$) — è una proprietà della fisica del punto, non
+della preparazione VQE. Quello che non cambia, in **entrambi** i punti
+testati, è che $N^*$ resta lo stesso confrontando le due preparazioni.
+Due punti non dimostrano una legge generale per ogni $b/J,D/J$, ma
+escludono che il primo risultato fosse un caso isolato.
+
+### File aggiornati
+
+`vqe_noise_aware_dimero.py` (nuova funzione
+`verifica_secondo_punto_lavoro`, non sovrascrive lo stato globale del
+modulo — b,D passati esplicitamente, ripristinati a fine funzione),
+`validate_vqe_noise_aware_dimero.py` (settimo controllo),
+`risultati_vqe_noise_aware_dimero.tex` e
+`risultati_vqe_noise_aware_completo.tex` (nuova sezione dedicata,
+tabella di confronto, figura, scope/conclusioni aggiornati). Tutti
+ricompilati (zero errori/overfull) e rieseguiti con successo.
+
+### Stato
+
+L'estensione VQE noise-aware resta CHIUSA nella sostanza. Il dominio
+di validità verificato è ora dichiarato esplicitamente in entrambi i
+documenti: due punti di lavoro, un solo livello di rumore di
+riferimento — non una dimostrazione generale per ogni $b/J,D/J$ o ogni
+$\varepsilon_{1q},\varepsilon_{2q},p_\text{readout}$.
+
+## Sessione 5 settembre 2026 (continua) — continuità verificata quantitativamente, Passo 5 completo, documento definitivo
+
+Tre lavori chiusi in questa sessione, su richiesta esplicita
+dell'utente: (1) verificare rigorosamente l'argomento di continuità
+invece di lasciarlo qualitativo, (2) completare il Passo 5 su tutta la
+griglia (non solo al punto di riferimento), (3) consolidare tutta la
+documentazione dell'estensione VQE noise-aware in un unico resoconto
+fluido.
+
+### (1) Argomento di continuità — da qualitativo a quantitativo
+
+Derivato il legame esplicito: $|\Delta f|\le\|\nabla
+f(\theta^*_\text{ideale})\|\,\|\Delta\theta\|+O(\|\Delta\theta\|^2)$
+(sviluppo di Taylor al prim'ordine). Un primo tentativo di stima del
+gradiente per differenze finite sulla pipeline principale ha dato
+risultati **instabili in modo drammatico** al variare del passo $h$
+(una componente del gradiente variava da $-0.06$ a $-11.04$ a $+1099$
+a seconda di $h$) — causa isolata: il transpilatore cambia la sintesi
+dei gate (11 vs 12 \texttt{rz}) fra le due valutazioni usate per la
+differenza finita, un artefatto della transpilazione, non fisica.
+Corretto usando la stessa tecnica della "trappola di transpilazione"
+già nota, qui applicata allo scopo opposto: transpilare l'ansatz una
+sola volta in forma simbolica (struttura fissa, an che se meno
+efficiente in conteggio di gate) e poi solo assegnare i parametri
+numerici — il gradiente cosi' ottenuto e' stabile su 4 ordini di
+grandezza di $h$.
+
+Con il gradiente corretto, la previsione lineare riproduce lo
+scostamento osservato entro lo **0.1%** per entrambe le metriche
+(fedeltà di Trotter: predetto $4.150\times10^{-5}$ vs osservato
+$4.147\times10^{-5}$; correlatore: predetto $-6.794\times10^{-5}$ vs
+osservato $-6.792\times10^{-5}$). L'argomento di continuità è quindi
+**confermato quantitativamente**, non solo plausibile.
+
+File: `nota_continuita_preparazione.tex` — dichiarata esplicitamente
+come nota di lavoro interna, non capitolo di tesi (per decisione
+dell'utente: il risultato va citato in una riga, la derivazione
+completa resta come verifica metodologica interna).
+
+### (2) Passo 5 completo: griglia intera, non solo il punto di riferimento
+
+Ricalcolato $N^*$ (fedeltà di Trotter e modulo del correlatore) con
+**entrambe** le preparazioni (ideale, noise-aware) su tutta la griglia
+già usata nello scan originale del Passo 5: 7 valori di
+$\varepsilon_{2q}$ e 6 di $\varepsilon_{1q}$ per la fedeltà, 5 valori
+di $\varepsilon_{2q}$, 4 di $\varepsilon_{1q}$ e 3 di $p_\text{readout}$
+per il correlatore — **25 punti totali, 25/25 con $N^*$ invariato**.
+Prima di questo controllo, l'invarianza era verificata solo al singolo
+punto di riferimento (calibrazione `ibm_torino`); ora è verificata
+sull'intera griglia già esplorata nel Passo 5 originale.
+
+File: `verifica_passo5_noise_aware.py` (nuovo), ottavo controllo
+aggiunto a `validate_vqe_noise_aware_dimero.py`.
+
+### (3) Documento definitivo: narrativa unica, senza i salti della sessione di sviluppo
+
+Prodotto `risultati_vqe_noise_aware_definitivo.tex` (8 pagine, 7
+figure): sostituisce concettualmente i documenti precedenti
+(`risultati_vqe_noise_aware_dimero.tex`,
+`risultati_vqe_noise_aware_completo.tex`) con un'unica esposizione
+lineare — obiettivo, argomento fisico, implementazione, verifica,
+risultati (Passo 2, 3, 4), perché generalizza (continuità, secondo
+punto di lavoro, griglia completa del Passo 5), considerazioni,
+conclusioni. Non narra la cronologia delle correzioni fatte durante lo
+sviluppo (l'argomento inizialmente non rigoroso sull'estensione al
+Passo 4, la sua correzione, la scoperta del bug di transpilazione nel
+calcolo del gradiente): quella cronologia resta nel presente log, che
+è la sede corretta per conservarla. Il documento di riferimento per la
+tesi è ora questo. *(Nota: la frase originariamente scritta qui — "i
+documenti precedenti non sono stati cancellati, restano nel Project
+come cronologia dello sviluppo" — è superata dalla decisione presa
+nella sessione successiva: vanno invece rimossi dal Project, non
+conservati lì; vedi voce sotto.)*
+
+### Stato
+
+Estensione VQE noise-aware CHIUSA, con lo stesso esito sostanziale di
+sempre (rioptimizzare sotto rumore non cambia nulla di misurabile), ora
+sostenuto da: due metriche verificate direttamente, due punti di
+lavoro, l'intera griglia del Passo 5 (25/25), e un argomento di
+continuità reso quantitativo (non più solo qualitativo). Documentazione
+consolidata in un'unica esposizione lineare.
+
+## Sessione 5 settembre 2026 (continua) — correzione terminologica finale, documenti superati rimossi
+
+Due controlli richiesti esplicitamente dall'utente dopo la creazione
+del documento definitivo, invece di darli per scontati.
+
+### Terminologia "Passo N" tornata nei file nuovi
+
+Verificato con una scansione (non a occhio): la terminologia
+"argomento-prima, Passo-N-fra-parentesi" richiesta in una sessione
+precedente era rientrata nei file più recenti. Trovate 18 occorrenze in
+`risultati_vqe_noise_aware_definitivo.tex` e alcune in
+`teoria_readout_asimmetrico.tex` dove "Passo N" tornava a guidare la
+frase invece di seguirla. Corrette tutte quelle riferite alla pipeline;
+lasciate intatte le occorrenze di `teoria_readout_asimmetrico.tex` che
+sono passi di una derivazione matematica (`\paragraph{Passo 1 ---
+probabilità lette}` ecc.), un uso legittimo e
+diverso, verificato distinguendolo esplicitamente prima di correggere.
+Entrambi i documenti ricompilati e riverificati pagina per pagina dopo
+la correzione.
+
+### Documenti superati: box esplicito, poi rimozione dal Project
+
+Aggiunto un box "Documento superato" in apertura di
+`risultati_vqe_noise_aware_dimero.tex` e
+`risultati_vqe_noise_aware_completo.tex`, con rimando esplicito a
+`risultati_vqe_noise_aware_definitivo.tex`. Verificato (non assunto)
+che tutte le figure usate dai due documenti superati sono anche usate
+dal definitivo — nessuna figura orfana da eliminare. Decisione presa
+con l'utente, che corregge quanto scritto nella voce precedente di
+questo log: i due documenti superati vanno **rimossi dal Project**
+(non conservati lì), con la cronologia della loro correzione comunque
+preservata in questo log. Localmente, l'utente può scegliere fra
+cancellarli o archiviarli in una sottocartella `superati/` dentro
+`estensione_vqe_noise_aware/` — entrambe le scelte compatibili con
+quanto scritto qui.
+
+### Stato
+
+Estensione VQE noise-aware CHIUSA. Terminologia coerente in tutti i
+documenti attivi (verificato con scansione automatica, non solo
+visiva). Struttura di cartelle definitiva per
+`estensione_vqe_noise_aware/`: file correnti (script, documento
+definitivo, nota di continuità, figure) a un livello, i due documenti
+superati fuori dal Project (cancellati o archiviati localmente, a
+scelta dell'utente).

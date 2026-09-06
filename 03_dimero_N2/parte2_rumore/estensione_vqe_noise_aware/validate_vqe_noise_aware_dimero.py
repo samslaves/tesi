@@ -23,7 +23,8 @@ import numpy as np
 
 from vqe_noise_aware_dimero import (
     controllo_invarianza_cnot, vqe_noise_aware, energia_fedelta_rumorosa,
-    transpila_dopo_assegnazione,
+    transpila_dopo_assegnazione, controllo_N_star_correlatore,
+    verifica_secondo_punto_lavoro,
 )
 from vqe_dm_rumoroso_dimero import vqe_energia_fedelta_rumorosa
 from dimer_exact import dimer_hamiltonian
@@ -122,6 +123,66 @@ print(f"  N* (parametri noise-aware) = {Ns[imax]}   F(N*) = {Fs[imax]:.6f}")
 assert Ns[imax] == 8, f"N* si e' spostato: {Ns[imax]} invece di 8"
 print("  -> OK: N*=8 invariato rispetto alla versione originale della "
       "quantum simulation (Trotter) sotto rumore (parametri ideali).")
+
+print()
+print("=" * 70)
+print("6. N* DEL CORRELATORE DINAMICO (PASSO 4), CONTROLLO DIRETTO NON PER ANALOGIA")
+print("=" * 70)
+print("  Nota: questo controllo era stato inizialmente OMESSO, sostituito da")
+print("  un argomento per analogia (\"stessa struttura additiva del Passo 3\")")
+print("  che non era rigorosamente valido: N* qui e' argmax|C(N)| (modulo di")
+print("  un numero complesso), una metrica strutturalmente diversa dalla")
+print("  fedelta' additiva del Passo 3. Il controllo diretto e' quindi")
+print("  necessario, non opzionale -- vedi risultati_vqe_noise_aware_completo.tex")
+print("  Sez. 2.1 per la correzione completa del ragionamento.")
+ris_corr = controllo_N_star_correlatore(vqe_params_ideali, ris_seme["x"], nm_ref)
+print(f"  N* (preparazione ideale)      = {ris_corr['N_star_ideale']}"
+      f"   |C(N*)| = {ris_corr['val_star_ideale']:.6f}")
+print(f"  N* (preparazione noise-aware) = {ris_corr['N_star_na']}"
+      f"   |C(N*)| = {ris_corr['val_star_na']:.6f}")
+assert ris_corr["N_star_ideale"] == 5 and ris_corr["N_star_na"] == 5, \
+    "N* del correlatore non coincide con 5 per una delle due preparazioni"
+diff_max = max(abs(a - b) for a, b in zip(ris_corr["vals_ideale"], ris_corr["vals_na"]))
+print(f"  scostamento massimo su tutto lo scan di N: {diff_max:.2e}")
+assert diff_max < 1e-3, "scostamento del correlatore oltre la soglia attesa"
+print("  -> OK: N*=5 invariato, verificato DIRETTAMENTE su questa metrica "
+      "(non assunto per analogia).")
+
+print()
+print("=" * 70)
+print("7. SECONDO PUNTO DI LAVORO (b/J=-0.18, D/J=1) -- generalita' del risultato")
+print("=" * 70)
+print("  Punto gia' usato in dimero_03_dinamica.tex (dinamica non monocromatica,")
+print("  DM 5 volte piu' forte del punto 'test 2'). Verifica che le conclusioni")
+print("  non siano un artefatto del singolo punto testato finora.")
+ris2 = verifica_secondo_punto_lavoro(nm_ref)
+dE2 = ris2["E_noise_aware"] - ris2["E_ideale_su_rumore"]
+dF2 = ris2["F_noise_aware"] - ris2["F_ideale_su_rumore"]
+print(f"  Delta E = {dE2:+.2e}   Delta F = {dF2:+.2e}")
+assert abs(dE2) < 1e-4 and abs(dF2) < 1e-4, "scostamento oltre soglia al secondo punto"
+print(f"  N* Trotter: ideale={ris2['N_star_trotter_ideale']}  "
+      f"noise-aware={ris2['N_star_trotter_na']}")
+print(f"  N* Correlatore: ideale={ris2['N_star_corr_ideale']}  "
+      f"noise-aware={ris2['N_star_corr_na']}")
+assert ris2["N_star_trotter_ideale"] == ris2["N_star_trotter_na"], \
+    "N* Trotter si sposta al secondo punto"
+assert ris2["N_star_corr_ideale"] == ris2["N_star_corr_na"], \
+    "N* correlatore si sposta al secondo punto"
+print("  -> OK: stessa conclusione qualitativa (N* invariato) anche a un punto")
+print("  di lavoro genuinamente diverso -- non piu' un fatto isolato di un solo punto.")
+
+print()
+print("=" * 70)
+print("8. PASSO 5 COMPLETO: N* su tutta la griglia di rumore, non solo al riferimento")
+print("=" * 70)
+from verifica_passo5_noise_aware import verifica_griglia_completa
+righe = verifica_griglia_completa(vqe_params_ideali, ris_seme["x"], psi_exact)
+n_ok = sum(1 for r in righe if r[5])
+n_tot = len(righe)
+print(f"  {n_ok}/{n_tot} punti della griglia (eps_1q, eps_2q, p_readout; "
+      f"Trotter e correlatore) con N* invariato.")
+assert n_ok == n_tot, f"N* si sposta in {n_tot - n_ok} punti della griglia del Passo 5"
+print("  -> OK: Passo 5 chiuso su tutta la griglia, non solo al punto di riferimento.")
 
 print()
 print("=" * 70)

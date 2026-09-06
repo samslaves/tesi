@@ -1,0 +1,288 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codifica e lingua ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+
+% ---------- Matematica ----------
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{xcolor}
+\definecolor{amber}{HTML}{C68A00}
+\definecolor{teal2}{HTML}{2E8B7A}
+\usepackage{tikz}
+
+% ---------- Impaginazione ----------
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+\newcommand{\braket}[1]{\langle #1 \rangle}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\title{NOTA DI LAVORO INTERNA --- non per la commissione\\
+\large Derivazione e verifica dell'argomento di continuità\\
+\large(VQE noise-aware: perché $N^*$ non si sposta)}
+\author{Samuele \\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{center}
+\fbox{\parbox{0.9\linewidth}{\centering\textbf{Questo documento è una
+verifica metodologica interna, non un capitolo della tesi.} Il risultato
+--- l'argomento di continuità è confermato, con un residuo del primo
+ordine inferiore all'$1\%$ --- va citato in tesi in una riga; questa nota
+esiste per essere sicuri di quella riga, non per essere trasformata in
+sezione.}}
+\end{center}
+
+\tableofcontents
+
+\section{Il problema}
+
+Nei documenti dei risultati (\texttt{risultati\_vqe\_noise\_aware\_completo.tex},
+§\,``La spiegazione corretta: non struttura, continuità'') si afferma:
+
+\begin{quote}
+$\theta^*_\text{noise-aware}$ è quasi indistinguibile da
+$\theta^*_\text{ideale}$; qualunque funzione ragionevolmente liscia dello
+stato preparato deve differire fra le due preparazioni di una quantità
+altrettanto minuscola, per continuità.
+\end{quote}
+
+Questa è un'affermazione qualitativa, non dimostrata. Questo documento la
+rende quantitativa: deriva un legame esplicito fra $\|\Delta\theta\|$ e lo
+scostamento osservato nelle due metriche a valle (fedeltà di Trotter,
+modulo del correlatore), e lo confronta col dato numerico già raccolto.
+
+\section{Derivazione}
+
+\subsection{Linearizzazione al primo ordine}
+
+Sia $f:\mathbb R^3\to\mathbb R$ una qualunque delle due metriche a valle
+(fedeltà $F(N;\theta)$ a $N$ fissato, o modulo del correlatore
+$|C(N;\theta)|$), vista come funzione dei tre parametri variazionali
+$\theta=(\theta_0,\theta_1,\theta_2)$ dell'ansatz PMA-2q$\cdot$3, a $N$ e
+a tutti gli altri parametri fisici fissati. Se $f$ è differenziabile in
+un intorno di $\theta^*_\text{ideale}$, lo sviluppo di Taylor al prim'ordine dà
+\begin{equation}
+f(\theta^*_\text{ideale}+\Delta\theta) = f(\theta^*_\text{ideale}) +
+\nabla f(\theta^*_\text{ideale})\cdot\Delta\theta + O(\|\Delta\theta\|^2),
+\label{eq:taylor}
+\end{equation}
+dove $\Delta\theta\equiv\theta^*_\text{noise-aware}-\theta^*_\text{ideale}$.
+Per la disuguaglianza di Cauchy--Schwarz,
+\begin{equation}
+|\Delta f| \le \|\nabla f(\theta^*_\text{ideale})\|\;\|\Delta\theta\| +
+O(\|\Delta\theta\|^2).
+\label{eq:bound}
+\end{equation}
+Questo è il legame quantitativo che l'affermazione originale lasciava
+implicito: lo scostamento sull'osservabile è limitato dal prodotto fra la
+norma del gradiente e la norma dello scostamento dei parametri --- non
+``piccolo perché sì'', ma piccolo con un fattore di proporzionalità
+preciso e calcolabile.
+
+\subsection{$f$ è davvero liscia? Una cautela necessaria}
+\label{sec:cautela-liscezza}
+
+L'Eq.~\eqref{eq:taylor} presuppone che $f(\theta)$ sia differenziabile.
+Fisicamente lo è: ogni stato $\ket{\psi(\theta)}$ preparato dall'ansatz è
+combinazione di seni e coseni di $\theta/2$ (rotazioni $R_y$), il canale
+di rumore agisce linearmente sull'operatore densità, e la fedeltà/il
+modulo del correlatore sono funzioni polinomiali degli elementi di
+matrice di $\rho(\theta)$ --- quindi $f(\theta)$ è $C^\infty$, anzi
+analitica reale, in $\theta$.
+
+\textbf{Ma la funzione calcolata dal codice non è necessariamente quella
+funzione.} Il circuito usato per calcolare $f(\theta)$ nella pipeline
+principale (\texttt{trotter\_rumoroso\_dimero.py},
+\texttt{correlatori\_rumorosi\_dimero.py}) transpila l'ansatz \emph{dopo}
+aver assegnato il valore numerico di $\theta$ --- la scelta corretta per
+il conteggio di gate minimo (già stabilita in una sessione precedente),
+ma con una conseguenza collaterale qui rilevante: il transpilatore può
+scegliere sintesi diverse dei gate a seconda del valore numerico
+specifico di $\theta$ (per esempio se un angolo è vicino a $0$ o $\pi$,
+alcune rotazioni si fondono o si cancellano). Questo rende la funzione
+\emph{numericamente calcolata} discontinua a scala di transpilazione,
+anche se la funzione \emph{fisica} sottostante è liscia.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$h$ (passo differenze finite) & ops($\theta_2+h$) & ops($\theta_2-h$)\\
+\midrule
+$10^{-3}$ & 12 \texttt{rz} & 11 \texttt{rz}\\
+$10^{-5}$ & 12 \texttt{rz} & 11 \texttt{rz}\\
+$10^{-7}$ & 11 \texttt{rz} & 11 \texttt{rz}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Verificato direttamente (tabella sopra): il conteggio dei gate
+\texttt{rz} del circuito transpilato cambia fra le due valutazioni usate
+per stimare la derivata rispetto a $\theta_2$, per $h=10^{-3}$ e
+$h=10^{-5}$. Conseguenza: una stima del gradiente per differenze finite
+calcolata direttamente sulla pipeline principale è \textbf{instabile in
+modo drammatico} al variare di $h$:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$h$ & $\partial F/\partial\theta_0$ & $\partial F/\partial\theta_1$ & $\partial F/\partial\theta_2$\\
+\midrule
+$10^{-3}$ & $0.2309$ & $0.0594$ & $-0.169$\\
+$10^{-4}$ & $1.329$ & $-1.039$ & $-0.059$\\
+$10^{-5}$ & $0.2309$ & $0.0594$ & $\mathbf{-11.04}$\\
+$10^{-6}$ & $0.2309$ & $0.0594$ & $-0.0594$\\
+$10^{-7}$ & $\mathbf{1099}$ & $0.0594$ & $-0.0594$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Non è rumore fisico: è un artefatto della transpilazione, e
+avrebbe reso qualunque stima del gradiente fatta ingenuamente sulla
+pipeline principale inaffidabile (nella prima prova, con $h=10^{-5}$, la
+componente $\theta_2$ del gradiente usciva 190 volte più grande delle
+altre due --- un artefatto, non un fatto fisico).
+
+\subsection{La correzione: stessa idea della trappola di transpilazione, usata al contrario}
+
+La soluzione è la stessa tecnica già nota (transpilare l'ansatz
+\textbf{una sola volta}, in forma parametrica/simbolica, e poi assegnare
+i valori numerici) --- ma qui usata per lo scopo \emph{opposto} a quello
+per cui era stata scartata nell'ottimizzazione VQE noise-aware:
+\begin{itemize}[leftmargin=1.3em,itemsep=0.2em]
+\item nell'ottimizzazione (Passo 2), la transpilazione simbolica dà un
+circuito \emph{peggiore} (più rumoroso, più gate) --- per quello si
+transpila dopo aver assegnato i parametri, ad ogni valutazione;
+\item qui, per stimare una \textbf{derivata}, serve che la struttura del
+circuito resti \emph{esattamente la stessa} al variare di $\theta$ in un
+intorno infinitesimo --- per quello la transpilazione simbolica (fatta
+una volta sola, poi solo \texttt{assign\_parameters}) è l'unica scelta
+corretta, anche se il circuito risultante ha più gate (19 \texttt{rz} + 14
+\texttt{sx} invece di 11+8) e quindi una fedeltà assoluta leggermente più
+bassa a parità di rumore.
+\end{itemize}
+Con questa correzione, la stima del gradiente per differenze finite è
+\textbf{stabile su quattro ordini di grandezza di $h$} (verificato,
+$h=10^{-3}\ldots10^{-6}$, differenza $<10^{-6}$ sulle componenti del
+gradiente) --- la firma di una derivata numerica corretta.
+
+\section{Verifica numerica}
+
+\subsection{Impostazione}
+
+Usando la costruzione a struttura fissa (Sez.~\ref{sec:cautela-liscezza}),
+al punto di lavoro ``test 2'' ($b/J=0.35$, $D/J=0.80$), con
+$\theta^*_\text{ideale}$ e $\theta^*_\text{noise-aware}$ registrati nelle
+sessioni precedenti:
+\begin{equation}
+\Delta\theta = \theta^*_\text{noise-aware}-\theta^*_\text{ideale} =
+(1.993, -1.278, -0.559)\times10^{-4}, \qquad \|\Delta\theta\| =
+2.433\times10^{-4}.
+\end{equation}
+
+\subsection{Fedeltà di Trotter, $N=8$}
+
+Gradiente calcolato per differenze finite (struttura fissa, $h=10^{-5}$,
+stabile su 4 ordini di grandezza di $h$):
+\begin{equation}
+\nabla F = (0.22945,\ 0.05892,\ -0.05892), \qquad \|\nabla F\| = 0.2441.
+\end{equation}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$F(\theta^*_\text{ideale})$ & $0.813472$\\
+$F(\theta^*_\text{noise-aware})$ & $0.813514$\\
+$\Delta F$ osservato & $4.147\times10^{-5}$\\
+$\Delta F$ predetto ($\nabla F\cdot\Delta\theta$) & $4.150\times10^{-5}$\\
+rapporto predetto/osservato & $1.0007$\\
+residuo (ordine $\ge2$) & $-3.1\times10^{-8}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\subsection{Modulo del correlatore, $N=5$}
+
+\begin{equation}
+\nabla|C| = (-0.3167,\ 0.1104,\ -0.1663), \qquad \|\nabla|C|\| = 0.3744.
+\end{equation}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$|C(\theta^*_\text{ideale})|$ & $0.248044$\\
+$|C(\theta^*_\text{noise-aware})|$ & $0.247976$\\
+$\Delta|C|$ osservato & $-6.792\times10^{-5}$\\
+$\Delta|C|$ predetto ($\nabla|C|\cdot\Delta\theta$) & $-6.794\times10^{-5}$\\
+rapporto predetto/osservato & $1.0004$\\
+residuo (ordine $\ge2$) & $+2.4\times10^{-8}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{center}
+\fbox{\parbox{0.85\linewidth}{\centering
+In entrambi i casi la previsione lineare riproduce lo scostamento
+osservato entro lo $0.1\%$: siamo saldamente nel regime dove il
+prim'ordine domina, il residuo di ordine superiore è tre ordini di
+grandezza più piccolo del termine lineare stesso.}}
+\end{center}
+
+\section{Cosa dice, e cosa non dice, questo risultato}
+
+\begin{itemize}[leftmargin=1.3em,itemsep=0.3em]
+\item \textbf{Confermato}: al punto ``test 2'', per entrambe le metriche
+controllate, lo scostamento osservato è spiegato quasi esattamente
+(entro l'$1\%$) dal termine lineare $\nabla f\cdot\Delta\theta$. Non è
+più un'affermazione qualitativa (``dovrebbe essere piccolo'') ma un
+conto verificato (``è esattamente piccolo quanto la teoria del
+prim'ordine predice'').
+\item \textbf{Non dimostrato in generale}: il bound
+dell'Eq.~\eqref{eq:bound} usa $\|\nabla f(\theta^*_\text{ideale})\|$
+calcolato in questo punto specifico. Se in un altro punto di lavoro (o
+per un'altra metrica) il gradiente fosse molto più grande, lo stesso
+$\|\Delta\theta\|$ produrrebbe uno scostamento proporzionalmente più
+grande --- il bound protegge \emph{a patto che} il gradiente resti
+moderato, cosa verificata qui ($\|\nabla F\|\sim0.24$,
+$\|\nabla|C|\|\sim0.37$, entrambi ordine 1) ma non garantita a priori per
+ogni punto.
+\item \textbf{La cautela più importante}: qualunque stima futura di
+derivate o sensibilità su questa pipeline deve usare la costruzione a
+struttura fissa (transpilazione simbolica una tantum), mai la
+transpilazione post-assegnazione usata per l'efficienza --- la Sez.
+\ref{sec:cautela-liscezza} mostra cosa succede altrimenti (un artefatto
+del tutto scollegato dalla fisica, capace di produrre un gradiente
+apparente 190 volte più grande del vero).
+\end{itemize}
+
+\section{Riga da riportare in tesi, se serve}
+
+Se si vuole citare questo risultato senza riportare l'intera derivazione:
+\begin{quote}
+\emph{L'argomento di continuità è stato verificato quantitativamente: lo
+scostamento osservato in entrambe le metriche a valle è riprodotto entro
+lo 0.1\% da una previsione lineare $\nabla f\cdot\Delta\theta$, confermando
+che il regime è dominato dal prim'ordine (nota di lavoro interna, non
+riportata per esteso).}
+\end{quote}
+
+\end{document}

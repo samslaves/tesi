@@ -146,6 +146,159 @@ def controllo_invarianza_cnot(n_prove=5, seed=0):
     return conteggi, dettagli
 
 
+def controllo_N_star_correlatore(vqe_params_ideali, x_noise_aware, noise_model,
+                                  t=2.0, N_grid=None,
+                                  i=2, alpha="x", j=1, beta="x",
+                                  J=1.0, b=0.35, D=0.80, p_readout=0.023):
+    """Controllo DIRETTO (non per analogia) su una seconda metrica a valle,
+    strutturalmente diversa dalla fedelta' di Trotter: N* = argmax_N |C(N)|
+    del correlatore dinamico (Passo 4), con la preparazione VQE ideale
+    contro quella noise-aware.
+
+    Perche' questo controllo non era automatico dall'analogia con la
+    fedelta' di Trotter (Passo 3): quella e' una fedelta' (combinazione
+    lineare additiva di tre contributi, gia' scomposta numericamente in un
+    lavoro precedente sul correlatore stesso -- vedi log_decisioni.md,
+    'Scomposizione verificata numericamente'), mentre qui N* e' definito
+    come il massimo del MODULO di un numero complesso costruito da una
+    misura di Hadamard test. Comporre una trasformazione con un modulo non
+    preserva in generale le stesse proprieta' di invarianza di una somma
+    lineare (visto esplicitamente nel caso del readout asimmetrico, dove
+    la stessa preoccupazione ha effettivamente cambiato la conclusione
+    teorica, anche se non quella numerica). Il confronto va quindi fatto
+    qui, direttamente su questa metrica, non assunto per analogia."""
+    from correlatori_rumorosi_dimero import correlator_rumoroso, J_DEFAULT, b_DEFAULT, D_DEFAULT
+    if N_grid is None:
+        N_grid = list(range(1, 21))
+
+    vals_ideale, vals_na = [], []
+    for N in N_grid:
+        c_i = correlator_rumoroso(i, alpha, j, beta, t, N, J, b, D,
+                                   vqe_params_ideali, noise_model=noise_model,
+                                   p_readout=p_readout)
+        c_n = correlator_rumoroso(i, alpha, j, beta, t, N, J, b, D,
+                                   x_noise_aware, noise_model=noise_model,
+                                   p_readout=p_readout)
+        vals_ideale.append(abs(c_i))
+        vals_na.append(abs(c_n))
+
+    imax_i = int(np.argmax(vals_ideale))
+    imax_n = int(np.argmax(vals_na))
+    return {
+        "N_grid": N_grid,
+        "vals_ideale": vals_ideale, "vals_na": vals_na,
+        "N_star_ideale": N_grid[imax_i], "N_star_na": N_grid[imax_n],
+        "val_star_ideale": vals_ideale[imax_i], "val_star_na": vals_na[imax_n],
+    }
+
+
+def verifica_secondo_punto_lavoro(noise_model, R=6, maxiter=300, seed=0,
+                                   t=2.0, N_grid=None):
+    """Ripete l'intera catena di controlli (VQE ideale multistart, VQE
+    noise-aware, N* Trotter, N* correlatore) a un SECONDO punto di lavoro
+    -- b/J=-0.18, D/J=1 (J=1), gia' usato nella documentazione narrativa
+    per le slide (dimero_03_dinamica.tex) per la dinamica non
+    monocromatica, con un termine DM 5 volte piu' forte del punto
+    ``test 2''. Serve a verificare che le conclusioni di questo documento
+    non siano un artefatto del singolo punto di lavoro gia' testato.
+
+    Non sovrascrive lo stato globale del modulo: b, D vengono passati
+    esplicitamente, mai letti dalle costanti di modulo J,b,D definite in
+    testa a questo file (quelle restano legate al punto ``test 2'')."""
+    from dimer_exact import dimer_hamiltonian
+    from vqe_test2 import exact_ground, vqe_multistart
+    import trotter_rumoroso_dimero as _trd
+    import correlatori_rumorosi_dimero as _crd
+
+    J2, b2, D2 = 1.0, -0.18, 1.0
+    E0_exact, psi0_exact, w, v = exact_ground(b2, J2, D2)
+
+    # VQE ideale: multistart su piu' seed (necessario qui: un solo seed
+    # non sempre trova la fedelta' a precisione macchina a questo punto)
+    best = None
+    for s in range(10):
+        ris = vqe_multistart(pma_2q(3), dimer_hamiltonian(b2, J2, D2), w, v,
+                              R=6, seed=s)
+        if best is None or ris["E"] < best["E"]:
+            best = ris
+    vqe_params_ideali = best["x"]
+
+    # riuso ideale sotto rumore (Passo 2 originale, a questo punto)
+    H2 = dimer_hamiltonian(b=b2, J=J2, D=D2)
+    E_ideale_su_rumore, F_ideale_su_rumore, _ = energia_fedelta_rumorosa(
+        vqe_params_ideali, H2, noise_model, psi0_exact)
+
+    # VQE noise-aware a questo punto (serve un obj locale: b,D diversi da
+    # quelli di modulo usati da energia_rumorosa/vqe_noise_aware)
+    def obj_locale(x):
+        return energia_rumorosa(x, H2, noise_model)
+    rng = np.random.default_rng(seed)
+    x0_list = [rng.uniform(0.0, 2 * np.pi, 3) for _ in range(R)]
+    x0_list.append(np.asarray(vqe_params_ideali))
+    best_E, best_x = np.inf, None
+    from scipy.optimize import minimize
+    for x0 in x0_list:
+        res = minimize(obj_locale, x0, method="COBYLA",
+                        options={"maxiter": maxiter})
+        if res.fun < best_E:
+            best_E, best_x = res.fun, res.x
+    res_polish = minimize(obj_locale, best_x, method="L-BFGS-B")
+    if res_polish.fun < best_E:
+        best_E, best_x = res_polish.fun, res_polish.x
+    x_noise_aware = best_x
+
+    E_na, F_na, _ = energia_fedelta_rumorosa(x_noise_aware, H2, noise_model,
+                                              psi0_exact)
+
+    # N* Trotter
+    if N_grid is None:
+        N_grid = list(range(1, 21)) + [30, 40, 60, 80, 120, 160]
+    b_bak, D_bak, J_bak = _trd.b, _trd.D, _trd.J
+    _trd.b, _trd.D, _trd.J = b2, D2, J2
+    try:
+        F_i, F_n = [], []
+        for N in N_grid:
+            Fi, _ = _trd.fedelta_trotter_rumoroso(vqe_params_ideali, psi0_exact,
+                                                   t, N, noise_model=noise_model)
+            Fn, _ = _trd.fedelta_trotter_rumoroso(x_noise_aware, psi0_exact,
+                                                   t, N, noise_model=noise_model)
+            F_i.append(Fi); F_n.append(Fn)
+    finally:
+        _trd.b, _trd.D, _trd.J = b_bak, D_bak, J_bak
+    N_star_trotter_i = N_grid[int(np.argmax(F_i))]
+    N_star_trotter_n = N_grid[int(np.argmax(F_n))]
+
+    # N* correlatore
+    N_grid_corr = list(range(1, 21))
+    b_bak2 = (_crd.b_DEFAULT, _crd.D_DEFAULT, _crd.J_DEFAULT)
+    _crd.b_DEFAULT, _crd.D_DEFAULT, _crd.J_DEFAULT = b2, D2, J2
+    try:
+        vals_i, vals_n = [], []
+        for N in N_grid_corr:
+            c_i = _crd.correlator_rumoroso(2, "x", 1, "x", t, N, J2, b2, D2,
+                                            vqe_params_ideali, noise_model=noise_model,
+                                            p_readout=0.023)
+            c_n = _crd.correlator_rumoroso(2, "x", 1, "x", t, N, J2, b2, D2,
+                                            x_noise_aware, noise_model=noise_model,
+                                            p_readout=0.023)
+            vals_i.append(abs(c_i)); vals_n.append(abs(c_n))
+    finally:
+        _crd.b_DEFAULT, _crd.D_DEFAULT, _crd.J_DEFAULT = b_bak2
+    N_star_corr_i = N_grid_corr[int(np.argmax(vals_i))]
+    N_star_corr_n = N_grid_corr[int(np.argmax(vals_n))]
+
+    return {
+        "b": b2, "D": D2, "J": J2, "E0_exact": E0_exact,
+        "vqe_params_ideali": vqe_params_ideali, "x_noise_aware": x_noise_aware,
+        "E_ideale_su_rumore": E_ideale_su_rumore, "F_ideale_su_rumore": F_ideale_su_rumore,
+        "E_noise_aware": E_na, "F_noise_aware": F_na,
+        "N_grid_trotter": N_grid, "F_trotter_ideale": F_i, "F_trotter_na": F_n,
+        "N_star_trotter_ideale": N_star_trotter_i, "N_star_trotter_na": N_star_trotter_n,
+        "N_grid_corr": N_grid_corr, "vals_corr_ideale": vals_i, "vals_corr_na": vals_n,
+        "N_star_corr_ideale": N_star_corr_i, "N_star_corr_na": N_star_corr_n,
+    }
+
+
 if __name__ == "__main__":
     data = np.load("ground_state_test2.npz")
     vqe_params_ideali = data["vqe_params"]
@@ -217,11 +370,29 @@ if __name__ == "__main__":
     print(f"  N* (parametri noise-aware) = {Ns[imax]}   F(N*) = {Fs[imax]:.6f}")
     print(f"  N* (parametri ideali, Trotter rumoroso, gia' noto) = 8   F(N*) = 0.817725")
 
+    print()
+    print("=" * 70)
+    print("6. Controllo DIRETTO (non per analogia) su una metrica diversa:")
+    print("   N* del correlatore dinamico (Passo 4), argmax|C(N)|")
+    print("=" * 70)
+    ris_corr = controllo_N_star_correlatore(vqe_params_ideali, ris_rumore["x"], nm_ref)
+    print(f"  N* (preparazione ideale)      = {ris_corr['N_star_ideale']}"
+          f"   |C(N*)| = {ris_corr['val_star_ideale']:.6f}")
+    print(f"  N* (preparazione noise-aware) = {ris_corr['N_star_na']}"
+          f"   |C(N*)| = {ris_corr['val_star_na']:.6f}")
+    diff_max = max(abs(a - b) for a, b in zip(ris_corr["vals_ideale"], ris_corr["vals_na"]))
+    print(f"  scostamento massimo su tutto lo scan di N: {diff_max:.2e}")
+
     np.savez("vqe_noise_aware_result.npz",
              x_noise_aware=ris_rumore["x"],
              E_noise_aware=E_noise_aware, F_noise_aware=F_noise_aware,
              E_ideale_su_rumore=E_ideale_su_rumore,
              F_ideale_su_rumore=F_ideale_su_rumore,
              N_star_noise_aware=Ns[imax], F_N_star_noise_aware=Fs[imax],
-             cnot_invarianza=conteggi)
+             cnot_invarianza=conteggi,
+             N_grid_corr=ris_corr["N_grid"],
+             vals_corr_ideale=ris_corr["vals_ideale"],
+             vals_corr_na=ris_corr["vals_na"],
+             N_star_corr_ideale=ris_corr["N_star_ideale"],
+             N_star_corr_na=ris_corr["N_star_na"])
     print("\n[salvato] vqe_noise_aware_result.npz")

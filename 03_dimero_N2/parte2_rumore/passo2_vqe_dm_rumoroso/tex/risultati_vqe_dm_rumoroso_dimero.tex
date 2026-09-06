@@ -1,0 +1,178 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}VQE con termine DM sotto rumore}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}VQE con termine DM sotto rumore\\[0.2em]
+\Large\normalfont\color{softgray}Quanto degrada un risultato ideale su un simulatore rumoroso}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{vqe\_dm\_rumoroso\_dimero.py}. Punto di lavoro:
+$b/J=0.35$, $D/J=0.80$, $J=1$ (``test 2''). Modello di rumore: il
+canale depolarizzante 1q/2q + readout simmetrico di
+\texttt{noise\_model\_dimero.py}, ai valori di riferimento
+\texttt{ibm\_torino} salvo dove diversamente indicato.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Il VQE ideale (Parte 1, nessun rumore) trova parametri
+$\theta^*_\text{ideale}$ che preparano lo stato fondamentale
+dell'Hamiltoniana del dimero con DM entro la precisione numerica. Questo
+documento chiede: se lo stesso circuito, con la stessa ricetta di
+parametri, viene eseguito su un simulatore \textbf{rumoroso}, quanto
+degradano energia e fedeltà? È la prima domanda della Parte 2 (rumore),
+e la base su cui si costruiscono tutti gli stadi successivi.
+
+\begin{keyeq}[title={Scelta di modellazione dichiarata}]
+\centering
+Si riusano i parametri VQE già ottimizzati nel caso ideale, \textbf{senza}
+rioptimizzare sotto rumore: questo documento misura la degradazione di un
+risultato ideale, non la convergenza di un VQE che veda il rumore durante
+l'ottimizzazione (quella domanda è affrontata separatamente,
+\texttt{risultati\_vqe\_noise\_aware\_definitivo.tex}).
+\end{keyeq}
+
+\section{Osservabili: energia e fedeltà rumorose}
+
+Con il circuito rumoroso, lo stato preparato non è più puro: è descritto
+da un operatore densità $\rho$. L'energia si generalizza in modo diretto,
+$E_\text{rumoroso}=\Tr[\rho H]$. La fedeltà rispetto allo stato di
+riferimento puro $\ket{\psi_\text{ideale}}$ (fedeltà di Uhlmann,
+semplificata per un riferimento puro) è
+\begin{keyeq}
+\centering
+$F(\rho,\ket{\psi_\text{ideale}}) = \bra{\psi_\text{ideale}}\rho\ket{\psi_\text{ideale}}$
+\end{keyeq}
+--- verificata contro \texttt{qiskit.quantum\_info.state\_fidelity} su
+uno stato misto casuale (non il caso specifico di questo problema, per
+evitare una verifica circolare).
+
+\section{Risultati}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Condizione} & $\boldsymbol{E}$ & $\boldsymbol{F}$ & \textbf{CNOT}\\
+\midrule
+Rumore nullo (verifica di coerenza) & $-3.57321145$ & $1.0000000000$ & $2$\\
+Rumore di riferimento (\texttt{ibm\_torino}) & $-3.50164605$ & $0.9850060074$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Il caso a rumore nullo riproduce $E_0=-3.57321145$ (l'energia esatta,
+Parte 1) a precisione numerica --- coerenza interna della pipeline. Al
+rumore di riferimento: scostamento di energia $+0.071565$, perdita di
+fedeltà $1-F=0.014994$ ($\sim1.5\%$) --- con un ansatz a soli 2 CNOT,
+poco margine per il rumore di accumularsi.
+\end{okbox}
+
+\section{Dipendenza da \texorpdfstring{$\varepsilon_{2q}$}{eps\_2q}}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figure/fig_passo2_scan_eps2q.pdf}
+\caption{\textit{Energia e fedeltà rumorose in funzione di
+$\varepsilon_{2q}$ (a $\varepsilon_{1q}=2.9\times10^{-4}$,
+$p_\text{readout}=2.3\times10^{-2}$ fissati). La linea tratteggiata
+segna il valore di riferimento $\varepsilon_{2q}=3.8\times10^{-3}$.
+Degradazione monotona e liscia, nessuna soglia o comportamento anomalo
+nell'intervallo esplorato.}}
+\end{figure}
+
+\section{Cosa non è ancora stato controllato qui}
+
+Questo documento fissa un solo punto (o uno scan di un solo parametro):
+non dice ancora \emph{come} la fedeltà si comporti se il circuito viene
+allungato (nessuna dinamica qui, solo lo stato fondamentale statico), né
+se il rumore possa essere assorbito da un'ottimizzazione diversa dei
+parametri (affrontato separatamente, VQE noise-aware). Serve solo come
+riferimento di degradazione per uno stato preparato, prima di introdurre
+qualunque evoluzione temporale.
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Due fatti da questo documento sono usati esplicitamente nel passo
+successivo (quantum simulation Trotter sotto rumore): (1) i parametri
+$\theta^*_\text{ideale}$ e il loro CNOT-count minimo (2, per la sola
+preparazione) sono il punto di partenza --- il passo successivo aggiunge
+$N$ passi di Trotter sopra questa stessa preparazione; (2) la scala della
+degradazione qui osservata ($1-F\sim1.5\%$ al rumore di riferimento) è
+il termine di \emph{preparazione} che il passo successivo isolerà come
+contributo costante, indipendente da $N$, nella fedeltà totale --- un
+fatto verificato esplicitamente lì, non solo assunto qui.
+
+\begin{okbox}{Sintesi in una riga}
+Riusare parametri VQE ideali sotto rumore di riferimento costa
+$\sim1.5\%$ di fedeltà con un ansatz a 2 CNOT --- la scala di riferimento
+per tutti gli stadi a valle.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{vqe\_dm\_rumoroso\_dimero.py}, questo documento.
+
+\end{document}

@@ -1,0 +1,273 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnred}{HTML}{9E3B3B}
+\definecolor{warnredbg}{HTML}{FBEDED}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Correlatori dinamici sotto rumore}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnredbg, colframe=warnred!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{warnred}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Correlatori dinamici sotto rumore\\[0.2em]
+\Large\normalfont\color{softgray}Il test di Hadamard, il readout, e il compromesso Trotter/rumore}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{correlatori\_rumorosi\_dimero.py}. Punto di
+lavoro: $b/J=0.35$, $D/J=0.80$, $J=1$, $t=2$. Correlatore di
+riferimento: $C_{21}^{xx}(t)$.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Un correlatore dinamico $C_{ij}^{\alpha\beta}(t)=\bra{\psi_0}\sigma_i^\alpha(t)\sigma_j^\beta(0)\ket{\psi_0}$
+non è un osservabile diretto: si estrae da un circuito di Hadamard test,
+che introduce un qubit ancilla e --- a differenza della fedeltà del passo
+precedente --- una \textbf{misura reale}, quindi il readout entra in gioco
+per la prima volta in questa pipeline. Questo documento costruisce il
+circuito rumoroso, deriva la correzione di readout, e trova il
+compromesso Trotter/rumore ($N^*$) per questo osservabile specifico.
+
+\section{Il circuito: schema e teoria}
+
+\begin{keyeq}
+\centering
+$C_{ij}^{\alpha\beta}(t) = \bra{\psi_0}U(t)^\dagger\, \sigma_i^\alpha\, U(t)\, \sigma_j^\beta\ket{\psi_0}$
+\end{keyeq}
+Schema del circuito (derivazione completa in
+\texttt{circuito\_correlatori\_spiegato.tex}):
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.15em]
+\item preparazione $\ket{\psi_0}$ sul registro (ampiezze esatte, o ansatz
+VQE --- vedi Sez.~\ref{sec:ansatz-params});
+\item Hadamard sull'ancilla;
+\item controlled-$W$ ($W=\sigma_j^\beta$, controllo pieno) sul sito $j$,
+\emph{prima} di $U(t)$;
+\item $U(t)=e^{-iHt}$ sul registro, non controllato (Trotter, come nel
+passo precedente);
+\item anti-controlled-$V$ ($V=\sigma_i^\alpha$, attivo su ancilla$=\ket0$)
+sul sito $i$, \emph{dopo} $U(t)$;
+\item rotazione di base sull'ancilla ($H$ per la parte reale,
+$R_x(\pi/2)$ per la parte immaginaria) e misura $Z$.
+\end{enumerate}
+
+\subsection{Preparazione: ampiezze esatte o ansatz VQE reale}
+\label{sec:ansatz-params}
+
+A differenza del passo precedente, qui la preparazione può usare le
+ampiezze esatte (\texttt{ansatz\_params=None}) oppure il circuito VQE
+reale (\texttt{ansatz\_params=$\theta^*$}), mirror del pattern già in uso
+per anello e catena. Questa opzione, verificata di nuovo in questa
+sessione dopo una regressione temporanea del modulo che la implementa
+(\texttt{circuito\_correlazioni\_dimero.py}), è la base del confronto di
+coerenza in Sez.~\ref{sec:verifica-coerenza}.
+
+\section{Il readout: correzione simmetrica}
+
+\begin{keyeq}
+\centering
+$\langle Z\rangle_\text{readout} = (1-2p)\,\langle Z\rangle_\text{ideale}$
+\end{keyeq}
+(caso simmetrico; il caso asimmetrico è trattato separatamente,
+\texttt{teoria\_readout\_asimmetrico.tex}). Un fattore puramente
+moltiplicativo: importante più avanti per capire perché $N^*$ non dipenda
+da $p_\text{readout}$ (visto nello scan sui parametri di rumore).
+
+\section{Verifica di coerenza con la Parte 1}
+\label{sec:verifica-coerenza}
+
+\begin{warnbox}{Una regressione trovata e richiusa}
+Il modulo \texttt{circuito\_correlazioni\_dimero.py}, che implementa la
+preparazione via ansatz VQE reale per il confronto di coerenza qui sotto,
+era regredito a una versione precedente (placeholder con
+\texttt{NotImplementedError} al posto dell'implementazione) --- non a
+causa di un errore mai corretto, ma di un file caricato per sbaglio sopra
+la versione giusta (episodio simile, con la stessa causa, già accaduto e
+richiuso in una sessione precedente: vedi \texttt{log\_decisioni.md}).
+Ricaricato il file corretto e riverificato da zero: tutti i numeri
+dichiarati qui sotto sono stati ricalcolati con il modulo funzionante,
+non assunti dalla sessione precedente.
+\end{warnbox}
+
+Confronto, a rumore nullo, fra il correlatore calcolato dal circuito
+completo (preparazione ansatz VQE + Trotter + Hadamard test) e quello
+calcolato dal modulo di riferimento della Parte 1 (stessa preparazione
+ansatz, nessun rumore):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+$\boldsymbol{(i,\alpha,j,\beta,t,N)}$ & \textbf{Parte 1} & \textbf{Rumore nullo} & $\boldsymbol{|\Delta|}$\\
+\midrule
+$(2,x,1,x,2.0,20)$ & $+0.074599+0.257465i$ & $+0.074599+0.257465i$ & $2.5\times10^{-14}$\\
+$(1,z,1,z,1.0,20)$ & $-0.158218+0.969111i$ & $-0.158218+0.969111i$ & $4.2\times10^{-15}$\\
+$(1,x,1,y,0.5,20)$ & $+0.205804+0.228287i$ & $+0.205804+0.228287i$ & $5.0\times10^{-14}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Coincidenza a precisione quasi macchina --- il circuito rumoroso, a
+rumore spento, riproduce esattamente il calcolo di riferimento. Ulteriori
+tre controlli specifici sul modulo di preparazione VQE: infedeltà
+ansatz/esatto $1.6\times10^{-11}$ (dipende dal seed del VQE, non un
+problema); consistenza fra le due preparazioni sui tre correlatori
+sopra, $3\times10^{-7}$--$4\times10^{-6}$; costo in gate, $18$ CNOT
+(preparazione esatta) contro $19$ CNOT (preparazione VQE) a $N=5$ ---
+un solo CNOT in più per il circuito VQE, trascurabile.
+\end{okbox}
+
+\section{Conteggio gate: crescita lineare}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\boldsymbol{N}$ & \textbf{CNOT totali}\\
+\midrule
+$1$ & $7$\\
+$2$ & $10$\\
+$5$ & $19$\\
+$10$ & $34$\\
+$20$ & $64$\\
+$40$ & $124$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Incremento costante di 3 CNOT per unità di $N$ (il contributo
+di un passo di Trotter) --- nessuna fusione spuria, la transpilazione a
+blocchi funziona come deve.
+
+\section{Formula di readout: Monte Carlo contro analitica}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$\langle Z\rangle$ analitico (rumore di gate + correzione readout) & $+0.044089$\\
+$\langle Z\rangle$ Monte Carlo ($2\times10^5$ shot, readout vero) & $+0.046550$\\
+$|$differenza$|$ (atteso $\lesssim0.0067$, $3\sigma$) & $2.46\times10^{-3}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\noindent Due cammini di calcolo indipendenti (formula analitica contro
+simulazione Monte Carlo con \texttt{ReadoutError} vero) coincidono entro
+l'errore statistico atteso.
+
+\section{Risultato: la curva \texorpdfstring{$|C(N)|$}{|C(N)|} e \texorpdfstring{$N^*$}{N*}}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\linewidth]{figure/fig_passo4_correlatore_vs_N.pdf}
+\caption{\textit{Modulo del correlatore rumoroso $|C_{21}^{xx}(t{=}2,N)|$
+in funzione di $N$. Massimo a $N^*=5$ --- più basso dell'$N^*=8$ della
+fedeltà di Trotter (atteso: il circuito di Hadamard test ha più gate a
+parità di $N$, per via dei due blocchi controllati aggiuntivi, quindi il
+rumore satura prima).}}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$N^*$ & $5$\\
+$|C(N^*)|$ & $0.250002$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Tre fatti da qui sono usati esplicitamente nello scan sui parametri di
+rumore: (1) $N^*=5$ è specifico di questo correlatore, a questi
+parametri --- lo scan ne verifica la stabilità al variare di
+$\varepsilon_{1q},\varepsilon_{2q},p_\text{readout}$, non la dà per
+scontata; (2) la correzione di readout è un fattore puramente
+moltiplicativo, $(1-2p)$: questo è l'argomento analitico (verificato,
+non solo dichiarato) per cui $N^*$ non può dipendere da $p_\text{readout}$
+per readout simmetrico --- moltiplicare per una costante positiva non
+sposta la posizione di un massimo; (3) il conteggio gate lineare in $N$
+è la base per stimare come il rumore accumulato cresca al variare dei
+parametri del canale.
+
+\begin{okbox}{Sintesi in una riga}
+$N^*=5$ per il correlatore dinamico, verificato con il modulo di
+preparazione VQE ora funzionante dopo una regressione richiusa;
+correzione di readout puramente moltiplicativa, la chiave per capire
+perché $N^*$ non dipenderà da $p_\text{readout}$.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{correlatori\_rumorosi\_dimero.py}, questo documento. Modulo di
+preparazione VQE: \texttt{circuito\_correlazioni\_dimero.py} (ricaricato
+e riverificato in questa sessione).
+
+\end{document}

@@ -1,0 +1,266 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Quantum simulation (Trotter) sotto rumore}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Quantum simulation (Trotter) sotto rumore\\[0.2em]
+\Large\normalfont\color{softgray}Il compromesso fra errore di Trotter e rumore accumulato}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{trotter\_rumoroso\_dimero.py}. Punto di lavoro:
+$b/J=0.35$, $D/J=0.80$, $J=1$, $t=2$. Preparazione: ansatz VQE
+$\theta^*_\text{ideale}$ (VQE con termine DM sotto rumore).
+
+\tableofcontents
+
+\section{Obiettivo}
+
+L'evoluzione temporale reale $e^{-iHt}$ va approssimata con una sequenza
+finita di $N$ passi di Suzuki--Trotter. Più $N$ è grande, più
+l'approssimazione di Trotter è accurata --- ma più gate servono, e più
+rumore si accumula. Deve esistere un $N$ ottimale, $N^*$, che bilancia i
+due effetti. Questo documento lo trova e lo caratterizza.
+
+\section{Teoria: la scomposizione dell'Hamiltoniana}
+
+L'Hamiltoniana del dimero con DM si scrive $H=H_1+H_2$, con
+\begin{keyeq}
+\centering
+$H_1 = \text{scambio isotropo} + \text{Zeeman} \quad (\text{fattorizza esattamente}), \qquad
+H_2 = \text{solo DM}$
+\end{keyeq}
+Un singolo passo di Trotter al prim'ordine, di durata $\tau=t/N$, è
+$U_\text{step}=e^{-iH_2\tau}e^{-iH_1\tau}$; l'errore per passo è
+$O(\tau^2)=O((t/N)^2)$, quindi l'errore totale di Trotter (senza rumore)
+scala come $O(t^2/N)$ --- decresce con $N$.
+
+\section{Perché conta l'ordine di transpilazione}
+
+Il singolo passo di Trotter viene transpilato \textbf{una sola volta} al
+suo costo minimo (3 CNOT), poi il blocco già compilato è composto $N$
+volte. \textbf{Mai} ritranspilare l'intero circuito assemblato: il
+transpilatore fondrebbe gli $N$ passi in un unico blocco a costo
+costante, cancellando la dipendenza da $N$ che è l'oggetto stesso di
+questo studio.
+
+\section{L'osservabile: fedeltà rispetto allo stato bersaglio fisico}
+
+\begin{keyeq}
+\centering
+$\ket{\psi_\text{target}(t)} = e^{-iHt}\ket{\psi_0^\text{esatto}}, \qquad
+F(N) = \bra{\psi_\text{target}(t)}\rho_N\ket{\psi_\text{target}(t)}$
+\end{keyeq}
+dove $\rho_N$ è lo stato ottenuto da: preparazione VQE (VQE con termine
+DM sotto rumore) $\to$ $N$ passi di Trotter rumorosi. Questa singola
+quantità impacchetta tre contributi: la preparazione (costante in $N$),
+l'errore di Trotter (decresce con $N$), il rumore di gate accumulato
+(cresce con $N$).
+
+\section{Verifica indipendente: circuito Qiskit contro potenza di matrice}
+\label{sec:cross-check-numpy}
+
+Prima di fidarsi della curva $F(N)$, un controllo che non passi dal
+circuito Qiskit stesso --- per escludere che un bug nella costruzione
+del circuito (per esempio nell'ordine dei blocchi, o nel segno di
+$H_2$) produca comunque una curva plausibile ma sbagliata. A rumore
+nullo, l'evoluzione di Trotter si può calcolare anche per pura potenza
+di matrice in \texttt{numpy}, senza passare da nessun oggetto Qiskit:
+\begin{keyeq}
+\centering
+$\ket{\psi_N} = \Big(e^{-iH_2\tau}e^{-iH_1\tau}\Big)^N \ket{\psi_\text{VQE}},
+\qquad \tau=t/N$
+\end{keyeq}
+applicata direttamente allo stato $\ket{\psi_\text{VQE}}$ (le ampiezze
+dell'ansatz VQE, estratte una sola volta da Qiskit come vettore, poi mai
+più toccate da Qiskit).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+$\boldsymbol{N}$ & \textbf{Circuito Qiskit} & \textbf{Potenza di matrice (numpy)}\\
+\midrule
+$8$ & $0.9454850$ & $0.9454850$\\
+$20$ & $0.9921835$ & $0.9921835$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Coincidenza esatta (a precisione mostrata) fra i due cammini di calcolo,
+completamente indipendenti --- uno passa da un circuito quantistico
+simulato, l'altro da una moltiplicazione di matrici $4\times4$ pura.
+\end{okbox}
+
+\section{Il ruolo del rumore: confronto diretto rumore nullo/rumoroso}
+\label{sec:confronto-rumore}
+
+La tabella seguente mostra $F(N)$ nei due casi fianco a fianco, per
+rendere esplicito \emph{perché} serva il rumore perché esista un
+$N^*$ finito.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$\boldsymbol{N}$ & $\boldsymbol{F}$ \textbf{(rumore nullo)} & $\boldsymbol{F}$ \textbf{(\texttt{ibm\_torino})} & \\
+\midrule
+$1$ & $0.7799372$ & $0.7567291$ & \\
+$2$ & $0.4776280$ & $0.4624084$ & \\
+$5$ & $0.8323751$ & $0.7560090$ & \\
+$8$ & $0.9454850$ & $0.8177249$ & $\approx N^*$\\
+$10$ & $0.9666876$ & $0.8087205$ & \\
+$20$ & $0.9921835$ & $0.7097565$ & \\
+$40$ & $0.9980771$ & $0.5427382$ & \\
+$80$ & $0.9995212$ & $0.3567462$ & \\
+$160$ & $0.9998804$ & $0.2686760$ & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Il confronto rende visibile il compromesso}
+Senza rumore, $F(N)\to1$ al crescere di $N$ --- puro errore di Trotter,
+in diminuzione monotona per $N\gtrsim5$: più passi, sempre meglio, nessun
+compromesso, nessun massimo. Con il rumore di riferimento, la stessa
+curva smette di crescere oltre $N=8$ e comincia a scendere: è
+\emph{solo} il rumore di gate accumulato a creare il massimo finito
+$N^*=8$ --- senza rumore l'ottimo sarebbe $N\to\infty$.
+\end{okbox}
+
+\section{Risultato: la curva \texorpdfstring{$F(N)$}{F(N)} e \texorpdfstring{$N^*$}{N*}}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.72\linewidth]{figure/fig_passo3_F_vs_N.pdf}
+\caption{\textit{Fedeltà $F(N)$ rispetto allo stato bersaglio fisico, in
+funzione del numero di passi di Trotter, a rumore di riferimento
+(\texttt{ibm\_torino}). Crescita rapida per $N$ piccolo (l'errore di
+Trotter domina), massimo a $N^*=8$, decrescita lenta per $N$ grande (il
+rumore di gate accumulato domina).}}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$N^*$ & $8$\\
+$F(N^*)$ & $0.817725$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.68\linewidth]{figure/fig_passo3_zoom_minimo.pdf}
+\caption{\textit{Zoom sulla regione non perturbativa, $N=1$ a $8$. Il
+minimo (non il semplice calo atteso) è a $N=3$, identico a rumore nullo
+e a rumore acceso --- prova diretta che è un effetto di Trotter puro,
+non un artefatto del rumore o della simulazione.}}
+\end{figure}
+
+\begin{okbox}{Un dettaglio da non ignorare: il vero minimo è a $N=3$}
+La curva non è monotona per $N$ piccolo: parte relativamente alta a
+$N=1$ ($F\approx0.78$), scende in modo sostanziale --- non lieve, la
+fedeltà quasi si dimezza --- fino a un minimo a $N=3$ ($F\approx0.40$),
+poi risale con continuità verso il massimo. Non è rumore numerico: lo
+stesso minimo, alla stessa posizione, compare identico anche a rumore
+nullo (colonna sinistra della Sez.~\ref{sec:confronto-rumore}) --- è il regime non ancora
+perturbativo dell'errore di Trotter ($\tau=t/N=2,1,0.67$ per
+$N=1,2,3$: tutt'altro che piccolo), non un artefatto della
+simulazione.
+\end{okbox}
+
+\section{Cosa non entra in questa fedeltà}
+
+Il readout non compare in questa metrica: è una fedeltà fra stati
+(operatore densità contro stato puro), non una misura di un osservabile
+via ancilla --- il readout entrerà per la prima volta al passo
+successivo (correlatori dinamici), dove la quantità osservata passa
+attraverso una misura reale.
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Il compromesso Trotter/rumore trovato qui ($N^*=8$) non è universale:
+dipende da $t$, dal punto di lavoro fisico, e dal livello di rumore ---
+lo si vedrà esplicitamente nello scan sui parametri di rumore, dove
+$N^*$ si sposta al variare di $\varepsilon_{1q},\varepsilon_{2q}$. Il
+passo successivo (correlatori dinamici) userà lo stesso principio
+(Trotter per l'evoluzione, transpilazione a blocchi mai ricomposta per
+intero) ma su un circuito diverso --- un test di Hadamard con ancilla,
+non una semplice preparazione più evoluzione --- e troverà un $N^*$
+diverso ($N^*=5$, non $8$): la posizione del compromesso dipende dal
+circuito specifico, un fatto da verificare di nuovo lì, non da assumere
+per analogia da qui.
+
+\begin{okbox}{Sintesi in una riga}
+Il compromesso Trotter/rumore ha un ottimo netto a $N^*=8$, con un
+regime non perturbativo visibile a $N$ piccolissimo --- entrambi fatti
+verificati numericamente, non solo attesi qualitativamente.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{trotter\_rumoroso\_dimero.py}, questo documento.
+
+\end{document}

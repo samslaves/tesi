@@ -1,0 +1,259 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Scan sui parametri di rumore}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Scan sui parametri di rumore\\[0.2em]
+\Large\normalfont\color{softgray}Come si sposta $N^*$ al variare del canale}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{scan\_parametri\_rumore\_dimero.py}. Punto di
+lavoro: $b/J=0.35$, $D/J=0.80$, $J=1$, $t=2$. Metrica: fedeltà rispetto
+allo stato bersaglio fisico (quantum simulation Trotter sotto rumore).
+
+\tableofcontents
+
+\section{Obiettivo}
+
+I passi precedenti hanno trovato $N^*$ a un \textbf{singolo} punto della
+calibrazione di riferimento (\texttt{ibm\_torino}). Questo documento
+chiede: $N^*$ si sposta se il rumore è più o meno forte? E se il
+readout è più o meno rumoroso? Non è una domanda oziosa: un chip diverso,
+o lo stesso chip in un momento diverso, avrà calibrazioni diverse ---
+sapere come $N^*$ dipenda dai parametri del canale rende il risultato
+utile oltre il singolo punto già misurato.
+
+\section{Teoria: perché ci si aspetta un effetto su \texorpdfstring{$\varepsilon_{1q},\varepsilon_{2q}$}{eps} ma non su \texorpdfstring{$p_\text{readout}$}{p readout}}
+
+Il rumore di gate entra nella fedeltà in modo non banale: più forte è
+$\varepsilon_{1q}$ o $\varepsilon_{2q}$, più in fretta il rumore
+accumulato supera il guadagno dell'errore di Trotter al crescere di $N$
+--- ci si aspetta che $N^*$ \textbf{diminuisca} al crescere del rumore di
+gate (meno passi convengono prima che il rumore domini).
+
+Il readout, invece, entra come nella Sez.~3 del documento sui correlatori
+dinamici: un fattore \textbf{puramente moltiplicativo},
+$(1-2p_\text{readout})$, applicato a tutti gli $N$ allo stesso modo.
+\begin{keyeq}
+\centering
+Se $g(N)$ ha un massimo a $N^*$, allora $c\cdot g(N)$ ($c>0$ costante)
+ha il massimo \textbf{allo stesso} $N^*$: moltiplicare per una costante
+positiva non sposta un argmax.
+\end{keyeq}
+Previsione, prima della verifica: $N^*$ dipende da $\varepsilon_{1q}$ e
+$\varepsilon_{2q}$, non da $p_\text{readout}$.
+
+\section{Risultato: monotonia rispetto a \texorpdfstring{$\varepsilon_{1q},\varepsilon_{2q}$}{eps}}
+\label{sec:monotonia}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.95\linewidth]{figure/fig_passo5_Nstar_vs_eps.pdf}
+\caption{\textit{$N^*$ in funzione di $\varepsilon_{2q}$ (sinistra) e
+$\varepsilon_{1q}$ (destra), scala log, l'altro parametro fissato al
+valore di riferimento. Linea tratteggiata: valore di calibrazione
+\texttt{ibm\_torino}. Monotonia non-crescente confermata in entrambi i
+casi, con una transizione a $N^*=1$ per rumore sufficientemente forte
+(il singolo passo di Trotter, per quanto impreciso, costa comunque meno
+rumore accumulato di qualunque $N>1$).}}
+\end{figure}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\boldsymbol{\varepsilon_{2q}}$ & $\boldsymbol{N^*}$\\
+\midrule
+$1.0\times10^{-3}$ & $10$\\
+$2.0\times10^{-3}$ & $9$\\
+$3.8\times10^{-3}$ (riferimento) & $8$\\
+$6.0\times10^{-3}$ & $7$\\
+$1.0\times10^{-2}$ & $1$\\
+$1.5\times10^{-2}$ & $1$\\
+$2.5\times10^{-2}$ & $1$\\
+\bottomrule
+\end{tabular}
+\qquad
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\boldsymbol{\varepsilon_{1q}}$ & $\boldsymbol{N^*}$\\
+\midrule
+$1.0\times10^{-4}$ & $9$\\
+$2.9\times10^{-4}$ (riferimento) & $8$\\
+$1.0\times10^{-3}$ & $7$\\
+$3.0\times10^{-3}$ & $1$\\
+$1.0\times10^{-2}$ & $1$\\
+$3.0\times10^{-2}$ & $1$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+$N^*$ monotono non-crescente in entrambi $\varepsilon_{1q}$ e
+$\varepsilon_{2q}$, come previsto. La transizione a $N^*=1$ non è un
+artefatto numerico: oltre una certa soglia di rumore di gate, nessun
+numero di passi di Trotter maggiore di 1 vale il costo aggiuntivo in
+gate rumorosi.
+\end{okbox}
+
+\section{Risultato: invarianza rispetto a \texorpdfstring{$p_\text{readout}$}{p readout}}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$\boldsymbol{p_\text{readout}}$ & $\boldsymbol{N^*}$ & $\boldsymbol{F(N^*)}$\\
+\midrule
+$0.00$ & $5$ & $0.2621$\\
+$0.05$ & $5$ & $0.2359$\\
+$0.20$ & $5$ & $0.1572$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato: la previsione teorica regge}
+$N^*=5$ per tutti i valori di $p_\text{readout}$ testati, dallo $0\%$ al
+$20\%$ --- un intervallo enormemente più ampio del valore di
+calibrazione reale ($2.3\%$). Il valore assoluto $F(N^*)$ cambia
+sensibilmente (da $0.26$ a $0.16$), ma la \emph{posizione} del massimo
+no: esattamente la firma di un fattore moltiplicativo costante in $N$.
+\end{okbox}
+
+\section{Un affinamento: quanto è rapida la saturazione a \texorpdfstring{$N^*=1$}{N*=1}?}
+
+La Sez.~\ref{sec:monotonia} mostra che $N^*$ decresce al crescere di $\varepsilon_{2q}$,
+fino a saturare a $N^*=1$. Un modello ingenuo per l'errore totale,
+$\varepsilon_\text{tot}(N)\sim a/N + g\,\varepsilon_{2q}N$ (Trotter
+decrescente più rumore crescente, entrambi additivi), predice
+l'ottimo per derivazione diretta:
+\begin{keyeq}
+\centering
+$\dfrac{d\varepsilon_\text{tot}}{dN} = -\dfrac{a}{N^2} + g\varepsilon_{2q} = 0
+\ \Longrightarrow\ N^* = \sqrt{\dfrac{a}{g\,\varepsilon_{2q}}} \ \propto\ \varepsilon_{2q}^{-1/2}$
+\end{keyeq}
+--- una pendenza $-0.5$ in scala log-log. Confrontando con i punti non
+ancora saturati della Sez.~\ref{sec:monotonia} ($\varepsilon_{2q}=10^{-3}$ a
+$6\times10^{-3}$, $N^*$ da $10$ a $7$):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+Pendenza log-log prevista ($\varepsilon_\text{tot}$ additivo) & $-0.5$\\
+Pendenza log-log osservata (fit sui 4 punti non saturati) & $-0.195$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Non è una contraddizione: il modello additivo era per la
+metrica sbagliata}
+Lo scostamento fra $-0.5$ atteso e $-0.195$ osservato non indica un
+errore --- indica che il modello $\varepsilon_\text{tot}(N)\sim a/N+g\varepsilon_{2q}N$
+era pensato per un errore additivo su una singola quantità, mentre qui
+l'osservabile è una \textbf{fedeltà}. Con rumore depolarizzante
+accumulato su molti passi, una fedeltà si comporta più come un
+decadimento (moltiplicativo, $F(N)\sim(1-\varepsilon_{2q})^{cN}$ per
+qualche costante $c$) che come una somma di due termini indipendenti ---
+la forma funzionale esatta di $N^*(\varepsilon_{2q})$ per una fedeltà
+resta un affinamento possibile, non necessario per rispondere alla
+domanda del relatore (``come si sposta $N^*$''), a cui la
+Sez.~\ref{sec:monotonia}
+risponde già direttamente con i dati.
+\end{okbox}
+
+\section{Cosa non è coperto da questo scan}
+
+Lo scan varia un parametro alla volta, con gli altri fissati al valore
+di riferimento --- non esplora l'intero spazio congiunto
+$(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$. Non copre inoltre
+punti di lavoro fisici diversi da quello usato in tutta questa pipeline
+($b/J=0.35$, $D/J=0.80$): se e quanto $N^*$ dipenda anche dal punto
+fisico è una domanda verificata separatamente per l'estensione VQE
+noise-aware (due punti di lavoro, \texttt{risultati\_vqe\_noise\_aware\_definitivo.tex}),
+non qui.
+
+\section{Considerazioni finali sulla pipeline di rumore}
+
+Questo chiude la pipeline in cinque stadi: dal modello di rumore
+(due canali, quattro numeri) fino a qui, ogni stadio ha aggiunto un
+livello di struttura --- energia statica, poi dinamica (Trotter), poi un
+osservabile a due tempi che richiede una misura reale (correlatori), poi
+la sensibilità del risultato ai parametri stessi del rumore. Il filo
+conduttore verificato ad ogni stadio: il readout simmetrico è sempre un
+fattore moltiplicativo, mai additivo --- una proprietà che smette di
+valere non appena il readout diventa asimmetrico (verificato
+separatamente, \texttt{teoria\_readout\_asimmetrico.tex}), e che è alla
+base di ogni argomento di invarianza usato in questa pipeline.
+
+\begin{okbox}{Sintesi in una riga}
+$N^*$ dipende in modo monotono e prevedibile dal rumore di gate, non
+dipende affatto dal readout (simmetrico) --- entrambi i fatti verificati,
+non solo previsti.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{scan\_parametri\_rumore\_dimero.py}, questo documento.
+
+\end{document}

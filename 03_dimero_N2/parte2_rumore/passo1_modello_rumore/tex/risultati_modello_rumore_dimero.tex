@@ -1,0 +1,320 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Il modello di rumore per il dimero}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Il modello di rumore per il dimero\\[0.2em]
+\Large\normalfont\color{softgray}Canale depolarizzante, errore di lettura, calibrazione reale}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{noise\_model\_dimero.py}. Derivazione completa in
+\texttt{teoria\_modello\_rumore.tex} (qui richiamate solo le formule
+essenziali). Nessun punto di lavoro specifico: questo è il modello di
+rumore condiviso da tutti gli stadi successivi della pipeline.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Prima di poter dire quanto un risultato VQE, una simulazione di Trotter o
+un correlatore dinamico degradino sotto rumore, serve un modello di
+rumore concreto: quali canali includere, con quali parametri, calibrati
+su cosa. Questo documento fissa quella base, condivisa da tutti gli
+stadi a valle (VQE con termine DM sotto rumore, quantum simulation
+Trotter sotto rumore, correlatori dinamici sotto rumore, scan sui
+parametri di rumore).
+
+Il relatore ha confermato esplicitamente (\texttt{domande\_relatore.md},
+sez.~12) lo scope: \textbf{due soli canali}, errore di gate
+(depolarizzante, 1 e 2 qubit) ed errore di lettura (readout, simmetrico
+come primo passo). $T_1/T_2$ esclusi per decisione esplicita --- non
+un'omissione, una scelta di scope dichiarata.
+
+\section{Il canale depolarizzante: derivazione essenziale}
+
+Un canale depolarizzante a $n$ qubit ($d=2^n$) sostituisce lo stato con
+una miscela fra lo stato originale e lo stato massimamente misto:
+\begin{keyeq}
+\centering
+$\mathcal{E}(\rho) = (1-\lambda)\,\rho + \lambda\,\dfrac{\mathbf{1}}{d}$
+\end{keyeq}
+dove $\lambda\in[0,1]$ è il parametro del canale in Qiskit Aer. Le
+calibrazioni pubblicate (randomized benchmarking) non riportano $\lambda$
+direttamente, ma l'\textbf{errore medio di gate} $\varepsilon$ ---
+la probabilità media che il gate produca un risultato diverso da quello
+ideale, mediata su tutti gli stati di ingresso. Il legame fra i due,
+derivato in \texttt{teoria\_modello\_rumore.tex}, è
+\begin{keyeq}
+\centering
+$\varepsilon = \lambda\,\dfrac{d-1}{d} \quad\Longrightarrow\quad
+\lambda_{1q} = 2\,\varepsilon_{1q} \ \ (d=2), \qquad
+\lambda_{2q} = \dfrac{4}{3}\,\varepsilon_{2q} \ \ (d=4)$
+\end{keyeq}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.62\linewidth]{figure/fig_depolarizzazione_bloch.pdf}
+\caption{\textit{Contrazione del vettore di Bloch, $1-\lambda$, in
+funzione di $\lambda$. Ai valori di calibrazione di riferimento (linee
+tratteggiate) la contrazione è piccola ($<1\%$) ma non nulla --- l'intero
+punto della pipeline di rumore è misurare quanto questo piccolo effetto,
+accumulato su molti gate, degradi i risultati a valle.}}
+\end{figure}
+
+\section{Errore di lettura}
+
+Il readout simmetrico è descritto da un solo parametro $p$: la
+probabilità di leggere il risultato sbagliato è la stessa in entrambe le
+direzioni, $0\to1$ e $1\to0$. La correzione sull'osservabile
+$\langle Z\rangle$ --- derivata per sostituzione diretta nella
+distribuzione di probabilità letta, dettagli in
+\texttt{teoria\_modello\_rumore.tex} --- è
+\begin{keyeq}
+\centering
+$\langle Z\rangle_\text{readout} = (1-2p)\,\langle Z\rangle_\text{ideale}$
+\end{keyeq}
+un fattore puramente moltiplicativo. (Il caso $p_{01}\neq p_{10}$,
+asimmetrico, è trattato separatamente in
+\texttt{teoria\_readout\_asimmetrico.tex}: introduce un termine additivo
+che complica questa semplice proporzionalità.)
+
+\section{Calibrazione: valori di riferimento}
+
+\begin{keyeq}[title={Fonte citata}]
+\centering
+J.~P.~T.~Stenger, G.~Bazargan, N.~T.~Bronn, D.~Gunlycke, \emph{``Method
+for simulating open-system dynamics using mid-circuit measurements on a
+quantum computer''}, arXiv:2504.15187 (2025) --- Appendice B, mediane
+pubblicate per \texttt{ibm\_torino} (IBM Heron r1, 133 qubit).
+\end{keyeq}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Canale} & \textbf{Gate di riferimento} & \textbf{Valore mediano}\\
+\midrule
+Errore di gate, 1 qubit & \texttt{sx} & $\varepsilon_{1q}=2.9\times10^{-4}$\\
+Errore di gate, 2 qubit & \texttt{CZ} & $\varepsilon_{2q}=3.8\times10^{-3}$\\
+Errore di lettura & --- & $p_\text{readout}=2.3\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Nota di modellazione, dichiarata esplicitamente}
+Il gate nativo a 2 qubit di \texttt{ibm\_torino} è il CZ, mentre il
+circuito di questa tesi è scritto nella base $\{rz,sx,x,cx\}$. Si usa il
+valore di errore del CZ come rappresentativo dell'ordine di grandezza
+dell'errore di gate a 2 qubit --- lo stesso approccio generico richiesto
+dal relatore (\emph{"usa dei valori tipici... guardando qualche chip di
+riferimento"}), non una replica esatta dell'hardware. Lo scan sui
+parametri di rumore copre comunque un intorno di questi valori, non solo
+il punto singolo.
+\end{okbox}
+
+\subsection{Perché il valore del CZ è una scelta giustificata, non solo tipica}
+
+L'argomento è più solido di un semplice ``stesso ordine di grandezza fra
+gate simili'': il CNOT e il CZ sono legati da un'identità circuitale
+\textbf{esatta}, non da un'approssimazione,
+\begin{keyeq}
+\centering
+$\text{CNOT} = (\mathbb{1}\otimes H)\cdot\text{CZ}\cdot(\mathbb{1}\otimes H)$
+\end{keyeq}
+Il CZ è il gate nativo di \texttt{ibm\_torino}: fisicamente, l'hardware
+realizza un'interazione a due qubit che \emph{è} il CZ, non il CNOT.
+Quando il transpilatore deve produrre un CNOT logico su questo hardware,
+genera esattamente questa sequenza --- due Hadamard (gate a 1 qubit,
+gia' inclusi separatamente in $\varepsilon_{1q}$) attorno al CZ nativo.
+La parte difficile, l'interazione a due qubit dove si concentra la
+maggior parte dell'errore, è la \emph{stessa identica operazione fisica}
+in entrambi i casi --- non un'analogia fra gate della stessa famiglia,
+lo stesso gate con un cambio di base attorno.
+
+\paragraph{Il calcolo, per esteso.} Nella base
+$\{\ket{00},\ket{01},\ket{10},\ket{11}\}$,
+\begin{keyeq}
+\centering
+$\text{CZ} = \begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&1&0\\0&0&0&-1\end{pmatrix},
+\qquad
+\mathbb{1}\otimes H = \dfrac{1}{\sqrt2}\begin{pmatrix}1&1&0&0\\1&-1&0&0\\0&0&1&1\\0&0&1&-1\end{pmatrix}$
+\end{keyeq}
+Il prodotto $(\mathbb{1}\otimes H)\cdot\text{CZ}\cdot(\mathbb{1}\otimes H)$
+agisce a blocchi $2\times2$ sul secondo qubit, condizionato al valore del
+primo: sul blocco condizionato a $\ket0$ si ha $H\cdot\mathbb{1}\cdot H=\mathbb{1}$
+(l'identità coniugata da $H$ resta l'identità); sul blocco condizionato a
+$\ket1$ si ha $H\cdot Z\cdot H=X$ --- l'identità standard di coniugazione
+di Pauli tramite Hadamard, verificabile da
+$H=\frac{1}{\sqrt2}\begin{pmatrix}1&1\\1&-1\end{pmatrix}$ per sostituzione
+diretta. Il risultato è
+\begin{keyeq}
+\centering
+$(\mathbb{1}\otimes H)\cdot\text{CZ}\cdot(\mathbb{1}\otimes H)
+= \begin{pmatrix}1&0&0&0\\0&1&0&0\\0&0&0&1\\0&0&1&0\end{pmatrix} = \text{CNOT}$
+\end{keyeq}
+--- verificato anche numericamente (moltiplicazione matriciale diretta),
+scarto dalla forma esatta del CNOT: $2.2\times10^{-16}$ (precisione
+macchina, zero per costruzione algebrica, non una coincidenza numerica).
+
+\begin{okbox}{Il residuo di approssimazione, dichiarato con onestà}
+Due cose che questa identità non chiude del tutto:
+\begin{itemize}[leftmargin=1.3em,itemsep=0.15em]
+\item il costo aggiuntivo dei due Hadamard, $\sim2\varepsilon_{1q}\approx6\times10^{-4}$,
+sopra $\varepsilon_{2q}=3.8\times10^{-3}$ --- un aumento relativo
+$\sim15\%$, non trascurabile ma nemmeno un ordine di grandezza;
+\item il randomized benchmarking misura l'errore medio del CZ isolato:
+non è un teorema che lo stesso valore si trasferisca invariato al CNOT
+sintetizzato, solo un'ipotesi ragionevole data l'identità esatta sopra.
+\end{itemize}
+
+\paragraph{Da dove viene $2\varepsilon_{1q}$.} Non è una formula esatta,
+è una stima al prim'ordine. Il randomized benchmarking assegna a ogni
+gate una probabilità di errore $\varepsilon$ (la probabilità che il gate
+applicato non sia quello ideale). Per due gate \textbf{indipendenti} in
+sequenza (i due Hadamard), la probabilità che almeno uno fallisca è
+\begin{keyeq}
+\centering
+$P(\text{almeno un errore}) = 1-(1-\varepsilon_{1q})^2 = 2\varepsilon_{1q}-\varepsilon_{1q}^2$
+\end{keyeq}
+Con $\varepsilon_{1q}=2.9\times10^{-4}$, il termine quadratico è
+$\varepsilon_{1q}^2\approx8.4\times10^{-8}$ --- quattro ordini di
+grandezza più piccolo del termine lineare $2\varepsilon_{1q}\approx5.8\times10^{-4}$,
+quindi trascurabile: da qui l'approssimazione
+$P(\text{almeno un errore})\approx2\varepsilon_{1q}$. Il rapporto rispetto
+a $\varepsilon_{2q}=3.8\times10^{-3}$ dà l'aumento relativo dichiarato,
+$5.8\times10^{-4}/3.8\times10^{-3}\approx15\%$.
+\end{okbox}
+La formulazione cauta (``valore rappresentativo dell'ordine di
+grandezza'') resta comunque quella corretta da riportare: soddisfa il
+livello di rigore richiesto dal relatore senza sovra-vendere una
+giustificazione che, pur solida, non è un calcolo esatto end-to-end.
+
+\section{Verifica}
+
+Costruito il \texttt{NoiseModel} con \texttt{build\_noise\_model()} ai
+valori di riferimento:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$\varepsilon_{1q}$ & $2.9000\times10^{-4}$\\
+$\varepsilon_{2q}$ & $3.8000\times10^{-3}$\\
+$p_\text{readout}$ & $2.3000\times10^{-2}$\\
+$\lambda_{1q}=2\varepsilon_{1q}$ & $5.8000\times10^{-4}$\\
+$\lambda_{2q}=\frac{4}{3}\varepsilon_{2q}$ & $5.0667\times10^{-3}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+I gate di base $\{rz,sx,x\}$ portano il canale a 1 qubit ($\lambda_{1q}$);
+il \texttt{cx} porta il canale a 2 qubit ($\lambda_{2q}$); la
+\texttt{measure} porta l'errore di lettura --- struttura del
+\texttt{NoiseModel} verificata via \texttt{noise\_model.py} stesso
+(elenco delle istruzioni rumorose stampato a schermo, coincide con
+quanto dichiarato: \texttt{['rz','sx','x','cx','measure']}).
+\end{okbox}
+
+\section{Cosa non entra in questo modello}
+
+Esplicito, per non lasciarlo implicito (stesso principio applicato in
+tutte le estensioni successive):
+\begin{itemize}[leftmargin=1.3em,itemsep=0.2em]
+\item $T_1/T_2$ (rilassamento e decoerenza continua durante il circuito)
+--- decisione esplicita del relatore, non un'omissione tecnica.
+\item Correlazioni fra qubit (crosstalk di gate o di lettura): ogni
+canale è applicato indipendentemente qubit per qubit (o coppia per
+coppia per il \texttt{cx}).
+\item Asimmetria del readout ($p_{01}\neq p_{10}$): trattata come
+estensione separata, non nel modello di base.
+\item Deriva temporale della calibrazione: un solo punto nel tempo
+(mediane pubblicate), non un modello dipendente dal momento
+dell'esecuzione.
+\end{itemize}
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Il modello è deliberatamente minimale: due canali, quattro numeri. Questa
+scelta ha una conseguenza diretta sul passo successivo (VQE con termine
+DM sotto rumore): l'unico modo in cui il rumore entra è tramite il
+\texttt{NoiseModel} costruito qui, applicato durante la simulazione a
+operatore densità --- nessun altro canale, nessun parametro nascosto.
+Chi legge i risultati del passo successivo deve sapere che ``rumoroso''
+significa, in questa tesi, esattamente questi due canali a questi
+valori (o a quelli esplicitamente scansionati) --- non una replica
+generica di ``un computer quantistico rumoroso''.
+
+\begin{okbox}{Sintesi in una riga}
+Due canali (depolarizzante 1q/2q, readout simmetrico), calibrati sulle
+mediane pubblicate di \texttt{ibm\_torino}, condivisi da tutta la
+pipeline a valle.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{noise\_model\_dimero.py}, questo documento. Derivazione completa
+delle formule in \texttt{teoria\_modello\_rumore.tex}.
+
+\end{document}

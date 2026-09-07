@@ -378,3 +378,39 @@ documenti di risultati dedicati per ciascun passo
 documento finale di tesi; valorizzare il confronto RBS vs $W$ (Parte 1,
 `scelta_ansatz_RBS_vs_W.tex`) come sezione metodologica a sé, come da nota
 precedente in questo stesso file.
+
+## Aggiornamento 6 settembre 2026 — Parte 2 dimero chiusa e comunicata; topologia del trimero confermata
+
+Nota terminologica: i documenti della Parte 2 sul dimero sono stati
+riorganizzati e rinominati in questa sessione (non più
+`risultati_passo{1..5}_*.tex`, sostituiti con nomi che indicano
+l'argomento esplicito — `risultati_modello_rumore_dimero.tex`,
+`risultati_vqe_dm_rumoroso_dimero.tex`,
+`risultati_trotter_rumoroso_dimero.tex`,
+`risultati_correlatori_rumorosi_dimero.tex`,
+`risultati_scan_parametri_rumore_dimero.tex`,
+`panoramica_pipeline_rumore_dimero.tex`), con contenuto riverificato da
+zero e approfondito rispetto alle versioni precedenti. I vecchi file
+sono stati rimossi dal Project.
+
+**Aggiunte rispetto a quanto registrato nell'aggiornamento precedente:**
+due estensioni facoltative completate — ottimizzazione ripetuta del VQE
+sotto rumore (nessun cambiamento misurabile su due metriche, due punti
+di lavoro, tutta la griglia di parametri di rumore) ed errore di lettura
+asimmetrico ($N^*$ invariante anche in quel caso, verificato non
+garantito dalla teoria). Dettaglio completo in `log_decisioni.md`.
+
+**Comunicato al relatore:** relazione dei risultati inviata
+(`relazione_rumore_dimero.docx`), riscontro positivo ("analisi molto
+interessante ed accurata").
+
+**Decisione presa:** Parte 2 sul trimero procede con la topologia
+**anello** (non la catena) — confermato dal relatore dopo una proposta
+motivata (circuito più semplice, meno gate, meno correlatori da
+verificare; la catena resta un'estensione possibile ma non prioritaria).
+
+**Prossimo passo:** Parte 2 (rumore) sul trimero ad anello — stessa
+pipeline già validata sul dimero (modello di rumore condiviso, VQE con
+DM sotto rumore, quantum simulation Trotter sotto rumore, correlatori
+dinamici sotto rumore, scan sui parametri), applicata all'ansatz
+$W$-2q.6 a 3 spin.

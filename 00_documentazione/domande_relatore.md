@@ -356,3 +356,23 @@ Due risultati che potrebbero interessargli in particolare:
 
 Non richiede una risposta; utile per orientare la discussione quando si
 passerà alla stesura del capitolo finale.
+
+## Domanda posta e risolta (6 settembre 2026) — topologia del trimero per il rumore
+
+**Domanda posta** (via email, insieme alla relazione sui risultati di
+Parte 2 sul dimero): quale topologia del trimero (anello o catena
+aperta) usare per la Parte 2 (rumore), dato che entrambe hanno la Parte
+1 completa.
+
+**Risposta del relatore:** nessuna preferenza particolare; scegliere
+quella con i risultati più interessanti nel caso senza rumore.
+
+**Scelta fatta e comunicata:** anello — motivata sia per il vantaggio
+pratico (ansatz più semplice, meno gate, meno correlatori indipendenti
+da verificare per via degli zeri strutturali di simmetria) sia
+dichiarando esplicitamente cosa si rimanda (il risultato più originale
+della catena, l'alternanza dei legami che cancella l'errore chirale di
+Trotter a costo zero). **Il relatore ha confermato: "va bene".**
+
+Domanda chiusa. Nessuna azione ulteriore richiesta prima di iniziare la
+Parte 2 sull'anello.

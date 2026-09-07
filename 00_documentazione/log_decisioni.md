@@ -4116,3 +4116,60 @@ visiva). Struttura di cartelle definitiva per
 definitivo, nota di continuità, figure) a un livello, i due documenti
 superati fuori dal Project (cancellati o archiviati localmente, a
 scelta dell'utente).
+
+## Sessione 6 settembre 2026 — relazione inviata al relatore, confermata la topologia per il rumore sul trimero
+
+Prodotta `relazione_rumore_dimero.docx` (Word, stile conforme alle
+relazioni precedenti — Times New Roman 11pt, tabelle a bordo sottile con
+intestazione grigia, variabili fisiche in corsivo lettera per lettera):
+solo risultati e conclusioni della pipeline di rumore sul dimero (modello
+di rumore, VQE con termine DM sotto rumore, quantum simulation Trotter
+sotto rumore, correlatori dinamici sotto rumore, scan sui parametri di
+rumore) più le due estensioni (ottimizzazione ripetuta del VQE sotto
+rumore, errore di lettura asimmetrico) — nessuna derivazione teorica,
+nessun riferimento al relatore o alle sue richieste, terminologia
+esplicita al posto di "Passo N". Inviata via email con una breve
+domanda di indirizzo per il seguito del lavoro.
+
+### Scambio con il relatore
+
+Prima risposta del relatore: *"Analisi molto interessante ed accurata.
+Intendi quale metrica? Userei sempre la fidelity."* — un fraintendimento:
+la domanda posta ("quale dei due modi?") riguardava la **topologia** del
+trimero (anello o catena), non la metrica; il relatore l'ha letta come
+riferita alla metrica, probabilmente perché la relazione mostra ovunque
+fedeltà e correlatore in parallelo. Chiarito via email: la domanda era
+sulla topologia, la metrica sarà la fedeltà come indicato.
+
+Risposta del relatore sulla topologia: *"Sulla topologia non ho
+preferenze particolari. Scegliamo quella che dava risultati più
+interessanti nel caso noiseless."* Confrontate le due topologie (Parte 1
+completa per entrambe, verificato):
+- **Anello**: genuinamente frustrato, fisica più riconoscibile
+  (letteratura di riferimento), ansatz più semplice (un solo giro di
+  blocchi $W$), zeri strutturali nei correlatori per simmetria — anche
+  **più veloce da estendere al rumore** (meno parametri, meno gate, meno
+  correlatori indipendenti da verificare).
+- **Catena aperta**: non frustrata (chiralità scalare esattamente nulla
+  su ogni autostato reale, dimostrato in generale), ma risultato più
+  originale — l'alternanza dei legami fra passi di Trotter cancella
+  l'errore chirale dominante a costo zero ($O(1/N^4)$ invece di
+  $O(1/N^2)$) — e ansatz più complesso (due giri di blocchi, 10
+  parametri).
+
+Proposto l'anello al relatore, motivando sia la scelta (circuito più
+semplice, meno gate, meno correlatori da verificare) sia cosa si lascia
+sul tavolo (il risultato più originale della catena), per trasparenza.
+**Il relatore ha risposto "va bene": confermato, si procede con
+l'anello.**
+
+### Stato e prossimo passo
+
+Parte 2 (rumore) sul dimero CHIUSA e comunicata al relatore, con
+riscontro positivo. Prossimo passo del progetto: Parte 2 (rumore) sul
+trimero, topologia **anello** — replicare la stessa pipeline già fatta
+per il dimero (modello di rumore condiviso, VQE con DM sotto rumore,
+quantum simulation Trotter sotto rumore, correlatori dinamici sotto
+rumore, scan sui parametri), questa volta su un sistema a 3 spin con
+ansatz $W$-2q.6. La catena aperta resta un'estensione possibile ma non
+prioritaria, se il tempo lo permetterà dopo l'anello.

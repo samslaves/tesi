@@ -1,0 +1,477 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Guida d'uso --- pacchetto riproducibile, rumore sul dimero}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\title{\vspace{-1.5em}\color{inkblue}Guida d'uso\\[0.2em]
+\Large\normalfont\color{softgray}Riprodurre la pipeline di rumore sul dimero in locale}
+\author{Pacchetto riproducibile --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+Questo pacchetto contiene tutto il codice necessario per riprodurre, da
+zero, ogni simulazione, ogni numero e ogni figura usati nei documenti
+sulla Parte 2 (rumore quantistico) del dimero --- senza dipendere da
+nessun file già calcolato: tutto si rigenera in locale. Ogni modulo e
+ogni funzione del pacchetto sono commentati esplicitando sia il loro
+ruolo all'interno del proprio file sia il loro ruolo nell'insieme della
+pipeline --- questa guida ne è la mappa, non la ripetizione.
+
+\tableofcontents
+
+\section{Struttura del pacchetto}
+
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}ll@{}}
+\code{codice/} & 16 moduli Python (mattoni + pipeline + estensioni)\\
+\code{dati/} & dati intermedi (\code{.npz}) generati dagli script 01--03\\
+\code{figure/} & le 15 figure finali, in PDF e PNG\\
+\code{genera\_figure/} & 13 script, uno o più per ciascuna figura\\
+\code{01\_genera\_dati\_vqe\_ideale.py} & primo script da eseguire\\
+\code{02\_genera\_dati\_vqe\_noise\_aware.py} & secondo script\\
+\code{03\_genera\_dati\_secondo\_punto.py} & terzo script (punto di lavoro alternativo)\\
+\code{esegui\_tutto.py} & esegue tutto in un solo comando\\
+\end{tabular}
+\end{keyeq}
+
+\subsection{I 16 moduli di \texttt{codice/}}
+
+{\footnotesize
+\begin{longtable}{@{}p{4.9cm}p{9.3cm}@{}}
+\toprule
+\textbf{File} & \textbf{Cosa fa} \\
+\midrule
+\endhead
+\raggedright\code{dimer\_exact.py} & Hamiltoniana e diagonalizzazione esatta --- il ``mattone zero'', sorgente unica per tutto il pacchetto \\
+\raggedright\code{vqe\_test2.py} & ansatz PMA-2q.3 e ottimizzazione VQE ideale (nessun rumore) \\
+\raggedright\code{circuito\_correlazioni\_\allowbreak dimero.py} & circuito di Hadamard test per i correlatori, a rumore nullo (versione con supporto preparazione VQE reale) \\
+\raggedright\code{noise\_model\_dimero.py} & costruzione del \code{NoiseModel} (canale depolarizzante + readout, calibrazione \code{ibm\_torino}) \\
+\raggedright\code{vqe\_dm\_rumoroso\_\allowbreak dimero.py} & VQE con termine DM sotto rumore (riuso dei parametri ideali) \\
+\raggedright\code{trotter\_rumoroso\_\allowbreak dimero.py} & quantum simulation (Trotter) sotto rumore \\
+\raggedright\code{correlatori\_rumorosi\_\allowbreak dimero.py} & correlatori dinamici sotto rumore (readout simmetrico) \\
+\raggedright\code{scan\_parametri\_rumore\_\allowbreak dimero.py} & scan di $N^*$ al variare di $\varepsilon_{1q},\varepsilon_{2q}$ \\
+\raggedright\code{vqe\_noise\_aware\_\allowbreak dimero.py} & estensione: ottimizzazione ripetuta del VQE sotto rumore \\
+\raggedright\code{verifica\_passo5\_\allowbreak noise\_aware.py} & estensione: verifica su tutta la griglia dello scan \\
+\raggedright\code{correlatori\_readout\_\allowbreak asimmetrico.py} & estensione: errore di lettura asimmetrico \\
+\raggedright\code{stile.py} & stile grafico condiviso da tutti gli script di figura \\
+\raggedright\code{validate\_correlatori\_\allowbreak rumorosi\_dimero.py} & controllo obbligatorio: limite rumore nullo, conteggio gate, formula readout \\
+\raggedright\code{validate\_scan\_parametri\_\allowbreak rumore\_dimero.py} & controllo obbligatorio: nessuna regressione, monotonia, invarianza da $p_\text{readout}$ \\
+\raggedright\code{validate\_vqe\_noise\_\allowbreak aware\_dimero.py} & controllo obbligatorio: 8 verifiche sull'estensione VQE noise-aware \\
+\raggedright\code{validate\_correlatori\_\allowbreak readout\_asimmetrico.py} & controllo obbligatorio: 4 verifiche sull'estensione readout asimmetrico \\
+\bottomrule
+\end{longtable}
+}
+
+\section{Prerequisiti}
+
+Testato con questa combinazione esatta di versioni (altre versioni
+recenti di Qiskit 2.x dovrebbero funzionare, ma non sono state
+verificate):
+
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}ll@{}}
+Python & 3.12.3\\
+qiskit & 2.5.2\\
+qiskit-aer & 0.17.2\\
+numpy & 2.4.4\\
+scipy & 1.17.1\\
+matplotlib & 3.10.8\\
+\end{tabular}
+\end{keyeq}
+
+Installazione consigliata (ambiente virtuale):
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}l@{}}
+\code{python3 -m venv venv}\\
+\code{source venv/bin/activate\ \ \ \# Windows: venv\textbackslash Scripts\textbackslash activate}\\
+\code{pip install qiskit qiskit-aer numpy scipy matplotlib}\\
+\end{tabular}
+\end{keyeq}
+
+\begin{okbox}{Nessuna installazione LaTeX richiesta}
+Le figure sono generate direttamente in PDF/PNG da matplotlib, senza
+passare da un motore di rendering matematico esterno
+(\code{mathtext.fontset: cm} di matplotlib, autosufficiente).
+\end{okbox}
+
+\section{Il modo più semplice: un solo comando}
+
+\begin{keyeq}
+\centering
+\code{cd pacchetto\_riproducibile}\\
+\code{python3 esegui\_tutto.py}
+\end{keyeq}
+
+Esegue in ordine: generazione dati (3 script), validazioni (4 script),
+tutte le 15 figure (13 script). Si ferma al primo errore, indicando
+esattamente quale fase e comando ha fallito.
+
+\begin{okbox}{Tempo stimato}
+10--20 minuti. Le fasi più lente sono gli script di figura che ripetono
+ottimizzazioni VQE a più valori di rumore.
+\end{okbox}
+
+Se tutto va a buon fine, l'ultima riga stampata è:
+\begin{keyeq}
+\centering
+\code{TUTTO COMPLETATO. 15 figure in figure/, dati in dati/.}
+\end{keyeq}
+
+\section{Passo per passo, con la mappa esatta delle dipendenze}
+
+Diciassette script in tutto (3 dati, 4 validazioni, 13 di figura).
+Invece di un elenco lineare, questa sezione li organizza per
+\textbf{onde di dipendenza reale} --- verificate leggendo ogni
+\code{np.load}/\code{np.savez} nel codice, non assunte. Alcune
+dipendenze sono meno ovvie del previsto: \code{03\_} non ha bisogno di
+\code{01\_}/\code{02\_} (calcola tutto da zero per il secondo punto), e
+la figura del secondo punto ha bisogno solo di \code{03\_}, non degli
+altri due script dati.
+
+\subsection{Onda 1 --- nessuna dipendenza}
+
+\begin{keyeq}[title={01\_genera\_dati\_vqe\_ideale.py}]
+\textbf{Ingresso}: nessuno.\\
+\textbf{Uscita}: \code{dati/ground\_state\_test2.npz} --- \code{b,J,D},
+\code{E0\_exact, psi0\_exact}, \code{vqe\_params} (3 parametri PMA-2q.3),
+\code{fidelity, E\_vqe}.\\
+\textbf{Chi lo consuma}: quasi tutto il resto del pacchetto (Onda 2) ---
+è il prerequisito più condiviso. Fanno eccezione solo \code{03\_} e le
+figure che dipendono esclusivamente da \code{03\_} (vedi sotto).\\
+\textbf{Valore atteso}: energia $\approx-3.57321145$, fedeltà $\approx1.0000000000$.\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 01\_genera\_dati\_vqe\_ideale.py}
+\end{keyeq}
+
+\begin{keyeq}[title={03\_genera\_dati\_secondo\_punto.py}]
+\textbf{Ingresso}: nessuno --- NON legge \code{ground\_state\_test2.npz}
+né \code{vqe\_noise\_aware\_result.npz}: ottimizza da zero sia il VQE
+ideale sia quello noise-aware, al secondo punto ($b/J=-0.18$, $D/J=1$).\\
+\textbf{Uscita}: \code{dati/ground\_state\_punto2.npz} (analogo del file
+di \code{01\_} ma per il secondo punto) e
+\code{dati/vqe\_noise\_aware\_punto2.npz} (analogo del file di \code{02\_}).\\
+\textbf{Chi lo consuma}: solo \code{genera\_fig\_secondo\_punto.py}.\\
+\textbf{Valori attesi}: $\Delta E\approx-2.56\times10^{-8}$,
+$N^*$ Trotter $8\to8$, $N^*$ correlatore $3\to3$.\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 03\_genera\_dati\_secondo\_punto.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_modello\_rumore.py}]
+\textbf{Ingresso}: nessuno --- figura puramente concettuale (contrazione
+del vettore di Bloch), nessun dato del progetto richiesto.\\
+\textbf{Uscita}: \code{figure/fig\_depolarizzazione\_bloch.pdf}.\\
+\textbf{Chi la consuma}: nessuno (punto di arrivo).\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 genera\_figure/genera\_fig\_modello\_rumore.py}
+\end{keyeq}
+
+\subsection{Onda 2 --- dipende SOLO da \texorpdfstring{\code{01\_}}{01\_} (ground\_state\_test2.npz)}
+
+\begin{keyeq}[title={02\_genera\_dati\_vqe\_noise\_aware.py}]
+\textbf{Ingresso}: \code{dati/ground\_state\_test2.npz} (\code{vqe\_params, psi0\_exact}).\\
+\textbf{Uscita}: \code{dati/vqe\_noise\_aware\_result.npz} ---
+\code{x\_noise\_aware}, \code{E\_noise\_aware, F\_noise\_aware},
+\code{E\_ideale\_su\_rumore, F\_ideale\_su\_rumore}, \code{cnot\_invarianza},
+dati del confronto sul correlatore (\code{N\_grid\_corr},
+\code{vals\_corr\_ideale/na}, \code{N\_star\_corr\_ideale/na}).\\
+\textbf{Chi lo consuma}: le 4 figure dell'Onda 3 (uniche che hanno
+bisogno anche di questo file, oltre a \code{01\_}).\\
+\textbf{Valori attesi}: $\Delta E\approx-1.16\times10^{-7}$,
+$\Delta F\approx+1.76\times10^{-8}$, $N^*$ del correlatore $5\to5$.\\
+\textbf{Comando} (dalla radice del pacchetto, dopo \code{01\_}):\\
+\code{python3 02\_genera\_dati\_vqe\_noise\_aware.py}
+\end{keyeq}
+
+\paragraph{I 4 controlli di validazione} Tutti e quattro leggono
+\textbf{solo} \code{ground\_state\_test2.npz} (copiato in
+\code{codice/}) --- nessuno tocca l'output di \code{02\_} o \code{03\_},
+nemmeno \code{validate\_vqe\_noise\_aware\_dimero.py} (che pure valida
+l'estensione noise-aware): ricalcola tutto da zero invece di leggere una
+cache. Nessuno produce file, solo un resoconto a schermo
+(\code{AssertionError} se un controllo fallisce); nessuno è consumato da
+altri script (sono tutti controlli terminali). Prerequisito comune per
+tutti e quattro, da fare una sola volta:\\
+\code{cp dati/ground\_state\_test2.npz codice/}\\
+\code{cd codice}
+
+\begin{keyeq}[title={validate\_correlatori\_rumorosi\_dimero.py}]
+\textbf{Comando}: \code{python3 validate\_correlatori\_rumorosi\_dimero.py}
+\end{keyeq}
+
+\begin{keyeq}[title={validate\_scan\_parametri\_rumore\_dimero.py}]
+\textbf{Comando}: \code{python3 validate\_scan\_parametri\_rumore\_dimero.py}
+\end{keyeq}
+
+\begin{keyeq}[title={validate\_vqe\_noise\_aware\_dimero.py}]
+\textbf{Comando}: \code{python3 validate\_vqe\_noise\_aware\_dimero.py}
+\end{keyeq}
+
+\begin{keyeq}[title={validate\_correlatori\_readout\_asimmetrico.py}]
+\textbf{Comando}: \code{python3 validate\_correlatori\_readout\_asimmetrico.py}\\
+Dopo l'ultimo controllo, torna alla radice: \code{cd ..}
+\end{keyeq}
+
+\paragraph{7 figure che dipendono solo da \texttt{01\_}} Ingresso comune
+per tutte e sette: \code{dati/ground\_state\_test2.npz} soltanto. Uscita:
+la rispettiva figura in \code{figure/}. Nessuna è consumata da altri
+script del pacchetto (punti di arrivo). Comandi, tutti dalla
+\textbf{radice} del pacchetto:
+
+\begin{keyeq}[title={genera\_fig\_vqe\_dm\_rumoroso.py $\to$ fig\_passo2\_scan\_eps2q}]
+\code{python3 genera\_figure/genera\_fig\_vqe\_dm\_rumoroso.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_trotter\_rumoroso.py $\to$ fig\_passo3\_F\_vs\_N, fig\_passo3\_zoom\_minimo}]
+\code{python3 genera\_figure/genera\_fig\_trotter\_rumoroso.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_correlatori\_rumorosi.py $\to$ fig\_passo4\_correlatore\_vs\_N}]
+\code{python3 genera\_figure/genera\_fig\_correlatori\_rumorosi.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_scan\_parametri.py $\to$ fig\_passo5\_Nstar\_vs\_eps}]
+\code{python3 genera\_figure/genera\_fig\_scan\_parametri.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_trappola\_transpilazione.py $\to$ fig\_bug\_conteggio\_gate}]
+\code{python3 genera\_figure/genera\_fig\_trappola\_transpilazione.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_scan\_eps2q\_confronto.py $\to$ fig\_scan\_eps2q\_confronto}]
+Confronta ideale e noise-aware, ma ottimizza il noise-aware fresco ad
+ogni valore di $\varepsilon_{2q}$ invece di leggere \code{02\_} --- per
+questo resta in questa onda e non nella successiva.\\
+\code{python3 genera\_figure/genera\_fig\_scan\_eps2q\_confronto.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_readout\_asimmetrico.py $\to$ fig\_correlatore\_N\_asimmetrico, fig\_Nstar\_vs\_rapporto}]
+\code{python3 genera\_figure/genera\_fig\_readout\_asimmetrico.py}
+\end{keyeq}
+
+\subsection{Onda 2' --- dipende SOLO da \texorpdfstring{\code{03\_}}{03\_}}
+
+\begin{keyeq}[title={genera\_fig\_secondo\_punto.py}]
+\textbf{Ingresso}: \code{dati/ground\_state\_punto2.npz} e
+\code{dati/vqe\_noise\_aware\_punto2.npz} --- NON tocca
+\code{ground\_state\_test2.npz} né \code{vqe\_noise\_aware\_result.npz}:
+è indipendente da \code{01\_} e \code{02\_}, dipende solo da \code{03\_}.\\
+\textbf{Uscita}: \code{figure/fig\_secondo\_punto\_confronto.pdf}.\\
+\textbf{Chi la consuma}: nessuno (punto di arrivo).\\
+\textbf{Comando} (dalla radice del pacchetto, dopo \code{03\_}):\\
+\code{python3 genera\_figure/genera\_fig\_secondo\_punto.py}
+\end{keyeq}
+
+\subsection{Onda 3 --- dipende da \texorpdfstring{\code{01\_}}{01\_} E \texorpdfstring{\code{02\_}}{02\_}}
+
+\paragraph{4 figure che confrontano ideale e noise-aware} Ingresso
+comune per tutte e quattro: \code{dati/ground\_state\_test2.npz}
+\textbf{e} \code{dati/vqe\_noise\_aware\_result.npz} --- le uniche
+figure di questo pacchetto che hanno davvero bisogno dell'output di
+\code{02\_}. Uscita: la rispettiva figura in \code{figure/}. Nessuna
+consumata da altri script. Comandi, dalla \textbf{radice} del pacchetto:
+
+\begin{keyeq}[title={genera\_fig\_F\_vs\_N\_confronto.py $\to$ fig\_F\_vs\_N\_confronto}]
+\code{python3 genera\_figure/genera\_fig\_F\_vs\_N\_confronto.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_correlatore\_confronto.py $\to$ fig\_correlatore\_noise\_aware\_confronto}]
+\code{python3 genera\_figure/genera\_fig\_correlatore\_confronto.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_robustezza\_multistart.py $\to$ fig\_robustezza\_multistart}]
+\code{python3 genera\_figure/genera\_fig\_robustezza\_multistart.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_griglia\_completa.py $\to$ fig\_passo5\_griglia\_completa}]
+\code{python3 genera\_figure/genera\_fig\_griglia\_completa.py}
+\end{keyeq}
+
+\subsection{Il grafo delle dipendenze, in breve}
+
+\begin{okbox}{Tre catene indipendenti, non una sola sequenza}
+\begin{itemize}[leftmargin=1.3em,itemsep=0.15em]
+\item \code{01\_} $\to$ (4 validate + 7 figure dirette) $\to$ \code{02\_} $\to$ (4 figure di confronto)
+\item \code{03\_} $\to$ \code{genera\_fig\_secondo\_punto.py} (catena separata, mai tocca \code{01\_}/\code{02\_})
+\item \code{genera\_fig\_modello\_rumore.py} (isolato, nessuna dipendenza)
+\end{itemize}
+\code{esegui\_tutto.py} le esegue comunque tutte in un ordine fisso
+(\code{01\_}, \code{02\_}, \code{03\_}, poi validazioni, poi tutte le
+figure in ordine alfabetico) --- più semplice da leggere nel log, anche
+se non tutte le dipendenze lo richiederebbero.
+\end{okbox}
+
+\subsection{Tutti i comandi, in un unico blocco (nell'ordine di \texttt{esegui\_tutto.py})}
+
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}l@{}}
+\code{cd pacchetto\_dimero\_rumoroso\_riproducibile}\\
+\code{python3 01\_genera\_dati\_vqe\_ideale.py}\\
+\code{python3 02\_genera\_dati\_vqe\_noise\_aware.py}\\
+\code{python3 03\_genera\_dati\_secondo\_punto.py}\\
+\code{cp dati/*.npz codice/}\\
+\code{cd codice}\\
+\code{python3 validate\_correlatori\_rumorosi\_dimero.py}\\
+\code{python3 validate\_scan\_parametri\_rumore\_dimero.py}\\
+\code{python3 validate\_vqe\_noise\_aware\_dimero.py}\\
+\code{python3 validate\_correlatori\_readout\_asimmetrico.py}\\
+\code{cd ..}\\
+\code{python3 genera\_figure/genera\_fig\_F\_vs\_N\_confronto.py}\\
+\code{python3 genera\_figure/genera\_fig\_correlatore\_confronto.py}\\
+\code{python3 genera\_figure/genera\_fig\_correlatori\_rumorosi.py}\\
+\code{python3 genera\_figure/genera\_fig\_griglia\_completa.py}\\
+\code{python3 genera\_figure/genera\_fig\_modello\_rumore.py}\\
+\code{python3 genera\_figure/genera\_fig\_readout\_asimmetrico.py}\\
+\code{python3 genera\_figure/genera\_fig\_robustezza\_multistart.py}\\
+\code{python3 genera\_figure/genera\_fig\_scan\_eps2q\_confronto.py}\\
+\code{python3 genera\_figure/genera\_fig\_scan\_parametri.py}\\
+\code{python3 genera\_figure/genera\_fig\_secondo\_punto.py}\\
+\code{python3 genera\_figure/genera\_fig\_trappola\_transpilazione.py}\\
+\code{python3 genera\_figure/genera\_fig\_trotter\_rumoroso.py}\\
+\code{python3 genera\_figure/genera\_fig\_vqe\_dm\_rumoroso.py}\\
+\end{tabular}
+\end{keyeq}
+
+Ciascuna validazione stampa un resoconto dettagliato con i valori
+attesi accanto a quelli calcolati, e termina con un errore
+(\code{AssertionError}) se un controllo fallisce --- non un semplice
+messaggio ignorabile.
+
+
+\section{Come sapere se un numero è quello giusto}
+
+Ogni script stampa a schermo il valore appena calcolato \textbf{accanto}
+al valore atteso (commento \code{\# atteso: ...} o riga di stampa
+dedicata) --- non serve confrontare a memoria con i documenti.
+
+\begin{warnbox}{Se un numero non coincide}
+Qualcosa nel tuo ambiente locale (versione di Qiskit, seed del
+generatore casuale, ordine di esecuzione) sta producendo un risultato
+diverso: fermati e confronta prima di proseguire, non ignorare lo
+scostamento.
+\end{warnbox}
+
+\section{Due insidie già trovate e corrette}
+
+\begin{warnbox}{Non transpilare mai il circuito intero per i passi di Trotter ripetuti}
+Se transpili l'intero circuito assemblato (ancilla + preparazione + $N$
+passi + misura) a un livello di ottimizzazione alto, Qiskit può
+riconoscere che gli $N$ passi identici formano un unico blocco e
+comprimerli in un circuito a costo costante --- cancellando
+silenziosamente la dipendenza da $N$ che è l'oggetto stesso dello
+studio. La soluzione già in uso ovunque in questo pacchetto: transpilare
+una volta il singolo passo, poi comporre il blocco già compilato $N$
+volte senza più transpilare.
+\end{warnbox}
+
+\begin{warnbox}{Alcune funzioni hanno il punto di lavoro fissato come costante di modulo}
+In particolare \code{vqe\_energia\_fedelta\_rumorosa()} (in
+\code{vqe\_dm\_rumoroso\_dimero.py}) e \code{vqe\_noise\_aware()} (in
+\code{vqe\_noise\_aware\_dimero.py}) costruiscono internamente
+l'Hamiltoniana usando \code{b}, \code{D}, \code{J} definiti in testa al
+modulo (il punto ``test 2''), non un argomento della funzione. Per
+lavorare a un punto diverso (come nello script
+\code{03\_genera\_dati\_secondo\_punto.py}) serve sovrascrivere
+esplicitamente quegli attributi di modulo \textbf{prima} di chiamare la
+funzione:
+\begin{center}
+\begin{tabular}{@{}l@{}}
+\code{import vqe\_noise\_aware\_dimero as vna\_module}\\
+\code{vna\_module.b, vna\_module.D, vna\_module.J = -0.18, 1.0, 1.0}\\
+\end{tabular}
+\end{center}
+Altrimenti l'ottimizzazione avviene silenziosamente sul punto di lavoro
+sbagliato, senza nessun errore --- solo numeri finali non corrispondenti
+a quelli attesi. Questo pacchetto lo fa già correttamente in
+\code{03\_genera\_dati\_secondo\_punto.py}; se scrivi un nuovo script per
+un terzo punto di lavoro, applica lo stesso schema.
+\end{warnbox}
+
+\section{Cosa NON è incluso in questo pacchetto}
+
+I documenti \code{.tex}/\code{.pdf} che usano queste figure (i cinque
+documenti della pipeline base, l'estensione VQE noise-aware,
+l'estensione readout asimmetrico) sono deliverable separati, già
+consegnati in precedenza --- questo pacchetto riproduce i
+\textbf{numeri e le figure}, non il testo che li commenta. I nomi dei
+file delle figure qui prodotte coincidono esattamente con quelli
+richiamati nei documenti (\code{\textbackslash includegraphics\{figure/nome.pdf\}}),
+quindi puoi copiare la cartella \code{figure/} accanto a un documento
+\code{.tex} per ricompilarlo.
+
+\begin{okbox}{Verificato end-to-end, non solo assemblato}
+L'intera pipeline è stata rieseguita da zero (cartelle \code{dati/} e
+\code{figure/} svuotate, poi \code{esegui\_tutto.py} rilanciato) dopo
+ogni modifica sostanziale al codice, incluse quelle di commento --- ogni
+numero riportato in questa guida è stato ricontrollato, non solo
+riportato dalla prima stesura.
+\end{okbox}
+
+\end{document}

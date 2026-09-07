@@ -414,3 +414,26 @@ pipeline già validata sul dimero (modello di rumore condiviso, VQE con
 DM sotto rumore, quantum simulation Trotter sotto rumore, correlatori
 dinamici sotto rumore, scan sui parametri), applicata all'ansatz
 $W$-2q.6 a 3 spin.
+
+## Aggiornamento 7 settembre 2026 — pacchetti riproducibili sul dimero; handoff pronto per il trimero
+
+**Prodotto**: due pacchetti riproducibili per il dimero
+(`pacchetto_dimero_riproducibile.zip` per la Parte 1,
+`pacchetto_dimero_rumoroso_riproducibile.zip` per la Parte 2) — codice
+completamente documentato (ruolo di ogni modulo e funzione nel
+pacchetto), guide d'uso `GUIDA_USO.tex`/`.pdf` con mappa esatta delle
+dipendenze e comando pronto per ogni singolo script, verificati
+end-to-end da zero. Dettaglio completo in `log_decisioni.md`.
+
+**Preparato ma non ancora usato**: materiali di handoff per proseguire
+il lavoro in due chat diverse — uno per aprire la Parte 2 sul trimero ad
+anello in una chat nuova (con l'istruzione di produrre, come ultimo
+passo a lavoro completato, gli stessi due pacchetti riproducibili anche
+per il trimero), uno per la chat che scrive la narrativa di tesi
+(`dimero_00-04`), perché prepari a sua volta un prompt per la serie
+narrativa equivalente sulla Parte 2 (`tesi_dimero_rumoroso_slides`).
+
+**Prossimo passo**: usare quei materiali di handoff per avviare
+concretamente la Parte 2 (rumore) sul trimero ad anello, e la serie
+narrativa per la Parte 2 del dimero — nessuno dei due filoni ancora
+iniziato.

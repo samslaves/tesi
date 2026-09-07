@@ -1,0 +1,155 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 8. Correlatori sotto rumore}
+\input{preambolo_dimero}
+
+\title{\bfseries Quando il rumore incontra una misura vera\\[2pt]
+\large Documento 8 --- correlatori dinamici sotto rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Una differenza qualitativa rispetto ai due documenti precedenti}
+
+Il VQE rumoroso (Documento 6) e la fedeltà di Trotter rumorosa (Documento 7)
+sono entrambi oggetti che si leggono direttamente dall'operatore densità:
+un'aspettazione, una fedeltà. Un correlatore dinamico
+$C_{ij}^{\alpha\beta}(t)=\bra{\psi_0}\sigma_i^\alpha(t)\sigma_j^\beta(0)\ket{\psi_0}$
+non è così: come già nel Documento 4, si estrae da un circuito di Hadamard
+test con un qubit ausiliario, e la quantità finale passa da una \emph{misura
+reale} sull'ancilla. È il primo punto della pipeline in cui il readout, fin
+qui rimasto sullo sfondo del modello di rumore (Documento 5), entra
+effettivamente in gioco.
+
+\section{Il circuito, con il rumore su ogni ingrediente}
+
+Lo schema è lo stesso del Documento 4: preparazione di $\ket{\psi_0}$,
+Hadamard sull'ancilla, controlled-$W$ sul sito $j$ prima di $U(t)$, evoluzione
+$U(t)$ non controllata (Trotter, come nel Documento 7), anti-controlled-$V$ sul
+sito $i$ dopo $U(t)$, rotazione di base e misura $Z$ sull'ancilla. Sotto
+rumore, ciascuno di questi ingredienti è imperfetto: la preparazione (Documento
+6), il blocco $U(t)$ ripetuto (Documento 7), e infine la misura, che include
+anche l'errore di lettura.
+
+La preparazione può usare le ampiezze esatte oppure il circuito VQE reale ---
+la stessa opzione già in uso per anello e catena a $N=3$. Verificarla di nuovo
+in questa sessione si è rivelato necessario, non solo prudente: vedi
+Sez.~\ref{sec:regressione}.
+
+\section{Il readout: correzione simmetrica}
+
+\begin{equation}
+\langle Z\rangle_\text{readout} = (1-2p)\,\langle Z\rangle_\text{ideale}
+\end{equation}
+esattamente come nel Documento 5 (il caso asimmetrico è un'estensione a sé,
+Documento 11). Un fattore puramente moltiplicativo: la ragione, resa esplicita
+al documento successivo, per cui $N^*$ non dipenderà da $p_\text{readout}$.
+
+\section{Una regressione trovata e richiusa}
+\label{sec:regressione}
+
+Il modulo che implementa la preparazione via ansatz VQE reale, usato per il
+confronto di coerenza qui sotto, era regredito a una versione precedente ---
+un placeholder senza implementazione al posto del codice giusto. Non un errore
+mai corretto: un file caricato per sbaglio sopra la versione funzionante, un
+episodio con la stessa causa già accaduto e richiuso in una sessione
+precedente. Ricaricato il file corretto e riverificato da zero: ogni numero
+riportato qui sotto è stato ricalcolato con il modulo funzionante, non
+assunto dalla sessione in cui la regressione era presente.
+
+\verifica{Confronto, a rumore nullo, fra il correlatore dal circuito completo
+(preparazione ansatz VQE + Trotter + Hadamard test) e quello del modulo di
+riferimento della Parte 1, stessa preparazione, nessun rumore:
+$(i,\alpha,j,\beta,t,N)=(2,x,1,x,2.0,20)$ dà $+0.074599+0.257465i$ in entrambi
+i casi, scarto $2.5\times10^{-14}$ --- precisione quasi macchina, su questa e
+altre due combinazioni indipendenti controllate. L'infedeltà fra ansatz e
+stato esatto è $1.6\times10^{-11}$ (dipende dal seme del VQE, non è un
+problema); il costo in gate è $18$ CNOT con la preparazione esatta contro $19$
+con quella VQE, a $N=5$ --- un solo CNOT in più, trascurabile.}
+
+\section{Il conteggio dei gate cresce come deve}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+$N$ & CNOT totali\\
+\midrule
+$1$ & $7$\\
+$2$ & $10$\\
+$5$ & $19$\\
+$10$ & $34$\\
+$20$ & $64$\\
+$40$ & $124$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Incremento costante di 3 CNOT per unità di $N$ --- il contributo di un passo
+di Trotter, lo stesso già visto in Parte 1 e nel Documento 7. Nessuna fusione
+spuria: la transpilazione a blocchi funziona come deve anche in questo
+circuito più complesso.
+
+\section{Formula di readout: due cammini indipendenti}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore\\
+\midrule
+$\langle Z\rangle$ analitico (rumore di gate + correzione readout) & $+0.044089$\\
+$\langle Z\rangle$ Monte Carlo ($2\times10^5$ shot, readout vero) & $+0.046550$\\
+$|$differenza$|$ (atteso $\lesssim0.0067$, $3\sigma$) & $2.46\times10^{-3}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+La formula analitica $(1-2p)\langle Z\rangle_\text{ideale}$, applicata dopo
+aver già simulato il rumore di gate, e una simulazione Monte Carlo con un vero
+\texttt{ReadoutError} agganciato ad Aer --- due cammini di calcolo indipendenti
+--- coincidono entro l'errore statistico atteso.
+
+\section{Risultato: la curva $|C(N)|$ e $N^*$}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_passo4_correlatore_vs_N}
+\caption{Modulo del correlatore rumoroso $|C_{21}^{xx}(t{=}2,N)|$ in funzione
+di $N$. Massimo a $N^*=5$ --- più basso dell'$N^*=8$ della fedeltà di Trotter
+(Documento 7). Atteso: il circuito di Hadamard test ha più gate a parità di
+$N$, per via dei due blocchi controllati aggiuntivi, quindi il rumore satura
+prima.}
+\end{figure}
+
+\FloatBarrier
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore\\
+\midrule
+$N^*$ & $5$\\
+$|C(N^*)|$ & $0.250002$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\verifica{Rieseguito indipendentemente il correlatore $C_{21}^{xx}(t{=}2)$
+per $N=1,5,10,20,40$: a $N=5$, rumore acceso, la parte reale e immaginaria
+danno $|C|=\sqrt{0.046662^2+0.245608^2}\approx0.2500$, coerente con il valore
+riportato in tabella.}
+
+\messaggio{Tre fatti da questo documento sono usati esplicitamente nel
+Documento 9: $N^*=5$ è specifico di questo correlatore, a questi parametri ---
+lo scan ne verifica la stabilità, non la dà per scontata; la correzione di
+readout è un fattore puramente moltiplicativo, ed è l'argomento (verificato,
+non solo dichiarato) per cui $N^*$ non può dipendere da $p_\text{readout}$ per
+readout simmetrico; il conteggio gate lineare in $N$ è la base per stimare
+come il rumore accumulato cresca al variare dei parametri del canale.}
+
+\end{document}

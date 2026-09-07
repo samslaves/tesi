@@ -4173,3 +4173,199 @@ quantum simulation Trotter sotto rumore, correlatori dinamici sotto
 rumore, scan sui parametri), questa volta su un sistema a 3 spin con
 ansatz $W$-2q.6. La catena aperta resta un'estensione possibile ma non
 prioritaria, se il tempo lo permetterà dopo l'anello.
+
+## Sessione 7 settembre 2026 — pacchetti riproducibili sul dimero, e materiali di handoff per il trimero
+
+### Due pacchetti riproducibili prodotti per il dimero
+
+Su richiesta esplicita, costruiti due pacchetti standalone con tutto il
+codice necessario per rigenerare da zero simulazioni e figure, senza
+dipendere da nessun file già calcolato:
+
+- `pacchetto_dimero_riproducibile.zip` (Parte 1, sistema chiuso): 9
+  moduli in `codice/` (mattoni + confronto ansatz HA-vs-PMA + Trotter
+  esplicito + correlatori), 1 script di generazione dati, 2 validazioni,
+  4 figure. Risultato genuino scoperto nel processo, non solo assunto:
+  l'ansatz PMA a $K=1$ ha un vero calo di fedeltà ($\approx0.82$, non
+  $1.0$) nella zona di anticrossing quando $D\neq0$ — motiva
+  esplicitamente perché il resto del progetto usa un ansatz più
+  espressivo (PMA-2q.3).
+- `pacchetto_dimero_rumoroso_riproducibile.zip` (Parte 2, rumore): 16
+  moduli, 3 script di generazione dati, 4 validazioni, 13 script di
+  figura (15 figure totali). Due bug reali trovati e corretti durante la
+  costruzione (non solo teorici): una funzione con Hamiltoniana fissata
+  come costante di modulo invece che parametro (avrebbe dato risultati
+  silenziosamente sbagliati al secondo punto di lavoro), scoperta
+  confrontando con i valori storici già verificati in sessioni
+  precedenti.
+
+**Disciplina di documentazione applicata a tutti i 25 moduli**: ogni
+modulo con un docstring di modulo esplicito sul proprio ruolo rispetto
+agli altri file del pacchetto; ogni funzione con "ruolo nel modulo" e
+"ruolo nell'insieme" distinti. Dipendenze verso moduli concettualmente
+di un'altra parte dichiarate esplicitamente (es.
+`validate_ansatz_params_dimero.py`, incluso nel pacchetto di Parte 1,
+importa `BASIS_GATES` da `noise_model_dimero.py`, concettualmente di
+Parte 2 — dichiarato, non nascosto).
+
+**`GUIDA_USO.tex`/`.pdf` per entrambi**: non un elenco lineare di
+comandi, ma una mappa per "onde di dipendenza reale" (verificate
+leggendo ogni `np.load`/`np.savez` nel codice, non assunte) — per
+ciascuno script: ingresso, uscita (file e contenuto), chi lo consuma a
+valle, comando esatto pronto da copiare. Scoperte non ovvie emerse solo
+controllando il codice: uno script che sembrava richiedere l'output di
+due script precedenti in realtà calcolava tutto da solo (indipendente);
+una figura di confronto dipendeva solo da un terzo script dati, mai dai
+primi due. Entrambe le guide verificate end-to-end (cartelle dati/
+figure svuotate, pipeline rilanciata da zero, exit code 0) dopo ogni
+modifica sostanziale, zero font Type 3, zero overfull.
+
+### Materiali di handoff preparati (non ancora usati)
+
+Tre file pronti per essere caricati in due chat diverse, per proseguire
+il lavoro:
+
+1. `prompt_nuova_chat_rumore_trimero_anello.md` +
+   `addendum_stile_struttura.md` — per una **chat nuova** che apra la
+   Parte 2 sul trimero ad anello: stato del progetto, i cinque stadi da
+   replicare, le lezioni metodologiche dal dimero (transpilazione a
+   blocchi, verifica diretta non per analogia, terminologia esplicita),
+   i due preamboli LaTeX (teoria/risultati), e — come ultimo passo, solo
+   a lavoro completato — l'istruzione di produrre
+   `pacchetto_trimero_riproducibile.zip` e
+   `pacchetto_trimero_rumoroso_riproducibile.zip` con lo stesso standard
+   appena fissato sul dimero.
+2. `prompt_per_chat_narrativa_dimero_rumoroso.md` — per la **chat
+   esistente** che ha scritto la serie narrativa `dimero_00_filo_
+   conduttore.tex`...`dimero_04_correlatori.tex` (Parte 1): la aggiorna
+   su tutto il lavoro di Parte 2 (cinque stadi, due estensioni) e le
+   chiede di preparare *lei stessa* un prompt per una terza chat che
+   scriva la serie narrativa equivalente per la Parte 2, pacchetto
+   risultante `tesi_dimero_rumoroso_slides` (stesso schema di
+   `tesi_dimero_slides` già esistente per la Parte 1).
+
+Nessuno dei tre è ancora stato usato al momento di questa voce di log.
+
+## Sessione [data] — serie narrativa Parte 2 (rumore) sul dimero, prodotta in una nuova chat
+
+Su richiesta esplicita, prodotti sette documenti narrativi nuovi
+(`dimero_05_rumore_modello.tex` ... `dimero_11_readout_asimmetrico.tex`),
+stesso stile e filosofia della serie `dimero_00`-`dimero_04` (Parte 1):
+narrazione in prima persona nell'ordine in cui il lavoro è stato fatto,
+`\messaggio{}`/`\verifica{}`, mai "Passo N" nudo. Struttura: Documenti
+5-9 rispecchiano i cinque stadi della pipeline di rumore (modello, VQE
+rumoroso, Trotter rumoroso, correlatori rumorosi, scan sui parametri);
+Documenti 10-11 sono le due estensioni facoltative (VQE noise-aware,
+readout asimmetrico), tenute separate perché non condividono argomento
+fisico. `dimero_00_filo_conduttore.tex` aggiornato con una sezione che
+introduce 05-11 (non un settimo documento di cornice), e con la sezione
+"Che cosa non c'è in questa serie" corretta di conseguenza.
+
+Verifica: rieseguiti personalmente gli script degli stadi 1-4
+(`noise_model_dimero.py`, `vqe_dm_rumoroso_dimero.py`,
+`trotter_rumoroso_dimero.py`, `correlatori_rumorosi_dimero.py`) --
+numeri coincidenti a tutte le cifre con i documenti tecnici, incluso il
+minimo non ovvio a $N=3$ nella fedeltà di Trotter. Stadio 5 e le due
+estensioni presi dai `.tex` tecnici già verificati in sessioni
+precedenti, non ricalcolati.
+
+Compilazione da cartella pulita, doppia passata `pdflatex`, tutti e
+otto i documenti: zero errori, zero riferimenti indefiniti, zero
+overfull box.
+
+**Nota tecnica da portare a sessioni future, NON ancora risolta:** le
+figure `.pdf` del progetto risultano, nell'ambiente di quella chat,
+accessibili solo come anteprima raster (JPEG dentro un contenitore zip
+mascherato da `.pdf`), non come PDF vettoriali originali -- usate così
+nel pacchetto consegnato. Da sostituire con gli originali vettoriali
+prima della consegna definitiva -- verificare in una sessione dedicata
+se è un problema locale a quella chat/ambiente o se riguarda anche i
+file effettivamente presenti nel Project.
+
+Prodotto: `tesi_dimero_rumoroso_slides.zip` (7 `.tex` nuovi + `dimero_00`
+aggiornato, `preambolo_dimero.tex`, `figure/`, tutti i `.pdf`
+compilati).
+
+## Correzione alla voce precedente — diagnosi precisa sul problema dei PDF di figura
+
+La nota tecnica della sessione precedente ("figure .pdf accessibili
+solo come anteprima raster, JPEG dentro un contenitore zip mascherato
+da .pdf") era imprecisa nella descrizione. Verificato caricando due dei
+PDF effettivamente prodotti (`dimero_00_filo_conduttore.pdf`,
+`dimero_07_dinamica_rumorosa.pdf`) e controllandoli con `file`,
+`pdffonts`, `pdftotext`, `pdfimages -list`:
+
+- **Non sono "PDF mascherati da zip"**: `file` conferma `PDF document,
+  version 1.5` genuino; `pdftotext` estrae testo vero. Il diagramma
+  tikz di `dimero_00` (catena di dipendenze a 4 box) è vettoriale
+  puro, zero immagini incorporate in quel documento.
+- **Problema reale 1 -- font Type 3**: entrambi i documenti mescolano
+  Type 1 (veri) e Type 3 (bitmap) -- 13 contro 15 in `dimero_00`, 11
+  contro 13 in `dimero_07`. Identico, sintomo per sintomo, al problema
+  `cm-super` mancante già risolto due volte nella pipeline di rumore
+  del dimero: quella chat lavora in un sandbox diverso, senza
+  `cm-super` installato.
+- **Problema reale 2 -- le figure matplotlib sono incorporate come
+  JPEG raster**: in `dimero_07`, le due figure (curva $F(N)$, zoom sul
+  minimo a $N=3$) sono JPEG a 303--320 ppi, non PDF vettoriale --
+  verificato con `pdfimages -list`. Quella chat non ha usato i file
+  `.pdf` vettoriali originali del progetto (con `pdf.fonttype=42`) in
+  fase di compilazione, o ha lavorato da una copia già rasterizzata.
+
+**Correzione da applicare in quella chat, non nei file sorgente**: (1)
+installare `cm-super` prima di compilare qualunque `.tex`; (2)
+verificare che i comandi `\includegraphics{}` puntino ai `.pdf`
+vettoriali veri del progetto, non a una copia PNG/JPEG intermedia.
+Nessun problema nei file sorgente del progetto stesso -- confermato
+dal diagramma tikz di `dimero_00`, compilato correttamente come
+vettoriale nello stesso ambiente.
+
+## Seguito — ispezione di tesi_dimero_slides.zip e richiesta di correzione inviata
+
+Caricato `circ_ha.pdf`/`.png` (un circuito disegnato con Qiskit,
+fornito come controprova di riferimento) e verificato: font CID
+TrueType veri, zero immagini raster incorporate -- conferma concreta
+di come deve apparire un PDF fatto bene.
+
+Caricato anche `tesi_dimero_slides.zip` (la serie di Parte 1) e
+ispezionato per intero (29 PDF controllati con `pdffonts` e
+`pdfimages -list`, non solo un campione):
+
+- **Zero font Type 3 su tutto il pacchetto** -- conferma che
+  `cm-super` era installato correttamente quando fu prodotto.
+- **14 immagini raster genuine**, tutte in tre file
+  (`dimero_04_correlatori.pdf`, `fig08_scan36.pdf`,
+  `fig15_scan36_vqe.pdf`) -- ma legittime: heatmap dense di scan a
+  griglia (es. scan $6\times6$), a 861-869 ppi, altissima risoluzione.
+  Normale e corretto che dati 2D densi siano raster ad alta
+  risoluzione dentro un PDF altrimenti vettoriale -- non è lo stesso
+  problema trovato in `dimero_07` (curva 1D incorporata come JPEG a
+  sole 303-320 ppi, quella sì un difetto).
+- **Struttura esatta di `codice_sorgente/` chiarita**, guardando dentro
+  i file: `stile.py` (condiviso), `ansatz_dimero.py` (solo perché
+  `fig_circuiti.py` lo importa), `fig_circuiti.py` (diagrammi di
+  circuito), e un `fig_docN.py` per ciascun documento narrativo
+  (`fig_doc1.py` -> `dimero_01`, ecc.). Verificato che NON contiene i
+  moduli di fisica sottostanti (`dimer_exact.py`, `trotter_dimero.py`
+  non ci sono, pur essendo importati da dentro) -- solo gli script
+  "colla" che generano le figure.
+
+Prodotto e inviato alla chat narrativa `richiesta_correzione_slides_
+dimero_rumoroso.md`: due correzioni puntuali, non generiche --
+(1) installare `cm-super`, verificare che le figure puntino ai `.pdf`
+vettoriali veri del progetto, con l'eccezione esplicita delle heatmap
+legittime; (2) aggiungere `codice_sorgente/` con uno script
+`fig_doc5.py`...`fig_doc11.py` per documento (stesso schema della
+Parte 1), senza duplicare i moduli di fisica. Include anche i comandi
+di autoverifica (`pdffonts`, `pdfimages -list`) da controllare prima
+di riconsegnare, non solo l'elenco dei problemi.
+
+**In parallelo**: aggiornati anche `prompt_nuova_chat_rumore_trimero_
+anello.md` e `addendum_stile_struttura.md` (i materiali di handoff per
+il trimero, non ancora usati) con una sezione preventiva su questi
+stessi tre problemi, per il caso in cui più avanti serva anche un
+pacchetto slides per il trimero -- così quella futura chat non dovrà
+riscoprirli da zero.
+
+Nessuna risposta ancora ricevuta dalla chat narrativa alla richiesta di
+correzione, al momento di questa voce di log.

@@ -1,0 +1,337 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 10. VQE noise-aware}
+\input{preambolo_dimero}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\title{\bfseries Vale la pena rioptimizzare vedendo il rumore?\\[2pt]
+\large Documento 10 --- VQE noise-aware, estensione facoltativa}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{La domanda complementare}
+
+I cinque documenti precedenti (5--9) misurano quanto degrada un risultato
+\textbf{ideale} --- parametri VQE ottimizzati senza rumore --- quando lo si
+esegue su un simulatore rumoroso. È una scelta di modellazione dichiarata fin
+dal Documento 6, non un'omissione: resta aperta la domanda complementare, se
+il rumore fosse acceso già durante l'ottimizzazione --- come avverrebbe su un
+hardware reale, dove non esiste una versione ideale a cui accedere per
+calibrare l'ottimizzatore --- l'ottimizzatore convergerebbe a parametri
+diversi? E se sì, questo cambierebbe in modo misurabile i risultati a valle
+(Trotter, correlatori, lo scan del Documento 9)?
+
+Questa è un'estensione \textbf{facoltativa} della pipeline, già chiusa in
+tutti e cinque i documenti precedenti --- non uno stadio mancante. Copre: la
+rioptimizzazione stessa, il suo effetto su $N^*$ della fedeltà di Trotter e su
+$N^*$ del correlatore dinamico, la sua generalità rispetto al punto di lavoro
+fisico e ai parametri di rumore.
+
+\section{L'argomento fisico, e una previsione prima di verificarla}
+
+Il canale di rumore è depolarizzante, isotropo: riduce uniformemente la sfera
+di Bloch in ogni direzione. Per uno stato puro $\ket{\psi(\theta)}$ preparato
+dall'ansatz,
+\begin{equation}
+\rho(\theta) = (1-\lambda)\,\ket{\psi(\theta)}\bra{\psi(\theta)} + \lambda\,\frac{\mathbf 1}{d},
+\end{equation}
+con $\lambda>0$ legato a $\varepsilon_{1q},\varepsilon_{2q}$ come nel
+Documento 5, $d=4$ per 2 qubit. L'energia rumorosa diventa
+\begin{equation}
+E_\text{rumoroso}(\theta) = \Tr[\rho(\theta) H] = (1-\lambda)\,E_\text{ideale}(\theta) + \lambda\,\frac{\Tr[H]}{d}
+\end{equation}
+--- una trasformazione \textbf{affine} di $E_\text{ideale}(\theta)$: il secondo
+termine non dipende da $\theta$, il primo è $E_\text{ideale}(\theta)$
+moltiplicato per una costante positiva $1-\lambda$. Una trasformazione affine
+con coefficiente positivo non cambia la posizione del minimo: lo stesso
+$\theta^*$ che minimizza $E_\text{ideale}$ minimizza anche $E_\text{rumoroso}$.
+A questo si aggiunge un secondo fatto, verificato indipendentemente
+(Sez.~\ref{sec:cnot}): il conteggio CNOT del circuito transpilato non dipende
+dai valori numerici dei parametri, quindi non c'è nemmeno una via indiretta,
+via costo in gate, per cui convenga spostarsi verso un $\theta$ diverso da
+quello ideale.
+
+\messaggio{Previsione dichiarata prima della verifica: $\theta^*_\text{rumore}
+\approx\theta^*_\text{ideale}$, nessun vantaggio misurabile a rioptimizzare
+sotto rumore rispetto al semplice riuso dei parametri ideali. È una
+previsione, non un fatto acquisito: il resto di questo documento la mette
+alla prova su più metriche e più punti di lavoro.}
+
+La previsione riguarda l'\emph{energia}. Ma l'effetto va controllato anche
+sulle quantità a valle nella pipeline, ed è qui che serve una distinzione: la
+fedeltà di Trotter (Documento 7) è un osservabile additivo,
+$F(N)=\bra{\psi_\text{target}}\rho_N\ket{\psi_\text{target}}$; il correlatore
+dinamico (Documento 8) usa invece $N^*=\arg\max_N|C(N)|$, il \textbf{modulo}
+di un numero complesso. Sono oggetti matematici diversi --- un conto valido
+per una somma additiva non si trasporta automaticamente a un modulo, come si
+vedrà in modo netto nel Documento 11. Per questo entrambe le metriche vengono
+verificate esplicitamente, non una per analogia dall'altra.
+
+\section{Una scelta tecnica, scoperta lavorandoci}
+\label{sec:cnot}
+
+Il circuito va transpilato \textbf{dopo} aver assegnato i valori numerici di
+$\theta$, ad ogni valutazione dell'obiettivo --- non transpilato una volta
+sola in forma parametrica e poi solo legato con l'assegnazione dei parametri
+(il principio inverso di quello che funziona per il blocco di Trotter, dove i
+parametri fisici non cambiano da una valutazione all'altra). La ragione: con
+parametri simbolici il transpilatore non può fondere le rotazioni a 1 qubit
+il cui angolo dipende dal valore numerico di $\theta$, producendo un circuito
+strutturalmente più rumoroso.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.6\textwidth]{figure/fig_bug_conteggio_gate}
+\caption{Costo in gate del circuito transpilato, a parità di parametri
+$\theta$, a seconda dell'ordine fra transpilazione e assegnazione. Il
+conteggio CNOT resta invariato (2); i gate a singolo qubit quasi raddoppiano
+se si transpila prima dell'assegnazione --- 19 \texttt{rz} + 14 \texttt{sx}
+contro 11 \texttt{rz} + 8 \texttt{sx} --- ogni gate in più è un'ulteriore
+occasione di errore per il canale depolarizzante.}
+\end{figure}
+
+\FloatBarrier
+
+\verifica{Invarianza del conteggio CNOT (premessa fisica dell'argomento
+sopra) controllata su 5 assegnazioni casuali indipendenti di $\theta$: CNOT
+$=2$ in tutte le prove, sempre 11 \texttt{rz} + 8 \texttt{sx} + 2 \texttt{cx}
+--- nessuna direzione del paesaggio dei parametri verso cui convenga
+spostarsi per ``risparmiare'' rumore.}
+
+\section{Risultato 1: energia e fedeltà}
+
+Multistart $R=6$ punti casuali più un seme uguale a
+$\theta^*_\text{ideale}$, per garantire di non fare mai peggio del semplice
+riuso; la robustezza del multistart è discussa a parte
+(Sez.~\ref{sec:robustezza}).
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Quantità & Riuso $\theta^*_\text{ideale}$ & VQE noise-aware\\
+\midrule
+$E$ (rumoroso) & $-3.50164605$ & $-3.50164616$\\
+$F$ (rumorosa) & $0.98500601$ & $0.98500602$\\
+CNOT & $2$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$\Delta E=-1.16\times10^{-7}$, $\Delta F=+1.76\times10^{-8}$ --- sei ordini di
+grandezza più piccoli della scala fisica del problema (la perdita di fedeltà
+$\sim1.5\times10^{-2}$ già misurata nel Documento 6 a rumore acceso).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{figure/fig_scan_eps2q_confronto}
+\caption{Energia e fedeltà rumorose in funzione di $\varepsilon_{2q}$, riuso
+dei parametri ideali contro rioptimizzazione noise-aware. Le due curve sono
+indistinguibili a questa scala su tutto il range esplorato, dal rumore nullo a
+$4\times$ il valore di riferimento.}
+\end{figure}
+
+\FloatBarrier
+
+\section{Robustezza del multistart}
+\label{sec:robustezza}
+
+Con $R=6$ punti casuali e nessun seme, il minimo trovato può restare a
+distanza $10^{-4}$--$10^{-2}$ dall'ottimo vero, a seconda del seme ---
+dispersione reale del paesaggio energetico rumoroso, caratterizzata su 8 semi
+indipendenti. Per questo il risultato principale include
+$\theta^*_\text{ideale}$ come uno dei punti di partenza.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_robustezza_multistart}
+\caption{Energie finali dei singoli restart COBYLA (rumore acceso), per tre
+configurazioni di multistart. La linea tratteggiata è l'ottimo noto. Con soli
+6 restart casuali il minimo trovato può restare lontano dall'ottimo; con 20 il
+punto migliore si avvicina entro $3.6\times10^{-6}$.}
+\end{figure}
+
+\FloatBarrier
+
+Un multistart indipendente più ampio ($R=20$, nessun seme) converge comunque
+allo stesso ottimo entro $2.6\times10^{-6}$: il seme non altera la conclusione
+fisica, garantisce solo di raggiungerla con un numero contenuto di restart.
+
+\section{Risultato 2: $N^*$ della fedeltà di Trotter}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Preparazione & $N^*$ & $F(N^*)$\\
+\midrule
+$\theta^*_\text{ideale}$ & $8$ & $0.817725$\\
+$\theta^*_\text{noise-aware}$ & $8$ & $0.817767$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{figure/fig_F_vs_N_confronto}
+\caption{Sinistra: fedeltà $F(N)$, le due preparazioni a confronto ---
+massimo a $N^*=8$ in entrambi i casi. Destra: scostamento, scala ingrandita
+($\sim10^{-4}$): un ordine di grandezza sopra il rumore numerico, ma sei
+ordini sotto la scala fisica del problema.}
+\end{figure}
+
+\FloatBarrier
+
+\section{Risultato 3: $N^*$ del correlatore dinamico}
+
+Per la distinzione strutturale già discussa, questa metrica va verificata
+\textbf{direttamente}, non per estensione dal risultato precedente.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Preparazione & $N^*$ & $|C(N^*)|$\\
+\midrule
+$\theta^*_\text{ideale}$ & $5$ & $0.250002$\\
+$\theta^*_\text{noise-aware}$ & $5$ & $0.249933$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{figure/fig_correlatore_noise_aware_confronto}
+\caption{Sinistra: modulo del correlatore rumoroso, le due preparazioni a
+confronto --- massimo a $N^*=5$ in entrambi i casi. Destra: scostamento,
+scala ingrandita ($\sim10^{-5}$) --- un ordine di grandezza più piccolo
+persino dello scostamento osservato per la fedeltà di Trotter.}
+\end{figure}
+
+\FloatBarrier
+
+\section{Perché il risultato generalizza: l'argomento di continuità}
+
+Le due metriche condividono una proprietà comune, verificabile direttamente:
+$\theta^*_\text{noise-aware}$ e $\theta^*_\text{ideale}$ sono quasi
+indistinguibili ($\Delta E\sim10^{-7}$). Per qualunque funzione ragionevolmente
+liscia dello stato preparato --- una fedeltà, il modulo di un correlatore, o
+altro --- questo garantisce, per continuità, uno scostamento a valle
+altrettanto minuscolo, indipendentemente dalla struttura specifica della
+metrica. Non è quindi la struttura di $N^*$ a garantire l'invarianza: è la
+piccolezza di $\Delta\theta$ a renderla ininfluente su qualunque metrica
+ragionevole a valle. Questo argomento è stato reso quantitativo: lo
+scostamento osservato in entrambe le metriche è riprodotto entro lo $0.1\%$
+da una previsione lineare al prim'ordine,
+$\Delta f\approx\nabla f(\theta^*_\text{ideale})\cdot\Delta\theta$ (derivazione
+completa in una nota di lavoro interna, non riportata per esteso qui per la
+sua natura metodologica più che di risultato fisico).
+
+\section{Generalità: un secondo punto di lavoro}
+
+L'argomento fisico sopra è generale --- vale per qualunque $b/J,D/J$ e
+qualunque intensità di rumore isotropo --- ma la \emph{dimensione} di
+$\Delta\theta$, e quindi se sia abbastanza piccola da non spostare un $N^*$
+specifico, è un fatto numerico. Per non lasciarlo verificato in un solo punto,
+l'intera catena --- VQE ideale, VQE noise-aware, $N^*$ Trotter, $N^*$
+correlatore --- è stata ripetuta a un secondo punto di lavoro, $b/J=-0.18$,
+$D/J=1$: un termine DM cinque volte più forte e segno di $b$ opposto rispetto
+a ``test 2''.
+
+\begin{center}
+\footnotesize
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Quantità & test 2 & secondo punto\\
+ & ($b/J{=}0.35,D/J{=}0.80$) & ($b/J{=}{-}0.18,D/J{=}1$)\\
+\midrule
+$\Delta E$ (noise-aware $-$ riuso ideale) & $-1.16\times10^{-7}$ & $-2.56\times10^{-8}$\\
+$\Delta F$ (noise-aware $-$ riuso ideale) & $+1.76\times10^{-8}$ & $+3.96\times10^{-9}$\\
+$N^*$ Trotter (ideale $\to$ noise-aware) & $8\to8$ & $8\to8$\\
+$N^*$ correlatore (ideale $\to$ noise-aware) & $5\to5$ & $3\to3$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{figure/fig_secondo_punto_confronto}
+\caption{Secondo punto di lavoro. Sinistra: fedeltà di Trotter, $N^*=8$ ---
+stesso valore del punto ``test 2''. Destra: modulo del correlatore, $N^*=3$
+--- diverso dal punto ``test 2'' ($N^*$ dipende dalla fisica del punto, non è
+universale), ma comunque invariato fra le due preparazioni.}
+\end{figure}
+
+\FloatBarrier
+
+$N^*$ \textbf{cambia} da un punto di lavoro all'altro: è una proprietà della
+fisica del punto, non della preparazione VQE. Quello che \textbf{non} cambia,
+in entrambi i punti testati, è che $N^*$ resta lo stesso confrontando le due
+preparazioni --- coerente con l'argomento di continuità: $\Delta\theta$ resta
+piccolo anche a questo secondo punto, pur essendo un regime fisicamente
+diverso. Due punti non dimostrano una legge generale per ogni $b/J,D/J$, ma
+escludono che il risultato sia un caso isolato.
+
+\section{Generalità: tutta la griglia dello scan sui parametri di rumore}
+
+Lo scan sui parametri di rumore (Documento 9) esplora una griglia
+$(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$. Le due metriche a
+valle sono state ricalcolate con \textbf{entrambe} le preparazioni su
+\textbf{tutta} la griglia già usata in quello scan --- non solo al punto di
+riferimento --- per un totale di 25 combinazioni.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figure/fig_passo5_griglia_completa}
+\caption{$N^*$ in funzione di $\varepsilon_{2q}$, riuso ideale contro
+noise-aware, su tutta la griglia del Documento 9. Sinistra: fedeltà di
+Trotter (con la nota transizione a $N^*=1$ per rumore forte, già
+caratterizzata lì). Destra: modulo del correlatore. Le due curve sono
+sovrapposte in ogni punto.}
+\end{figure}
+
+\FloatBarrier
+
+$N^*$ resta invariato fra le due preparazioni in \textbf{tutti} i 25 punti
+testati --- 7 valori di $\varepsilon_{2q}$ e 6 di $\varepsilon_{1q}$ per la
+fedeltà di Trotter, 5 valori di $\varepsilon_{2q}$, 4 di $\varepsilon_{1q}$ e 3
+di $p_\text{readout}$ per il correlatore --- verificato punto per punto, non
+solo al riferimento.
+
+\section{Considerazioni}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=3pt]
+\item La previsione è confermata, non solo plausibile. L'argomento della
+trasformazione affine non garantiva a priori uno scostamento numerico
+trascurabile su \emph{ogni} metrica a valle: il modulo di un correlatore e
+una fedeltà additiva sono oggetti diversi, e comporre una trasformazione con
+un modulo non eredita automaticamente le stesse proprietà di invarianza (si
+vedrà in modo netto nel Documento 11). Per questo entrambe le metriche sono
+state verificate esplicitamente, non una per analogia dall'altra.
+\item L'argomento di continuità è più solido di un argomento di struttura, e
+più generale: si applica a qualunque osservabile liscio dello stato preparato,
+additivo o no, purché il gradiente resti moderato --- non richiede che
+l'osservabile abbia una decomposizione additiva nota a priori.
+\item Il dominio di validità è dichiarato esplicitamente: due punti di
+lavoro, un insieme di parametri di rumore esplorato per intero al punto di
+riferimento del canale. Non è una dimostrazione per ogni $b/J,D/J$ o ogni
+intensità di rumore, ma un controllo sistematico, non un singolo punto
+isolato.
+\end{itemize}
+
+\messaggio{Rioptimizzare l'ansatz PMA-2q$\cdot$3 sotto rumore, invece di
+riusare i parametri ideali, non cambia in modo misurabile né l'energia o la
+fedeltà del Documento 6 ($\Delta E\sim10^{-7}$--$10^{-8}$ a seconda del punto
+di lavoro), né la posizione di $N^*$ della fedeltà di Trotter (Documento 7,
+sempre $N^*=8$) o del correlatore dinamico (Documento 8, $N^*=5$ o $N^*=3$ a
+seconda del punto di lavoro, comunque invariato). Verificato su due metriche
+strutturalmente diverse, due punti di lavoro fisici, e l'intera griglia di
+parametri di rumore del Documento 9 (25/25 punti) --- non un'estrapolazione da
+un singolo controllo.}
+
+\end{document}

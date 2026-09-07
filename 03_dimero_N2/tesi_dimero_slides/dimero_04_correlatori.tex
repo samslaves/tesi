@@ -243,6 +243,32 @@ c'è, domina qualunque cosa si stia misurando a valle --- e ora lo dice un
 circuito genuinamente eseguito, non più un calcolo che pretendeva di
 esserlo.
 
+La forma stessa delle due curve nere merita uno sguardo, non solo il loro
+scarto. La curva esatta da $\psi_0$ sale in modo liscio, senza oscillare
+velocemente come farebbero le sue parti reale e immaginaria prese
+singolarmente: la scomposizione spettrale di
+Fig.~\ref{fig:ricostruzione-spettrale} mostra che una sola riga domina
+($c_2=-0.884$ a $E_2-E_0=4.573$), e per un termine isolato
+$\mathrm{Re}^2+\mathrm{Im}^2=|c_2|^2$ è costante per costruzione
+($\cos^2+\sin^2=1$): l'oscillazione veloce di $\mathrm{Re}$ e
+$\mathrm{Im}$ si cancella esattamente nel modulo. La lenta salita che si
+vede è il battimento fra questa riga dominante e le due deboli, di periodo
+$2\pi/0.428\approx14.7$ --- più del doppio della finestra mostrata: è solo
+la prima metà di quel battimento, non il comportamento a tempi lunghi.
+Estendendo il calcolo oltre $t=8$ il modulo scende di nuovo, con un massimo
+vero a $t\approx8.65$.
+
+Perché $\psi_{\rm VQE}$ oscilla molto di più, invece, si vede scomponendolo
+sugli stessi autostati esatti:
+$\psi_{\rm VQE}=0.940\ket0-0.228\ket1+0\cdot\ket2-0.254\ket3$. Non è solo
+che manca il $12\%$ di probabilità rispetto al fondamentale --- è che quel
+$12\%$ è diviso fra \emph{due} stati eccitati diversi, non uno. Questo
+introduce nella somma spettrale termini di battimento fra livelli eccitati
+che il fondamentale puro non ha mai (per esempio $E_3-E_1=1.429$, non solo
+differenze $E_n-E_0$), con pesi già abbastanza grandi da rendersi visibili
+dentro la stessa finestra $[0,8]$ in cui il battimento del caso esatto è
+ancora troppo lento per vedersi.
+
 Un solo correlatore, però, non dice se $C_{12}^{zz}$ sia un caso rappresentativo
 o un caso sfortunato. Vale la pena rifare lo scan completo di
 Fig.~\ref{fig:scan}, questa volta con lo stato del PMA base al posto delle

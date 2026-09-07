@@ -1,0 +1,176 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 7. Dinamica sotto rumore}
+\input{preambolo_dimero}
+
+\title{\bfseries Più passi non è sempre meglio\\[2pt]
+\large Documento 7 --- quantum simulation (Trotter) sotto rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Il compromesso che il sistema chiuso non poteva mostrare}
+
+Nel sistema chiuso (Documento 3), aumentare il numero di passi di Trotter $N$
+migliorava sempre l'approssimazione dell'evoluzione $e^{-iHt}$: l'errore di
+Trotter per passo è $O(\tau^2)$ con $\tau=t/N$, quindi l'errore totale scende
+come $O(t^2/N)$, e a $N\to\infty$ si tende all'evoluzione esatta. Con il
+rumore acceso questo non è più vero: ogni passo aggiunge gate, e ogni gate ha
+una probabilità non nulla di sbagliare. Deve esistere un compromesso, e quindi
+un $N$ ottimale $N^*$ --- questo documento lo trova.
+
+L'Hamiltoniana si scompone come già nel Documento 3, $H=H_1+H_2$, con $H_1$ lo
+scambio isotropo più il campo (fattorizza esattamente) e $H_2$ il solo
+termine DM; un passo di Trotter al prim'ordine è
+$U_\text{step}=e^{-iH_2\tau}e^{-iH_1\tau}$.
+
+\section{Una trappola tecnica, già incontrata e già evitata}
+
+Il singolo passo di Trotter va transpilato \textbf{una sola volta} al suo
+costo minimo (3 CNOT, già dimostrato in Parte 1), e il blocco già compilato va
+poi composto $N$ volte. Transpilare invece l'intero circuito assemblato è un
+errore silenzioso: a un livello di ottimizzazione alto, Qiskit riconosce che
+gli $N$ passi identici formano nel complesso un unico unitario a 2 qubit, e lo
+risintetizza a costo \emph{costante}, indipendente da $N$ --- cancellando
+esattamente la dipendenza da $N$ che è l'oggetto di questo studio. La
+strategia di transpilazione a blocchi, adottata qui per la prima volta sotto
+rumore, resta la regola per tutto il resto della pipeline.
+
+\section{L'osservabile: fedeltà rispetto allo stato bersaglio fisico}
+
+\begin{equation}
+\ket{\psi_\text{target}(t)} = e^{-iHt}\ket{\psi_0^\text{esatto}}, \qquad
+F(N) = \bra{\psi_\text{target}(t)}\rho_N\ket{\psi_\text{target}(t)}
+\end{equation}
+dove $\rho_N$ è lo stato ottenuto da: preparazione VQE rumorosa (Documento 6)
+$\to$ $N$ passi di Trotter rumorosi. Una singola quantità impacchetta tre
+contributi diversi: la preparazione, costante in $N$; l'errore di Trotter, che
+decresce con $N$; il rumore di gate accumulato, che cresce con $N$.
+
+\section{Prima di fidarsi della curva: un secondo cammino di calcolo}
+
+A rumore nullo, l'evoluzione di Trotter si può calcolare anche per pura
+potenza di matrice in \texttt{numpy}, senza passare da nessun oggetto
+Qiskit --- un controllo indipendente contro un bug nella costruzione del
+circuito (per esempio nell'ordine dei blocchi, o nel segno di $H_2$) che
+produca comunque una curva plausibile ma sbagliata.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+$N$ & Circuito Qiskit & Potenza di matrice (\texttt{numpy})\\
+\midrule
+$8$ & $0.9454850$ & $0.9454850$\\
+$20$ & $0.9921835$ & $0.9921835$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\verifica{Coincidenza esatta, alla precisione mostrata, fra due cammini di
+calcolo completamente indipendenti --- uno passa da un circuito quantistico
+simulato, l'altro da una moltiplicazione di matrici $4\times4$ pura. Rieseguito
+anche in questa sessione: stessi valori, alla cifra.}
+
+\section{Perché serve il rumore: confronto diretto}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$N$ & $F$ (rumore nullo) & $F$ (\texttt{ibm\_torino}) & \\
+\midrule
+$1$ & $0.7799372$ & $0.7567291$ & \\
+$2$ & $0.4776280$ & $0.4624084$ & \\
+$5$ & $0.8323751$ & $0.7560090$ & \\
+$8$ & $0.9454850$ & $0.8177249$ & $\approx N^*$\\
+$10$ & $0.9666876$ & $0.8087205$ & \\
+$20$ & $0.9921835$ & $0.7097565$ & \\
+$40$ & $0.9980771$ & $0.5427382$ & \\
+$80$ & $0.9995212$ & $0.3567462$ & \\
+$160$ & $0.9998804$ & $0.2686760$ & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Senza rumore, $F(N)\to1$ al crescere di $N$: puro errore di Trotter, in
+diminuzione monotona per $N\gtrsim5$, nessun compromesso, nessun massimo. Con
+il rumore di riferimento, la stessa curva smette di crescere oltre $N=8$ e
+comincia a scendere: è \emph{solo} il rumore di gate accumulato a creare un
+massimo finito --- senza rumore l'ottimo sarebbe $N\to\infty$.
+
+\section{Risultato: la curva $F(N)$ e $N^*$}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_passo3_F_vs_N}
+\caption{Fedeltà $F(N)$ rispetto allo stato bersaglio fisico, in funzione del
+numero di passi di Trotter, a rumore di riferimento (\texttt{ibm\_torino}).
+Crescita rapida per $N$ piccolo (l'errore di Trotter domina), massimo a
+$N^*=8$, decrescita lenta per $N$ grande (il rumore di gate accumulato
+domina).}
+\end{figure}
+
+\FloatBarrier
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore\\
+\midrule
+$N^*$ & $8$\\
+$F(N^*)$ & $0.817725$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Un dettaglio che una prima occhiata avrebbe potuto perdere}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{figure/fig_passo3_zoom_minimo}
+\caption{Zoom sulla regione non perturbativa, $N=1$ a $8$. Il minimo (non il
+semplice calo che ci si aspetterebbe) è a $N=3$, identico a rumore nullo e a
+rumore acceso --- prova diretta che è un effetto di Trotter puro, non un
+artefatto del rumore o della simulazione.}
+\end{figure}
+
+\FloatBarrier
+
+La curva non è monotona per $N$ piccolo: parte relativamente alta a $N=1$
+($F\approx0.78$), scende in modo sostanziale --- la fedeltà quasi si dimezza
+--- fino a un minimo a $N=3$ ($F\approx0.40$), poi risale con continuità verso
+il massimo. Non è rumore numerico: lo stesso minimo, nella stessa posizione,
+compare identico anche a rumore nullo --- è il regime non ancora perturbativo
+dell'errore di Trotter ($\tau=t/N=2,\,1,\,0.67$ per $N=1,2,3$: tutt'altro che
+piccolo), non un artefatto della simulazione.
+
+\verifica{Rieseguito il calcolo per $N=3$ e $N=8$ separatamente da tutto il
+resto della tabella: $N=3$ dà $F=0.4018$ (rumore nullo) e $F=0.3892$
+(rumoroso), $N=8$ dà $F=0.9455$ e $F=0.8177$ --- entrambi coerenti a tutte le
+cifre con la tabella sopra. Il minimo a $N=3$ non è un artefatto del modo in
+cui è stata costruita la griglia di punti.}
+
+\section{Cosa non entra in questa fedeltà}
+
+Il readout non compare in questa metrica: è una fedeltà fra stati (operatore
+densità contro stato puro), non una misura di un osservabile via ancilla. Il
+readout entrerà per la prima volta al documento successivo, dove la quantità
+osservata passa attraverso una misura reale.
+
+\messaggio{Il compromesso Trotter/rumore trovato qui ($N^*=8$) non è
+universale: dipende dal tempo $t$, dal punto di lavoro fisico, e dal livello
+di rumore --- lo si vedrà esplicitamente nello scan sui parametri di rumore
+(Documento 9). Il documento successivo (correlatori dinamici) userà lo stesso
+principio --- Trotter per l'evoluzione, transpilazione a blocchi mai
+ricomposta per intero --- ma su un circuito diverso, un test di Hadamard con
+ancilla, e troverà un $N^*$ diverso ($N^*=5$, non $8$): la posizione del
+compromesso dipende dal circuito specifico, un fatto da verificare di nuovo
+lì, non da assumere per analogia da qui.}
+
+\end{document}

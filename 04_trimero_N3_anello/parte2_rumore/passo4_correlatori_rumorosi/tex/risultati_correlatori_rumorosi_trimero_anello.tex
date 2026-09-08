@@ -1,0 +1,230 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Correlazioni dinamiche sotto rumore (anello)}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Correlazioni dinamiche sotto rumore --- trimero ad anello\\[0.2em]
+\Large\normalfont\color{softgray}Circuito Hadamard test a 4 qubit, rumore su tutti gli ingredienti}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice:
+\texttt{correlatori\_\allowbreak rumorosi\_trimero\_anello.py} (mirror di
+\texttt{correlatori\_rumorosi\_dimero.py}). Punto di lavoro: $J=1,\,J'=0.4,\,b=b_c=2.4,\,D=0.15$
+--- stesso punto usato per l'esplorazione dei correlatori in Parte 1
+(\texttt{trimero\_\allowbreak anello\_correlazioni.tex}), non il punto
+$R_0$ (quello serve solo per lo Scenario B dello Stadio 3, mai usato per i
+correlatori in Parte 1). Correlatore usato come riferimento in questo
+documento: $C_{21}^{xx}(t)$, coerente con la scelta del dimero.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Stesso circuito Hadamard test a 4 qubit di Parte 1 (3 di registro + 1
+ancilla), ora con rumore su \textbf{tutti} i suoi ingredienti:
+preparazione (Stadio 2), passo esterno di Trotter ripetuto $N$ volte
+(Stadio 3, blocco riusato senza reimplementarlo), e infine la misura
+sull'ancilla (errore di lettura, Stadio 1 --- mai agganciato finora
+perché gli Stadi 2-3 non misuravano nulla).
+
+\begin{keyeq}[title={Convenzione qubit: diversa dal dimero, ereditata da Parte 1}]
+Registro = qubit 0,1,2; ancilla = qubit 3 --- \textbf{non} ancilla=0 come
+sul dimero. Eredità diretta di
+\texttt{circuito\_\allowbreak correlazioni\_\allowbreak trimero\_anello.py}
+(Parte 1): non ridefinita qui, per evitare un disallineamento con il
+circuito già validato. Conseguenza verificata esplicitamente (non
+assunta): nel Monte Carlo di verifica (Sez.~\ref{sec:readout}), il bit
+dell'ancilla nella stringa di misura è il carattere più a
+\textbf{sinistra}, non più a destra come sul dimero.
+\end{keyeq}
+
+\section{Quattro blocchi, transpilazione a blocchi (Stadio 3 riusato)}
+
+Stessa strategia already fissata allo Stadio 3, estesa qui a due nuovi
+blocchi locali a 2 qubit:
+\begin{enumerate}[leftmargin=1.4em,itemsep=0.2em]
+\item preparazione (ansatz $W$-2q.6, Stadio 2) --- transpilata una volta;
+\item controlled-$W$ sul sito $j$ (ancilla + 1 qubit di registro) ---
+transpilata una volta;
+\item passo esterno di Trotter (3 qubit), ripetuto $N$ volte ---
+\textbf{riusato da} \texttt{trotter\_\allowbreak rumoroso\_trimero\_
+anello.build\_step\_block} (Stadio 3), non reimplementato;
+\item anti-controlled-$V$ + rotazione di base (ancilla + 1 qubit di
+registro) --- transpilata una volta.
+\end{enumerate}
+
+\section{Risultati: limite di rumore nullo e conteggio gate}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Caso $(i,\alpha,j,\beta,t,N)$} & \textbf{Parte 1 (ansatz)} & \textbf{Stadio 4 (rumore=0)} & $|$\textbf{diff}$|$\\
+\midrule
+$(2,x,1,x,2.0,20)$ & $-0.571048+0.361219i$ & $-0.571048+0.361219i$ & $3.5\times10^{-9}$\\
+$(1,z,1,z,1.0,20)$ & $+0.398173+0.185174i$ & $+0.398173+0.185174i$ & $2.1\times10^{-9}$\\
+$(3,x,3,y,0.5,20)$ & $-0.770489+0.308875i$ & $-0.770489+0.308875i$ & $2.1\times10^{-11}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Coincidenza con Parte 1 entro l'infedeltà nota della preparazione VQE
+(scarti $\sim10^{-9}$--$10^{-11}$), su tre combinazioni diverse di siti e
+componenti (incluso un caso a stesso sito, $i=j=3$, componenti miste
+$x,y$ --- non strutturalmente nullo per simmetria, a differenza delle
+combinazioni $C_{33}^{xz},C_{33}^{zx},C_{33}^{yz},C_{33}^{zy}$ già
+identificate come nulle in Parte 1).
+\end{okbox}
+
+Conteggio gate: incremento costante di \textbf{15 CNOT} per unità di $N$
+(lo stesso costo per passo già stabilito allo Stadio 3), confermato da
+$N=1$ a $N=40$ --- nessuna fusione dei passi.
+
+\section{Formula del readout: verifica Monte Carlo indipendente}
+\label{sec:readout}
+
+Stessa formula analitica del dimero (verificata nello Stadio 1 come
+indipendente dal numero di qubit): $\langle Z\rangle_\text{readout} =
+(1-2p)\langle Z\rangle_\text{ideale}$, applicata dopo il rumore di gate.
+Verificata qui con una simulazione Monte Carlo indipendente (\texttt{ReadoutError}
+vero, $2\times10^5$ shot, $p=0.05$):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$\langle Z\rangle$ analitico (gate noise + correzione readout) & $-0.232313$\\
+$\langle Z\rangle$ Monte Carlo ($2\times10^5$ shot) & $-0.234790$\\
+$|$differenza$|$ & $2.5\times10^{-3}$ (atteso $\lesssim6.7\times10^{-3}$, $3\sigma$)\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Formula analitica confermata da un cammino di calcolo indipendente,
+entro la tolleranza statistica attesa. Posizione del bit dell'ancilla
+nella stringa di misura verificata esplicitamente (carattere più a
+sinistra, qubit 3), non assunta dall'analogia con il dimero.
+\end{okbox}
+
+\section{Il compromesso Trotter/rumore sul correlatore}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.82\linewidth]{figure/fig_correlatore_rumoroso_trimero_anello.pdf}
+\caption{\textit{$|C_{21}^{xx}(t{=}2,N)|$ a rumore nullo e di riferimento
+(\texttt{ibm\_torino}). A rumore nullo il correlatore converge rapidamente
+(già stabile da $N\gtrsim10$); sotto rumore emerge un massimo a $N$
+finito.}}
+\end{figure}
+
+\begin{okbox}{Verificato}
+$N^*=3$, $|C(N^*)|=0.505$ --- diverso sia da $N^*_A=2$ (fedeltà di
+Trotter, Stadio 3, stesso punto VQE) sia da $N^*_B=10$ (fedeltà, punto
+$R_0$): tre osservabili diverse, tre $N^*$ diversi, coerente col
+principio già stabilito sul dimero (``il numero ottimale di passi
+dipende dall'osservabile che si sta calcolando'') e qui riverificato
+direttamente su una quarta combinazione punto/osservabile, non assunto
+per analogia.
+\end{okbox}
+
+\section{Cosa non è ancora stato controllato qui}
+
+Nessuno scan sistematico sui parametri di rumore (Stadio 5). Il
+correlatore è stato verificato per un solo punto di lavoro (quello VQE,
+coerente con Parte 1); lo scenario $R_0$ non è stato esplorato per i
+correlatori, né qui né in Parte 1 --- non è un'omissione di questo
+documento, è coerente con lo scope già fissato quando Parte 1 ha
+esplorato i correlatori solo al punto VQE.
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Lo Stadio 5 (scan sui parametri di rumore) riprenderà sia la fedeltà di
+Trotter (Stadio 3, entrambi gli scenari) sia il correlatore (qui), per
+vedere come i tre $N^*$ già trovati ($2$, $10$, $3$) si spostano al
+variare di $(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$. Sul
+dimero, il modello di scomposizione additiva
+$\varepsilon_\text{tot}(N)\sim a/N+g\varepsilon_{2q}N$ non descriveva
+correttamente lo scaling di $N^*$ per una fedeltà (pendenza log-log
+osservata $-0.195$ contro $-0.5$ prevista, dichiarato esplicitamente nel
+documento dello Stadio 5 del dimero) --- non c'è quindi motivo di
+aspettarsi che descriva meglio né la fedeltà né il correlatore
+dell'anello: lo scan andrà letto sui dati, non sul modello.
+
+\begin{okbox}{Sintesi in una riga}
+Il circuito Hadamard test dell'anello, reso rumoroso riusando il blocco
+di Trotter dello Stadio 3, riproduce Parte 1 nel limite di rumore nullo
+ed espone un compromesso Trotter/rumore con $N^*=3$ --- un terzo valore
+di $N^*$, diverso dai due già trovati allo Stadio 3.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{correlatori\_\allowbreak rumorosi\_trimero\_anello.py},
+\texttt{validate\_\allowbreak correlatori\_\allowbreak rumorosi\_trimero\_anello.py},
+\texttt{generate\_figure\_\allowbreak correlatore\_\allowbreak rumoroso\_trimero\_anello.py},
+questo documento.
+
+\end{document}

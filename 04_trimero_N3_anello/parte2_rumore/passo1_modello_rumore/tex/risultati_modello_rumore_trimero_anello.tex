@@ -1,0 +1,311 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Il modello di rumore per il trimero ad anello}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Il modello di rumore per il trimero ad anello\\[0.2em]
+\Large\normalfont\color{softgray}Stesso modello del dimero, riusato su un circuito a 3 qubit}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{noise\_model\_trimero\_anello.py} (nuovo, wrapper
+sottile su \texttt{noise\_model\_dimero.py} --- Sez.~\ref{sec:riuso}),
+\texttt{validate\_noise\_model\_trimero\_anello.py} (nuovo, verifica
+l'aggancio a 3 qubit). Derivazione
+completa delle formule in \texttt{teoria\_modello\_rumore.tex} (comune al
+dimero, non richiama nulla di specifico a $N=2$). Nessun punto di lavoro
+specifico per il modello in sé: come per il dimero, è la base condivisa
+da tutti gli stadi successivi della pipeline.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Aprire la Parte 2 (rumore) sul trimero ad anello, dopo la chiusura della
+Parte 2 sul dimero (relazione inviata, riscontro positivo,
+\texttt{log\_decisioni.md}, 6 settembre 2026). Il relatore ha confermato
+la topologia (anello, non catena, stessa data) e lo scope dei canali di
+rumore era già stato fissato per il dimero
+(\texttt{domande\_relatore.md}, sez.~12): \textbf{due soli canali},
+errore di gate (depolarizzante, 1 e 2 qubit) ed errore di lettura
+(readout, simmetrico come primo passo). $T_1/T_2$ esclusi, stessa
+decisione esplicita.
+
+Questo documento non deriva un nuovo modello: verifica che quello già
+costruito e validato per il dimero si applichi correttamente a un
+sistema a 3 spin, senza modifiche.
+
+\section{Riuso del modulo: perché è diretto, non un'estensione}
+\label{sec:riuso}
+
+Il modulo \texttt{noise\_model\_dimero.py} costruisce il
+\texttt{NoiseModel} con due chiamate:
+\begin{keyeq}
+\centering
+\texttt{nm.add\_all\_qubit\_quantum\_error(err, [...])} \qquad
+\texttt{nm.add\_all\_qubit\_readout\_error(ro\_err)}
+\end{keyeq}
+Entrambe applicano l'errore a \emph{tutti} i qubit del circuito su cui
+il \texttt{NoiseModel} viene agganciato in fase di simulazione, quale
+che sia il loro numero: non c'è alcun riferimento hard-coded a 2 qubit
+nel modulo. Il riuso per l'anello (3 qubit) è quindi diretto, non
+un'estensione da scrivere --- verificato empiricamente in
+Sez.~\ref{sec:verifica}, non solo argomentato dalla lettura del codice.
+
+\begin{okbox}{Nota di dipendenza, dichiarata esplicitamente}
+\texttt{noise\_model\_trimero\_anello.py} è un \textbf{wrapper sottile}:
+importa e ri-espone tal quale (\texttt{build\_noise\_model},
+\texttt{eps\_to\_lambda}, \texttt{BASIS\_GATES} e le costanti di
+calibrazione) da \texttt{noise\_model\_dimero.py}, senza ridefinire
+alcuna logica. Stessa situazione, dichiarata con lo stesso principio, già
+segnalata per \texttt{validate\_ansatz\_params\_dimero.py} in Parte 1 del
+dimero: un file concettualmente di un'altra parte del progetto viene
+riusato da un contesto diverso, e la dipendenza è dichiarata nel
+docstring del modulo, non nascosta dietro un import silenzioso. Il
+motivo del wrapper, invece di un import diretto da
+\texttt{validate\_noise\_model\_trimero\_anello.py}: dare al trimero un
+punto d'ingresso con lo stesso nome usato in ogni altra parte del
+progetto (\texttt{noise\_model\_dimero.py}, e in futuro
+\texttt{noise\_model\_trimero\_catena.py} se servirà), cosi' che il
+pacchetto riproducibile del trimero elenchi un
+\texttt{noise\_model\_trimero\_anello.py} accanto agli altri moduli senza
+dover spiegare ogni volta l'assenza --- senza però duplicare la logica in
+due copie da tenere sincronizzate.
+\end{okbox}
+
+Le formule del canale depolarizzante e dell'errore di lettura, e la
+calibrazione di riferimento, sono identiche a quelle già derivate per il
+dimero (\texttt{teoria\_modello\_rumore.tex},
+\texttt{risultati\_modello\_rumore\_dimero.tex}) --- non ripetute qui per
+esteso, solo richiamate dove servono per la verifica.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Canale} & \textbf{Gate di riferimento} & \textbf{Valore mediano}\\
+\midrule
+Errore di gate, 1 qubit & \texttt{sx} & $\varepsilon_{1q}=2.9\times10^{-4}$\\
+Errore di gate, 2 qubit & \texttt{CZ} & $\varepsilon_{2q}=3.8\times10^{-3}$\\
+Errore di lettura & --- & $p_\text{readout}=2.3\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+Fonte: J.~P.~T.~Stenger, G.~Bazargan, N.~T.~Bronn, D.~Gunlycke,
+\emph{``Method for simulating open-system dynamics using mid-circuit
+measurements on a quantum computer''}, arXiv:2504.15187 (2025) ---
+Appendice B, mediane pubblicate per \texttt{ibm\_torino}.
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.62\linewidth]{figure/fig_depolarizzazione_bloch.pdf}
+\caption{\textit{Contrazione del vettore di Bloch, $1-\lambda$, in
+funzione di $\lambda$ --- stesso contenuto del documento sul dimero: la
+fisica del canale depolarizzante a 1 qubito non dipende dal numero di
+spin del sistema più ampio in cui il qubit è inserito. \textbf{Nota
+tecnica:} il PDF originale del Project, letto in questa sessione, risulta
+un archivio zip con anteprima JPEG (limite della piattaforma per i file
+binari montati in \texttt{/mnt/project} in questo ambiente --- verificato
+su più PDF, non isolato a questo file --- non un difetto del file
+sorgente). Rigenerata qui come vero PDF vettoriale
+(\texttt{generate\_figure\_depolarizzazione\_bloch.py}, stesso stile
+grafico del progetto via \texttt{stile.py}) a partire dalla formula nota
+($1-\lambda$) e dalle etichette/range esatti recuperati dal testo
+estratto nel manifest dello stesso pacchetto zip, non inventati.}}
+\end{figure}
+
+\section{Verifica}
+\label{sec:verifica}
+
+Punto di lavoro usato per la verifica: VQE+DM dell'anello, ansatz
+$W$-2q.6, $J=1,\,J'=0.4,\,b=b_c=2.4,\,D=0.15$ (punto confermato, mode
+``B''). Parametri VQE riottimizzati in questa sessione (multistart
+COBYLA + polish L-BFGS-B, stesso schema del dimero):
+$E_\text{VQE}=-5.53437001739340$, $E_\text{esatto}=-5.53437001739350$,
+fedeltà $=0.99999999999961$ --- coincide con la fidelity $\approx1$ già
+registrata in Parte 1 (Fase 5, ansatz $W$-2q.6).
+
+\begin{okbox}{Controllo 1 --- limite di rumore nullo}
+$\varepsilon_{1q}=\varepsilon_{2q}=p_\text{readout}=0$: l'energia
+calcolata su \texttt{AerSimulator(method="density\_matrix")} deve
+riprodurre l'energia VQE di Parte 1.
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$E_\text{VQE}$ (registrato, Parte 1) & $-5.5343700174$\\
+$E_\text{VQE}$ (density\_matrix, rumore$=0$) & $-5.5343700174$\\
+$|$differenza$|$ & $2.66\times10^{-15}$\\
+CNOT nel circuito transpilato & $6$\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{OK}: differenza a precisione di macchina, ben sotto la soglia
+$10^{-8}$ richiesta.
+\end{okbox}
+
+\begin{okbox}{Controllo 2 --- NoiseModel con valori di riferimento (\texttt{ibm\_torino})}
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\textbf{Quantità} & \textbf{Valore}\\
+\midrule
+$E_\text{VQE}$ (rumore di riferimento) & $-5.37687489$\\
+Scostamento da $E_\text{VQE}$ ideale & $+0.157495$\\
+CNOT nel circuito transpilato & $6$\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{OK}: energia rumorosa più alta del fondamentale, come atteso
+fisicamente per un canale che degrada verso lo stato massimamente misto.
+\end{okbox}
+
+\begin{okbox}{Controllo 3 --- scan rapido su $\varepsilon_{2q}$}
+A parità di $\varepsilon_{1q}=2.9\times10^{-4}$,
+$p_\text{readout}=2.3\times10^{-2}$:
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$\varepsilon_{2q}$ & $E_\text{VQE}$ rumoroso & scostamento & CNOT\\
+\midrule
+$0$ & $-5.49600915$ & $+0.038361$ & $6$\\
+$1.0\times10^{-3}$ & $-5.46445616$ & $+0.069914$ & $6$\\
+$3.8\times10^{-3}$ & $-5.37687489$ & $+0.157495$ & $6$\\
+$8.0\times10^{-3}$ & $-5.24760282$ & $+0.286767$ & $6$\\
+$1.5\times10^{-2}$ & $-5.03765731$ & $+0.496713$ & $6$\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{OK}: scostamento monotono crescente in $\varepsilon_{2q}$, come
+atteso. Il conteggio di CNOT resta $6$ per ogni valore --- stesso
+pattern già osservato sul dimero (il conteggio dopo transpilazione
+dipende dalla struttura del circuito, non dai valori numerici dei
+parametri del rumore né, qui, da quelli dell'ansatz).
+\end{okbox}
+
+\section{Perché 6 CNOT, e perché è indipendente da $\varepsilon_{2q}$}
+
+Il circuito VQE+DM dell'anello (ansatz $W$-2q.6) contiene tre blocchi
+$W$ (uno per legame: $(1,2)$, $(2,3)$, $(3,1)$), ciascuno costruito come
+$\texttt{cx}\cdot R_y(\theta)\cdot\texttt{cx}$ --- 2 CNOT per blocco,
+$3\times2=6$ in totale, più le rotazioni a 1 qubit finali che non
+aggiungono CNOT. La transpilazione (\texttt{optimization\_level=3}) non
+trova ulteriori fusioni: a differenza del blocco di Trotter del dimero
+(dove passi consecutivi identici possono fondersi), qui i tre blocchi
+agiscono su coppie di qubit diverse e in sequenza fissa, quindi non c'è
+struttura ripetuta da collassare. Il conteggio non dipende da
+$\varepsilon_{2q}$ per lo stesso motivo per cui non dipendeva dai valori
+di $\theta$ sul dimero: il \texttt{NoiseModel} agisce \emph{dopo} la
+transpilazione, sul circuito già fissato --- cambia la probabilità di
+errore per ciascun gate, non la struttura del circuito stesso.
+
+\section{Cosa non entra in questo modello}
+
+Identico al dimero, per coerenza esplicita: $T_1/T_2$ esclusi
+(decisione del relatore); nessuna correlazione fra qubit (ogni canale
+applicato indipendentemente qubit per qubit, o coppia per coppia per il
+\texttt{cx}); readout simmetrico soltanto in questa fase base;
+calibrazione a un solo punto nel tempo (mediane pubblicate).
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Il riuso diretto del modulo (Sez.~\ref{sec:riuso}) significa che lo
+Stadio 2 (VQE con DM sotto rumore) non richiede nuova infrastruttura di
+\emph{rumore}: il \texttt{NoiseModel} è già pronto,
+\texttt{energia\_vqe\_su\_simulatore(noise\_model, params)} già scritta
+in \texttt{validate\_noise\_model\_trimero\_anello.py} ne fissa lo schema
+d'uso (transpilazione + simulatore a operatore densità). La funzione di
+costo effettiva dello Stadio 2 non è però un riuso letterale di
+quest'ultima: aggiunge il calcolo della fedeltà (assente qui, dove serve
+solo l'energia per il controllo 1), quindi è una funzione nuova ma
+strutturalmente analoga --- stesso schema del dimero, dove
+\texttt{validate\_noise\_model\_dimero.py} e
+\texttt{vqe\_dm\_rumoroso\_dimero.py} sono due funzioni distinte per lo
+stesso motivo, non la stessa funzione riusata (verificato ora sul
+codice, non assunto per analogia).
+
+A differenza del dimero, però, la strategia di transpilazione a blocchi
+per Trotter e correlatori (Stadi 3--4) va scritta da zero: verificato
+esplicitamente che né \texttt{circuito\_correlazioni\_trimero\_
+anello.py} né \texttt{trotter\_trimero\_anello.py} contengono
+riferimenti a \texttt{BASIS\_GATES} --- non un'estensione di codice
+esistente, un modulo nuovo da scrivere seguendo lo stesso principio già
+fissato sul dimero (transpilare il singolo passo/blocco una volta,
+comporre $N$ volte).
+
+\begin{okbox}{Sintesi in una riga}
+Stesso modello di rumore del dimero (due canali, calibrazione
+\texttt{ibm\_torino}), riusato senza modifiche su un circuito a 3 qubit
+--- verificato con tre controlli su ansatz $W$-2q.6, non assunto
+dall'analogia con $N=2$.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{noise\_model\_trimero\_anello.py} (wrapper sottile su
+\texttt{noise\_model\_dimero.py}, Sez.~\ref{sec:riuso}),
+\texttt{validate\_noise\_model\_trimero\_anello.py}, questo documento.
+
+\end{document}

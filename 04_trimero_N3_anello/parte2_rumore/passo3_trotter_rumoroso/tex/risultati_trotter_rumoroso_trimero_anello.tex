@@ -1,0 +1,242 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Quantum simulation (Trotter) sotto rumore (anello)}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Quantum simulation (Trotter) sotto rumore --- trimero ad anello\\[0.2em]
+\Large\normalfont\color{softgray}Due scenari: punto VQE e punto $R_0$}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice:
+\texttt{trotter\_\allowbreak rumoroso\_trimero\_anello.py} (mirror
+strutturale di \texttt{trotter\_rumoroso\_dimero.py}, ma generico rispetto
+al punto di lavoro e allo stato iniziale). Modello di rumore:
+\texttt{noise\_model\_trimero\_anello.py}, valori di riferimento
+\texttt{ibm\_torino}.
+
+\tableofcontents
+
+\section{Obiettivo e una scelta esplicita di scope}
+
+A differenza del dimero, dove un unico punto di lavoro (``test 2'')
+serve sia il VQE sia la dimostrazione Trotter, \textbf{Parte 1
+dell'anello usa due punti diversi} per le due cose:
+
+\begin{keyeq}[title={Due scenari, entrambi trattati qui}]
+\begin{itemize}[leftmargin=1.3em,itemsep=0.2em]
+\item[\textbf{A}] Punto VQE ($b=b_c=2.4,\,D=0.15$, mode ``B''): stato
+preparato dall'ansatz $W$-2q.6 (Stadio 2), poi $N$ passi di Trotter.
+Mirror esatto dello schema del dimero.
+\item[\textbf{B}] Punto $R_0$ ($b=0.05,\,D=1.93$), \textbf{dichiarato
+provvisorio} in Parte 1
+(\texttt{quantum\_\allowbreak simulation\_\allowbreak trimero\_anello\_\allowbreak applicazione.tex}):
+nessuna preparazione VQE, si parte da $\ket{000}$ --- stesso stato e
+stesso punto della dimostrazione Trotter di Parte 1, qui reso rumoroso.
+\end{itemize}
+Scelta dell'utente: trattare \textbf{entrambi}, non scegliere fra i due.
+\end{keyeq}
+
+\section{Strategia di transpilazione a blocchi (scritta qui per la prima volta)}
+
+Segnalato all'apertura della Parte 2 sull'anello: né
+\texttt{circuito\_\allowbreak correlazioni\_\allowbreak trimero\_anello.py}
+né \texttt{trotter\_trimero\_anello.py} contenevano alcun riferimento a
+\texttt{BASIS\_GATES} --- verificato, non assunto. Stessa insidia già
+affrontata sul dimero: transpilare l'\emph{intero} circuito collasserebbe
+gli $N$ passi identici in un costo costante. Soluzione, identica nello
+spirito: il singolo passo esterno (scambio $H_\text{ex}$, poi campo, poi
+DM $H_\text{DM}$ --- stesso ordine di \texttt{trotter\_circuit} in Parte
+1) viene transpilato \textbf{una sola volta} in base $\{rz,sx,x,cx\}$,
+poi il blocco già compilato è composto $N$ volte.
+
+\section{Risultati: conteggio dei gate}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Scenario} & \textbf{CNOT preparazione} & \textbf{CNOT per passo} & \textbf{CNOT totali}\\
+\midrule
+A (VQE) & 6 & 15 & $6+15N$\\
+B ($R_0$) & 0 & 15 & $15N$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Crescita lineare confermata per $N\in\{1,2,5,10,20\}$ in entrambi gli
+scenari, coincidenza esatta con la formula attesa --- nessuna fusione
+silenziosa dei passi.
+\end{okbox}
+
+\section{Cross-check indipendente (rumore nullo)}
+
+Stessa struttura del dimero: fedeltà dal circuito Qiskit confrontata con
+un calcolo classico via potenza di matrice del singolo passo (numpy
+puro), cammino di calcolo indipendente dalla transpilazione a blocchi.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Scenario} & $\boldsymbol{N}$ & $\boldsymbol{F}$ \textbf{(numpy)} & $|$\textbf{diff}$|$ \textbf{vs Qiskit}\\
+\midrule
+A (VQE) & 5 & $0.9844752881$ & $4.4\times10^{-9}$\\
+A (VQE) & 80 & $0.9999521509$ & $2.6\times10^{-10}$\\
+B ($R_0$) & 5 & $0.3567981074$ & $3.1\times10^{-15}$\\
+B ($R_0$) & 80 & $0.9960968282$ & $1.6\times10^{-13}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Entrambi gli scenari convergono a $F\to1$ per $N$ crescente a rumore
+nullo (coerente con la convergenza già documentata in Parte 1). Lo
+scenario B converge più lentamente ($F=0.996$ a $N=80$, contro
+$F=0.99995$ dello scenario A): coerente con Parte 1, dove $D/J\simeq1.9$
+al punto $R_0$ (non piccolo) richiede $N\gtrsim300$ per infedeltà
+$<1\%$, contro il regime più mite del punto VQE.
+\end{okbox}
+
+\section{Il compromesso Trotter/rumore: localizzazione di \texorpdfstring{$N^*$}{N*}}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.98\linewidth]{figure/fig_trotter_rumoroso_trimero_anello.pdf}
+\caption{\textit{Fedeltà rumorosa $F(N)$ al rumore di riferimento
+(\texttt{ibm\_torino}), per entrambi gli scenari. In entrambi i casi il
+massimo è a un $N$ finito --- il compromesso fra errore di Trotter
+(decresce con $N$) e rumore accumulato (cresce con $N$, $15$ CNOT a
+passo) si manifesta concretamente, non solo previsto teoricamente.}}
+\end{figure}
+
+\begin{okbox}{Verificato}
+$N^*_A\approx2$ ($F(N^*)=0.697$), $N^*_B\approx10$ ($F(N^*)=0.380$) ---
+\textbf{diversi fra loro}, non assunti identici al dimero né fra i due
+scenari stessi. Lo scenario B mostra inoltre un comportamento non
+monotono a $N$ piccolo ($F$ crolla a $N=2$ prima di risalire): a rumore
+nullo, $F(N{=}2)=0.0017$ è già piccolissima per il solo errore di
+Trotter (regime non perturbativo a $D/J\simeq1.9$), quindi il crollo a
+$N=2$ sotto rumore riflette innanzitutto un errore di Trotter grande a
+quel passo, non un effetto del rumore in sé.
+\end{okbox}
+
+\section{Cosa non è ancora stato controllato qui}
+
+Nessuno scan sistematico sui parametri di rumore (Stadio 5, non ancora
+aperto): qui $N^*$ è localizzato solo al punto di calibrazione di
+riferimento. Nessuna correlazione dinamica (Stadio 4): qui l'osservabile
+è la fedeltà rispetto allo stato fisico evoluto, non un correlatore a
+due tempi.
+
+\begin{okbox}{Punto lasciato esplicitamente aperto, non verificato}
+Lo Stadio 2 ipotizzava che la degradazione di preparazione
+($1-F\sim3.0\%$) entrasse nella fedeltà totale di Trotter come
+\textbf{contributo additivo e costante in $N$}. Questo documento
+\textbf{non verifica} tale decomposizione: calcola $F(N)$ nel suo
+complesso, non i singoli contributi (preparazione, errore di Trotter,
+rumore accumulato) separatamente. Precedente rilevante sul dimero
+(\texttt{log\_decisioni.md}, sessione 5 settembre): la stessa
+decomposizione additiva era stata verificata lì per un \emph{correlatore}
+(Stadio 4), poi estesa per analogia alla fedeltà di Trotter (Stadio 3)
+\textbf{senza} una derivazione indipendente per quella metrica --- un
+errore di ragionamento poi corretto esplicitamente. Per non ripeterlo
+qui: la frase dello Stadio 2 va quindi letta come un'ipotesi di lavoro
+non ancora messa alla prova, non come un fatto già stabilito.
+\end{okbox}
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Lo Stadio 4 (correlatori dinamici sotto rumore) userà lo stesso blocco
+di passo esterno transpilato qui (\texttt{build\_step\_block}), inserito
+nel circuito Hadamard test con qubit ancilla --- il costo per passo (15
+CNOT) resta lo stesso, a cui si aggiungerà il costo del circuito di
+misura.
+
+\begin{okbox}{Correzione (aggiunta dopo la chiusura dello Stadio 4)}
+Questa sezione prevedeva, quando scritta, che allo Stadio 4 andassero
+verificati entrambi gli scenari A e B. \textbf{Previsione non
+confermata}: Parte 1 ha esplorato i correlatori dinamici \emph{solo} al
+punto VQE (scenario A) --- il punto $R_0$ non è mai stato usato per i
+correlatori, nemmeno in Parte 1. Lo Stadio 4 verifica quindi solo lo
+scenario A, correttamente, non per un'omissione ma perché lo scenario B
+non ha un analogo da riprodurre per questa osservabile. Vedi
+\texttt{risultati\_\allowbreak correlatori\_\allowbreak rumorosi\_trimero\_anello.tex},
+Sez.\ ``Cosa non è ancora stato controllato qui''.
+\end{okbox}
+
+\begin{okbox}{Sintesi in una riga}
+La strategia di transpilazione a blocchi, scritta qui per la prima volta
+per l'anello, funziona identicamente in entrambi gli scenari (crescita
+lineare confermata); il compromesso Trotter/rumore produce un $N^*$
+finito ma \textbf{diverso} nei due scenari ($N^*_A=2$, $N^*_B=10$),
+segno che il punto di lavoro conta quanto il livello di rumore.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{trotter\_\allowbreak rumoroso\_trimero\_anello.py},
+\texttt{validate\_\allowbreak trotter\_\allowbreak rumoroso\_trimero\_anello.py},
+\texttt{generate\_figure\_\allowbreak trotter\_\allowbreak rumoroso\_trimero\_anello.py},
+questo documento.
+
+\end{document}

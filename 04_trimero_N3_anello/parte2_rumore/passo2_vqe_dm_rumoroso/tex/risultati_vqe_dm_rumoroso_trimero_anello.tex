@@ -1,0 +1,198 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}VQE con termine DM sotto rumore (anello)}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}VQE con termine DM sotto rumore --- trimero ad anello\\[0.2em]
+\Large\normalfont\color{softgray}Quanto degrada un risultato ideale su un simulatore rumoroso, a 3 qubit}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{vqe\_dm\_\allowbreak rumoroso\_trimero\_anello.py}
+(mirror di \texttt{vqe\_dm\_rumoroso\_dimero.py}). Punto di lavoro:
+$J=1,\,J'=0.4,\,b=b_c=2.4,\,D=0.15$ (mode ``B'', confermato in Parte 1).
+Modello di rumore: \texttt{noise\_model\_trimero\_anello.py} (wrapper su
+\texttt{noise\_model\_dimero.py} --- Stadio 1), ai valori di riferimento
+\texttt{ibm\_torino} salvo dove diversamente indicato.
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Stessa domanda dello Stadio 2 sul dimero, qui sul sistema a 3 spin: il
+VQE ideale (Parte 1, nessun rumore) trova parametri
+$\theta^*_\text{ideale}$ che preparano lo stato fondamentale
+dell'Hamiltoniana dell'anello con DM entro la precisione numerica ---
+fedeltà $0.9999999999996$, registrata in \texttt{w2q6\_params\_
+optimal.npz}. Se lo stesso circuito, con la stessa ricetta di parametri,
+viene eseguito su un simulatore \textbf{rumoroso}, quanto degradano
+energia e fedeltà?
+
+\begin{keyeq}[title={Scelta di modellazione dichiarata, identica al dimero}]
+\centering
+Si riusano i parametri VQE già ottimizzati nel caso ideale, \textbf{senza}
+rioptimizzare sotto rumore: questo documento misura la degradazione di un
+risultato ideale, non la convergenza di un VQE noise-aware (estensione
+facoltativa, non nello scope attuale per il trimero --- vedi
+\texttt{domande\_relatore.md}).
+\end{keyeq}
+
+\section{Osservabili: energia e fedeltà rumorose}
+
+Stessa formalizzazione del dimero, qui su un registro a 3 qubit:
+$E_\text{rumoroso}=\Tr[\rho H]$,
+\begin{keyeq}
+\centering
+$F(\rho,\ket{\psi_\text{ideale}}) = \bra{\psi_\text{ideale}}\rho\ket{\psi_\text{ideale}}$
+\end{keyeq}
+La derivazione della semplificazione (fedeltà di Uhlmann per un
+riferimento puro) non è ripetuta qui: è già in
+\texttt{risultati\_vqe\_dm\_\allowbreak rumoroso\_dimero.tex}. Qui si
+verifica solo che valga anche a dimensione $d=8$ (3 qubit), non solo alla
+$d=4$ del dimero (Sez.~\ref{sec:verifica}).
+
+\section{Risultati}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Condizione} & $\boldsymbol{E}$ & $\boldsymbol{F}$ & \textbf{CNOT}\\
+\midrule
+Rumore nullo (verifica di coerenza) & $-5.53437002$ & $1.0000000000$ & $6$\\
+Rumore di riferimento (\texttt{ibm\_torino}) & $-5.37687489$ & $0.9702147050$ & $6$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Il caso a rumore nullo riproduce $E_0=-5.53437002$ (l'energia esatta,
+Parte 1) a precisione numerica --- coerenza interna della pipeline. Al
+rumore di riferimento: scostamento di energia $+0.157495$, perdita di
+fedeltà $1-F=0.029785$ ($\sim3.0\%$) --- circa il \textbf{doppio} della
+perdita osservata sul dimero ($1-F=0.014994$, $\sim1.5\%$), coerente con
+un ansatz a 6 CNOT invece di 2: più gate a 2 qubit, più occasioni per il
+canale depolarizzante di agire.
+\end{okbox}
+
+\section{Dipendenza da \texorpdfstring{$\varepsilon_{2q}$}{eps\_2q}}
+\label{sec:verifica}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.92\linewidth]{figure/fig_scan_eps2q_trimero_anello.pdf}
+\caption{\textit{Energia e fedeltà rumorose in funzione di
+$\varepsilon_{2q}$ (a $\varepsilon_{1q}=2.9\times10^{-4}$,
+$p_\text{readout}=2.3\times10^{-2}$ fissati). La linea tratteggiata
+verticale segna il valore di riferimento
+$\varepsilon_{2q}=3.8\times10^{-3}$. Degradazione monotona e liscia,
+nessuna soglia o comportamento anomalo nell'intervallo esplorato ---
+stesso andamento qualitativo del dimero, pendenza diversa (piu' ripida,
+coerente col maggior numero di CNOT).}}
+\end{figure}
+
+\begin{okbox}{Verificato (formula della fedeltà a $d=8$)}
+$F=\bra{\psi}\rho\ket{\psi}$ confrontata contro
+\texttt{qiskit.quantum\_info.state\_fidelity} su uno stato misto casuale
+a $d=8$ (non il caso specifico del VQE, per evitare una verifica
+circolare, e non la stessa dimensione $d=4$ già verificata sul dimero):
+differenza $0$ a precisione di macchina.
+\end{okbox}
+
+\section{Cosa non è ancora stato controllato qui}
+
+Identico al dimero: nessuna dinamica qui (solo lo stato fondamentale
+statico), nessuna rioptimizzazione noise-aware. Serve solo come
+riferimento di degradazione per uno stato preparato, prima di introdurre
+l'evoluzione temporale (Stadio 3).
+
+\section{Considerazioni e cosa serve al passo successivo}
+
+Due fatti usati esplicitamente allo Stadio 3 (quantum simulation Trotter
+sotto rumore): (1) i parametri $\theta^*_\text{ideale}$ e il loro
+CNOT-count minimo (6, per la sola preparazione) sono il punto di partenza
+--- lo stadio successivo aggiunge $N$ passi di Trotter sopra questa
+stessa preparazione; (2) è naturale chiedersi se la degradazione qui
+osservata ($1-F\sim3.0\%$ al rumore di riferimento) entri nella fedeltà
+totale di Trotter come contributo \emph{additivo e costante} in $N$ ---
+ma questa è un'\textbf{ipotesi da verificare}, non un fatto già stabilito:
+sul dimero la stessa decomposizione additiva era stata verificata per un
+\emph{correlatore} (Stadio 4), poi estesa per analogia alla fedeltà di
+Trotter (Stadio 3) senza una derivazione indipendente per quella metrica
+--- un errore di ragionamento poi corretto esplicitamente
+(\texttt{log\_decisioni.md}, sessione 5 settembre). Lo Stadio 3 di questo
+documento non deve ripetere lo stesso errore.
+
+\begin{okbox}{Sintesi in una riga}
+Riusare parametri VQE ideali sotto rumore di riferimento costa
+$\sim3.0\%$ di fedeltà con un ansatz a 6 CNOT --- circa il doppio del
+dimero (2 CNOT, $\sim1.5\%$), coerente col maggior conteggio di gate a 2
+qubit.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{vqe\_dm\_\allowbreak rumoroso\_trimero\_anello.py},
+\texttt{validate\_vqe\_dm\_\allowbreak rumoroso\_trimero\_anello.py},
+\texttt{generate\_figure\_\allowbreak scan\_eps2q\_trimero\_anello.py},
+questo documento.
+
+\end{document}

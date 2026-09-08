@@ -1,0 +1,189 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codifica e lingua ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+
+% ---------- Matematica ----------
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+
+% ---------- Impaginazione ----------
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Rumore quantistico sul trimero ad anello\\
+\large Panoramica della pipeline (vista a 2000 piedi)}
+\author{Samuele \\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Questo documento è una mappa, non una derivazione: serve a
+vedere in un colpo d'occhio come è strutturata la pipeline di rumore sul
+trimero ad anello prima di entrare nel dettaglio di ciascuno stadio
+(ciascuno ha un proprio documento dedicato, elencato in
+Sez.~\ref{sec:stadi}). È il mirror esatto della pipeline già completata
+sul dimero (\texttt{panoramica\_\allowbreak pipeline\_rumore\_\allowbreak dimero.tex}): stessi
+cinque stadi, stesso modello di rumore, stessa terminologia. Cambia il
+sistema --- da 2 a 3 spin, ansatz $W$-2q.6 al posto di PMA-2q$\cdot$3 ---
+non la struttura della pipeline. Scope e canali di rumore restano quelli
+confermati dal relatore (\texttt{domande\_relatore.md}, sez.~12) e
+topologia confermata (sez. ``topologia del trimero per il rumore'',
+6 settembre 2026): l'\textbf{anello}, non la catena.
+\end{abstract}
+
+\tableofcontents
+
+\section{Da dove partiamo}
+
+La parte a sistema chiuso è completa sul trimero ad anello: teoria
+esatta (decomposizione di Kambe, termine DM Opzione B), VQE senza e con
+DM (ansatz $W$-2q.6), evoluzione temporale $e^{-iHt}$ via
+Suzuki--Trotter, e correlazioni dinamiche $C_{ij}^{\alpha\beta}(t)$
+tramite lo stesso circuito di tipo Hadamard test usato sul dimero. Tutto
+lavora su uno stato \emph{puro} $\ket{\psi}$ a 3 qubit che evolve
+unitariamente: non c'è interazione con l'ambiente, non c'è rumore.
+
+Questa pipeline ripercorre esattamente la stessa catena di stadi già
+fatta sul dimero --- preparazione dello stato fondamentale, evoluzione
+temporale, misura dei correlatori --- ma la accompagna con le stesse due
+sorgenti di rumore realistiche già calibrate per il dimero. Non si
+introduce fisica nuova nell'Hamiltoniana né un nuovo modello di rumore:
+si applica lo stesso modello, già validato, a un circuito a 3 qubit
+invece che 2.
+
+\section{Cosa cambia: da \texorpdfstring{$\ket{\psi}$}{|psi>} a \texorpdfstring{$\rho$}{rho}}
+
+Come per il dimero, il rumore accoppia il sistema a un ambiente che non
+osserviamo: uno stato puro non basta più, serve l'operatore densità
+$\rho$ e un'evoluzione non unitaria pura. In Qiskit questo corrisponde,
+esattamente come per il dimero, a usare
+\texttt{AerSimulator(method=\allowbreak"density\_matrix")} invece del
+simulatore statevector --- qui su un registro a 3 qubit.
+
+\section{Gli stadi della pipeline}
+\label{sec:stadi}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cll@{}}
+\toprule
+\# & Stadio & Cosa cambia rispetto al sistema chiuso \\
+\midrule
+1 & Modello di rumore & wrapper sul dimero, stessa logica \\
+2 & VQE con termine DM, rumoroso & ansatz $W$-2q.6, simulatore a $\rho$ \\
+3 & Quantum simulation (Trotter), rumorosa & stesso circuito, compilato per passo \\
+4 & Correlazioni dinamiche, rumorose & stesso Hadamard test, readout incluso \\
+5 & Scan sui parametri di rumore & nuovo: nessun analogo nel sistema chiuso \\
+\bottomrule
+\end{tabular}
+\caption{I cinque stadi della pipeline, mirror esatto di quelli del
+dimero. Il primo stadio non richiede alcun adattamento della
+\emph{fisica} del modello: il \texttt{NoiseModel} non dipende dal
+numero di qubit per costruzione (verificato, non assunto ---
+Sez.~\ref{subsec:modello}). Un nuovo file esiste comunque
+(\texttt{noise\_model\_\allowbreak trimero\_anello.py}), ma è un
+wrapper sottile, non una reimplementazione.}
+\end{table}
+\FloatBarrier
+
+\subsection{Modello di rumore}
+\label{subsec:modello}
+
+Stessi due canali confermati dal relatore per il dimero (errore di gate
+depolarizzante 1q/2q, errore di lettura simmetrico), stessa calibrazione
+reale (\texttt{ibm\_torino}, arXiv:2504.15187). La logica del
+\texttt{NoiseModel} non viene reimplementata: costruisce l'errore con
+\texttt{add\_all\_qubit\_\allowbreak quantum\_error}/\texttt{add\_all\_qubit\_\allowbreak readout\_error},
+operazioni intrinsecamente indipendenti dal numero di qubit del circuito
+su cui vengono applicate. \texttt{noise\_model\_\allowbreak trimero\_anello.py} è un
+\textbf{wrapper sottile} che importa e ri-espone questa logica da
+\texttt{noise\_model\_dimero.py} (dipendenza dichiarata esplicitamente
+nel docstring, non nascosta), cosi' che il trimero abbia un punto
+d'ingresso con lo stesso nome usato in ogni altra parte del progetto,
+senza duplicare codice da tenere sincronizzato. Verificato empiricamente
+sul circuito VQE+DM a 3 qubit, non solo argomentato dalla forma del
+codice. Documento:
+\texttt{risultati\_\allowbreak modello\_rumore\_\allowbreak trimero\_anello.tex}.
+
+\subsection{VQE con termine DM, sotto rumore}
+
+Si ripete la stima del ground state con l'ansatz $W$-2q.6 già validato a
+sistema chiuso (fedeltà $\approx1$ nel caso ideale, punto di lavoro
+$J=1,\,J'=0.4,\,b=b_c=2.4,\,D=0.15$), eseguito su simulatore a operatore
+densità con il \texttt{NoiseModel} agganciato. Documento:
+\texttt{risultati\_vqe\_dm\_\allowbreak rumoroso\_trimero\_anello.tex}.
+
+\subsection{Quantum simulation (Trotter), sotto rumore}
+\label{subsec:trotter}
+
+Stesso circuito di Suzuki--Trotter del sistema chiuso, stessa insidia
+già affrontata sul dimero: transpilare l'\emph{intero} circuito a un
+livello di ottimizzazione alto collasserebbe gli $N$ passi identici in
+un costo costante, cancellando la dipendenza da $N$ che serve allo scan.
+A differenza del dimero, qui la strategia di transpilazione a blocchi
+va scritta da zero: né
+\texttt{circuito\_\allowbreak correlazioni\_\allowbreak trimero\_anello.py}
+né \texttt{trotter\_trimero\_anello.py} la contengono già (verificato,
+non assunto). Soluzione: transpilare una volta il singolo passo/blocco
+al suo costo minimo, poi ripetere il blocco già compilato $N$ volte.
+
+\textbf{Due scenari trattati}, non uno solo: Parte 1 dell'anello usa
+punti di lavoro diversi per il VQE ($b=b_c=2.4,\,D=0.15$) e per la
+dimostrazione Trotter ($R_0$: $b=0.05,\,D=1.93$, provvisorio, da
+$\ket{000}$) --- a differenza del dimero, dove un unico punto serve
+entrambi. Lo Stadio 3 copre entrambi: scenario A (preparazione VQE + $N$
+passi) mirror esatto del dimero, scenario B (nessuna preparazione, da
+$\ket{000}$) mirror della dimostrazione di Parte 1, reso rumoroso.
+Documento:
+\texttt{risultati\_\allowbreak trotter\_\allowbreak rumoroso\_trimero\_anello.tex}.
+
+\subsection{Correlazioni dinamiche, sotto rumore}
+
+Stesso circuito Hadamard test del sistema chiuso (ancilla + 3 qubit di
+registro), ora con rumore su preparazione, blocco $U(t)$ ripetuto e
+misura sull'ancilla (readout incluso). Documento:
+\texttt{risultati\_correlatori\_\allowbreak rumorosi\_trimero\_anello.tex}.
+
+\subsection{Scan sui parametri di rumore}
+
+Come per il dimero: si ripete il conto dello stadio precedente al
+variare di $(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$, per
+vedere come si sposta il numero di passi ottimale $N^*$. Documento:
+\texttt{risultati\_scan\_\allowbreak parametri\_rumore\_trimero\_anello.tex}.
+
+\section{Cosa resta fuori}
+
+Stesso scope del dimero, per coerenza dichiarata esplicitamente:
+$T_1/T_2$ esclusi per decisione del relatore; readout asimmetrico
+opzionale, non prioritario; reti neurali (NQS) fuori scope. In più, per
+il trimero: la topologia \textbf{catena aperta} resta un'estensione
+possibile ma non prioritaria (decisione motivata e confermata dal
+relatore, 6 settembre 2026) --- il risultato più originale della catena
+(alternanza dei legami che cancella l'errore chirale di Trotter) resta
+sul tavolo, non perso.
+
+\section{Il filo conduttore verificato in ogni stadio}
+
+Stessa proprietà usata nella pipeline del dimero, da riverificare qui
+(non assumere dall'analogia): il readout simmetrico è un fattore
+\textbf{moltiplicativo} sull'osservabile misurato, mai additivo --- da
+cui, se confermato, discenderebbe che anche qui $N^*$ non dipende da
+$p_\text{readout}$. Sul dimero questo era un risultato analitico
+generale (non specifico a $N=2$); l'aspettativa è che si trasferisca
+inalterato, ma resta da verificare esplicitamente allo stadio 5, non da
+dare per scontato solo perché la dimostrazione originale non usava
+dettagli specifici del numero di spin.
+
+\end{document}

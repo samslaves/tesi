@@ -59,25 +59,61 @@ porte di Hadamard. Il circuito completo è questo blocco ripetuto $N$ volte.}
 
 \FloatBarrier
 
-\section{Verifica: il circuito riproduce la dinamica vera}
+\section{Verifica: la matrice compatta e il circuito riproducono la stessa dinamica}
 
 Partendo da $\ket{\uparrow\uparrow}$ e seguendo la magnetizzazione totale nel
-tempo, si può confrontare direttamente il risultato del circuito con quello
-dell'esponenziale di matrice calcolata classicamente.
+tempo, si può calcolare l'evoluzione di Trotter in due modi diversi, e
+confrontarli: prima con la matrice compatta (algebra lineare pura, nessuna
+porta), poi con il circuito vero (le porte di Fig.~\ref{fig:circ-trotter},
+transpilate ed eseguite $N$ volte).
+
+\needspace{10\baselineskip}
+\subsection*{Primo metodo: la matrice compatta}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.86\textwidth]{figure/fig05b_trotter_sz_matrice}
+\caption{\emph{Matrice compatta} $\big(e^{-iH_2\tau}e^{-iH_1\tau}\big)^N$,
+algebra lineare diretta, nessuna porta applicata. La curva nera è
+l'evoluzione esatta. Con soli $2$ passi (rosso) l'approssimazione sbaglia
+visibilmente ampiezza e fase; con $5$ passi (arancio) l'errore si riduce ma
+resta; con $20$ passi (verde) la curva si sovrappone all'esatta.}
+\label{fig:sz-matrice}
+\end{figure}
+
+\needspace{10\baselineskip}
+\subsection*{Secondo metodo: il circuito vero}
 
 \begin{figure}[htbp]
 \centering
 \includegraphics[width=0.86\textwidth]{figure/fig05_trotter_sz}
-\caption{Magnetizzazione totale in funzione del tempo. La curva nera è
-l'evoluzione esatta. Con soli $2$ passi (rosso) il circuito sbaglia visibilmente
-ampiezza e fase; con $5$ passi (arancio) l'errore si riduce ma resta; con $20$
-passi (verde) la curva si sovrappone all'esatta e non è più distinguibile a
-occhio. Il punto di lavoro è scelto perché la dinamica non sia monocromatica:
+\caption{\emph{Circuito vero}: stesso passo di Fig.~\ref{fig:circ-trotter},
+transpilato in porte native, composto $N$ volte. Stesso punto di lavoro,
+stesso stato iniziale, stessi valori di $N$ della Fig.~\ref{fig:sz-matrice}.
+Il punto di lavoro è scelto perché la dinamica non sia monocromatica:
 un'unica frequenza renderebbe l'errore molto più difficile da vedere.}
 \label{fig:sz}
 \end{figure}
 
 \FloatBarrier
+
+\needspace{6\baselineskip}
+\subsection*{Confronto}
+
+Le due curve --- una per metodo, a parità di $N$ --- coincidono a
+precisione macchina: scarto massimo $2.4\times10^{-13}$ sull'intera griglia
+di $N$ usata più avanti (da $N=1$ a $N=512$), verificato direttamente sullo
+stato finale, non solo sull'aspetto visivo dei grafici. Non è un caso
+isolato: la matrice compatta è per costruzione lo stesso operatore che il
+circuito implementa porta per porta --- verificarlo conferma che
+l'implementazione in porte non ha introdotto errori propri, non solo che
+il metodo teorico sia corretto.
+
+\messaggio{Due modi di calcolare la stessa cosa, non due fisiche diverse:
+la matrice compatta serve dove servono molti valori di $N$ velocemente
+(la convergenza che segue), il circuito vero conferma che quello che si
+vede in figura è davvero quello che un computer quantistico
+eseguirebbe.}
 
 \needspace{9\baselineskip}
 \section{L'errore si comporta come previsto}
@@ -87,17 +123,19 @@ modo di distinguere un'approssimazione controllata da un'approssimazione che si
 spera vada bene.
 
 La prima colonna della tabella e della figura che seguono ($\lVert
-U_{\rm Trotter}-U_{\rm esatto}\rVert$) misura quanto differiscono, nel caso
+U_{\rm circuito}-U_{\rm esatto}\rVert$) misura quanto differiscono, nel caso
 peggiore, i due operatori di evoluzione --- non punto per punto, ma come
 oggetti nel loro complesso: quanto possono al massimo allontanarsi due stati
-fatti evolvere l'uno con $U_{\rm Trotter}$ e l'altro con $U_{\rm esatto}$,
+fatti evolvere l'uno con $U_{\rm circuito}$ e l'altro con $U_{\rm esatto}$,
 qualunque sia lo stato di partenza. È un numero più severo della sola
 differenza sullo stato che stiamo davvero usando (colonna centrale): tiene
-conto anche degli stati che non abbiamo provato.
+conto anche degli stati che non abbiamo provato. Anche qui, calcolata con
+entrambi i metodi (matrice compatta e circuito vero) per lo stesso motivo di
+prima.
 
 \begin{figure}[htbp]
 \centering
-\includegraphics[width=0.76\textwidth]{figure/fig06_trotter_errore}
+\includegraphics[width=0.76\textwidth]{figure/fig06b_trotter_errore_matrice}
 \caption{Errore a tempo fissato ($t=6$) al crescere del numero di passi, in
 scala doppio-logaritmica. Le due grandezze misurano cose diverse: la distanza
 fra gli operatori di evoluzione (blu) scala come $1/N$, la perdita di fidelity
@@ -116,7 +154,7 @@ superiore, che a pochi passi non sono trascurabili.}
 \begin{tabular}{@{}rccc@{}}
 \toprule
 \rowcolor{grigetto}
-$N$ & $\lVert U_{\rm Trotter}-U_{\rm esatto}\rVert$ & $1-\mathcal F$ & $\lvert\Delta\media{S_z}\rvert$ \\
+$N$ & $\lVert U_{\rm circuito}-U_{\rm esatto}\rVert$ & $1-\mathcal F$ & $\lvert\Delta\media{S_z}\rvert$ \\
 \midrule
   2 & $1.26$ & $3.9\times10^{-1}$ & $1.8\times10^{-1}$ \\
   8 & $2.7\times10^{-1}$ & $8.6\times10^{-3}$ & $3.8\times10^{-2}$ \\
@@ -128,10 +166,35 @@ $N$ & $\lVert U_{\rm Trotter}-U_{\rm esatto}\rVert$ & $1-\mathcal F$ & $\lvert\D
 \caption{Errore a $t=6$. Raddoppiando i passi, la prima colonna si dimezza e la
 seconda si divide per quattro: è esattamente il comportamento atteso. Le
 pendenze misurate con un fit sui punti con $N\ge8$ valgono $-1.008$ e $-2.059$
-contro i valori teorici $-1$ e $-2$.}
+contro i valori teorici $-1$ e $-2$. Numeri dal circuito vero, seconda
+colonna calcolata come $\lVert U_{\rm circuito}-U_{\rm esatto}\rVert$ via
+\texttt{Operator()} sul circuito transpilato --- confrontati sotto con lo
+stesso calcolo fatto con la matrice compatta.}
 \end{table}
 
 \FloatBarrier
+
+\needspace{10\baselineskip}
+\subsection*{Lo stesso confronto, con il circuito vero}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.76\textwidth]{figure/fig06_trotter_errore}
+\caption{Stesso identico calcolo di Fig.~\ref{fig:errore}, ma con il
+circuito vero (transpilato, eseguito porta per porta) per ciascuno dei
+$10$ valori di $N$, al posto della matrice compatta.}
+\label{fig:errore-circuito}
+\end{figure}
+
+\FloatBarrier
+
+Le due figure sono indistinguibili, ed è verificato che lo siano davvero:
+scarto massimo $2.4\times10^{-13}$ punto per punto su tutti i $10$ valori
+di $N$, matrice compatta contro circuito vero. Per questa convergenza, con
+tanti valori di $N$ da coprire su più ordini di grandezza, la matrice
+compatta resta il metodo pratico --- il circuito vero (Fig.~\ref{fig:errore})
+serve a certificare che non ci si stia affidando ciecamente a una
+scorciatoia mai controllata.
 
 \needspace{9\baselineskip}
 \section{Quanto costa: la parte che decide se è fattibile su hardware}
@@ -200,7 +263,7 @@ $\ket{\uparrow\uparrow}$ è comodo perché è autosufficiente: non richiede null
 da nessun altro documento. Ma il Documento 2 ha già costruito due stati di
 partenza veri e propri --- quelli prodotti dal VQE --- e a questo stesso punto
 di lavoro le loro fidelity sono molto diverse fra loro (vedi la tabella di
-confronto nel Documento 2, \S6): $0.9229$ per l'ansatz minimo,
+confronto nel Documento 2, \S6): $0.9229$ per l'ansatz base,
 $1$ (a dodici cifre) per quello esteso. È l'occasione per chiedersi cosa
 succede quando i due errori del progetto --- quello di preparazione e quello
 di evoluzione --- agiscono insieme, e se un ansatz migliore basta a farlo
@@ -213,7 +276,8 @@ sparire.
 Documento 2. In entrambi i pannelli: nera, l'evoluzione esatta dal
 fondamentale esatto (il riferimento); tratteggiata, evoluzione \emph{esatta}
 ma a partire dallo stato del VQE (isola l'errore di preparazione); punteggiata,
-evoluzione di \emph{Trotter} ($N=20$) dallo stesso stato del VQE (entrambi gli
+evoluzione con il \emph{circuito} ($N=20$ passi di Trotter) dallo stesso
+stato del VQE (entrambi gli
 errori insieme). \textbf{A sinistra}, PMA base: le due curve del VQE si
 staccano nettamente da quella esatta. \textbf{A destra}, PMA esteso: tutte e
 tre le curve sono indistinguibili a occhio.}
@@ -231,14 +295,14 @@ I numeri confermano quello che si vede, per entrambi gli ansatz:
 \begin{tabular}{@{}lccc@{}}
 \toprule
 \rowcolor{grigetto}
-\textbf{ansatz} & \textbf{solo VQE} & \textbf{VQE + Trotter} & \textbf{solo Trotter (da VQE)} \\
+\textbf{ansatz} & \textbf{solo VQE} & \textbf{VQE + circuito} & \textbf{solo circuito (da VQE)} \\
 \midrule
 PMA base (1 par.) & $0.327$ & $0.322$ & $0.024$ \\
 PMA esteso (3 par.) & $0.000$ & $0.033$ & $0.033$ \\
 \bottomrule
 \end{tabular}
 \caption{Scarto massimo su $\langle S_z^{\rm tot}\rangle(t)$, scomposto come
-in Fig.~\ref{fig:trotter-vqe}. Con l'ansatz minimo l'errore di preparazione
+in Fig.~\ref{fig:trotter-vqe}. Con l'ansatz base l'errore di preparazione
 ($0.327$) domina quello di Trotter di più di dieci volte. Con l'ansatz esteso
 l'errore di preparazione sparisce del tutto (per costruzione: $\mathcal
 F\approx1$), e quello che resta --- $0.033$ --- è \emph{solo} Trotter: non
@@ -247,13 +311,13 @@ $\ket{\uparrow\uparrow}$ allo stesso $N$ (che vale $0.010$ sullo stesso
 intervallo) --- stati diversi hanno contenuto in frequenza diverso, quindi
 anche il loro errore di Trotter differisce --- ma dello stesso ordine di
 grandezza, e comunque molto più piccolo dell'errore di preparazione
-dell'ansatz minimo.}
+dell'ansatz base.}
 \label{tab:doppio-errore}
 \end{table}
 
 \FloatBarrier
 
-Con $N=20$, in questo punto, l'ansatz minimo lascia sul tavolo un errore di
+Con $N=20$, in questo punto, l'ansatz base lascia sul tavolo un errore di
 preparazione dieci volte più grande di quello di Trotter: aumentare $N$ non
 lo tocca nemmeno. Con l'ansatz esteso quell'errore sparisce, e resta solo
 quello che aumentare $N$ può davvero ridurre.

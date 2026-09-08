@@ -1,0 +1,461 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- Schema dei quattro passi}
+\input{preambolo_dimero}
+\usepackage{pdflscape}
+\usepackage{array}
+
+\title{\bfseries Schema riassuntivo\\[2pt]
+\large Punti di lavoro, stati iniziali e collegamenti nei quattro passi}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+Questo documento non introduce fisica nuova: raccoglie in un unico posto,
+per ciascuno dei quattro passi già svolti, il punto di lavoro usato, lo
+stato iniziale, il risultato chiave e il collegamento con quanto viene
+dopo --- pensato per essere consultato, non letto in ordine.
+
+\section*{Notazione: due basi diverse, stesso spazio}
+
+Da qui in avanti compaiono due notazioni che si assomigliano ma
+\textbf{non sono la stessa cosa} --- vanno tenute distinte fin dall'inizio,
+non chiarite a parole ogni volta che ricorrono.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.5}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{stato $\ket{S,M}$} & \textbf{nome} & \textbf{forma esplicita} & \textbf{stato di registro} \\
+\midrule
+$\ket{1,1}$ & tripletto, $M{=}{+}1$ & $\uparrow\uparrow$ & $\ket{00}$ \\
+$\ket{1,0}$ & tripletto, $M{=}0$ & $(\uparrow\downarrow+\downarrow\uparrow)/\sqrt2$ & $(\ket{01}+\ket{10})/\sqrt2$ \\
+$\ket{0,0}$ & singoletto & $(\uparrow\downarrow-\downarrow\uparrow)/\sqrt2$ & $(\ket{01}-\ket{10})/\sqrt2$ \\
+$\ket{1,-1}$ & tripletto, $M{=}{-}1$ & $\downarrow\downarrow$ & $\ket{11}$ \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\textbf{Colonna di sinistra} ($\ket{S,M}$, sempre con la virgola): la base
+di \emph{spin totale}, usata quando il significato fisico conta --- il
+singoletto, il tripletto e le sue tre componenti.
+\textbf{Colonna di destra} ($\ket{00}$ e simili, sempre senza virgola): la
+base di \emph{registro} --- lo stato letterale dei due qubit, quello che
+un circuito manipola davvero, prima di qualunque significato fisico
+attribuito a posteriori.
+
+\messaggio{La virgola non è un dettaglio tipografico: $\ket{1,1}$ (con la
+virgola) è un'etichetta di spin totale, un'affermazione fisica.
+$\ket{00}$ (senza virgola) è solo il nome di due bit messi a zero --- un
+fatto sul registro, non ancora una affermazione fisica su cosa
+rappresenti. Da qui in poi, ogni stato di registro citato nel testo è
+accompagnato dalla parola ``registro'', non lasciato alla sola notazione.}
+
+\section{Tabella d'insieme}
+
+\renewcommand{\arraystretch}{1.35}
+\begin{landscape}
+\thispagestyle{empty}
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\bfseries\raggedright}p{2.7cm} p{5.15cm} p{5.15cm} p{5.15cm} p{5.15cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{Il sistema} & \textbf{Il VQE} & \textbf{La dinamica (Trotter)} & \textbf{I correlatori} \\
+\midrule
+Obiettivo &
+Spettro esatto del dimero; ruolo del termine DM sull'incrocio dei livelli &
+Trovare il fondamentale con un circuito; capire quale ansatz funziona, e
+perché &
+Evoluzione temporale reale $e^{-iHt}$; quantificare l'errore di Trotter &
+Correlatori dinamici $C_{ij}^{\alpha\beta}(t)$ con un circuito ad ancilla \\
+\addlinespace
+Punto/i di lavoro &
+sweep in $b/J$; confronto $D=0$ vs $D/J=0.2$ &
+sweep in $b/J$, $D=0$ e $D/J=0.2$; più il punto singolo ``test 2''
+($b/J{=}0.35$, $D/J{=}0.80$) &
+$b/J=-0.18$, $D/J=1$ (DM forte, $5\times$ quello del VQE principale) &
+``test 2'' ($b/J{=}0.35$, $D/J{=}0.80$) --- stesso punto singolo del VQE \\
+\addlinespace
+Stato iniziale &
+nessuno (solo diagonalizzazione) &
+$\ket{00}$ per costruzione (registro di default). L'ansatz generico è
+tutto parametrizzato, senza porte fisse. Quello PMA parte invece da un
+punto scelto apposta: singoletto oppure registro $\ket{11}$ per l'ansatz
+minimo (dipende dal settore, $b/J$ sopra o sotto l'incrocio); sempre
+registro $\ket{10}$ per quello esteso, senza scelta --- poi vengono le
+porte parametrizzate &
+il registro $\ket{00}$ stesso per il grosso del passo (coincide con
+$\ket{1,1}$, nessuna porta applicata); nella sezione finale lo stesso
+registro $\ket{00}$ è invece \emph{trasformato dalle porte} PMA
+base/esteso (\emph{ri-ottimizzate a questo stesso punto}) in
+un'approssimazione del fondamentale, usata al posto di $\ket{1,1}$ &
+fondamentale esatto per il grosso del passo; PMA base/esteso
+ri-ottimizzati allo stesso punto, solo nella sezione finale \\
+\addlinespace
+Risultato chiave &
+incrocio esatto a $b/J=2$ con $D=0$ (gap$=0$); con $D/J=0.2$ si apre
+(gap minimo $0.565$) &
+ansatz base (CNOT--$R_y$--CNOT) crolla vicino all'incrocio se $D\neq0$
+($\mathcal F\to0.70$); risolto con RBS $+\,2$ rotazioni ($\mathcal F=1$
+sempre) &
+errore $\sim1/N$ (operatori), $\sim1/N^2$ (fidelity); con lo stato VQE
+minimo l'errore di preparazione ($0.327$) domina $10\times$ quello di
+Trotter ($0.024$) &
+stessa gerarchia di errori vista nella dinamica, ora sul correlatore; lo
+scan sistematico (circuito vero) mostra un fattore $\sim12\times$ fra
+combinazione di spin più protetta e più fragile con il PMA base; con
+l'esteso, errore di Trotter reale ma piccolo ($0.011$--$0.032$) \\
+\addlinespace
+Collegamento &
+motiva il passo successivo: l'ansatz dovrà fare i conti con una
+simmetria che, con $D\neq0$, non c'è più &
+fornisce la \emph{struttura di circuito} (PMA base/esteso) --- non uno
+stato --- riusata indipendentemente nei due passi seguenti, ciascuno al
+proprio punto &
+introduce il tema ``due errori distinti, non intercambiabili'', ripreso
+tale e quale nel passo successivo &
+chiude la serie: stessa disciplina (A/B/C dichiarati, ansatz VQE
+verificato) applicata a una quarta grandezza fisica \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{landscape}
+
+\clearpage
+
+\section{Il sistema}
+
+Punto di partenza puramente teorico: diagonalizzazione esatta della
+matrice $4\times4$ del dimero, nessun circuito. Il risultato che conta per
+tutto il resto del lavoro non è lo spettro in sé, ma la scoperta che il
+termine DM \textbf{rompe una simmetria esplicita}: senza DM,
+l'Hamiltoniana conserva la magnetizzazione totale $M$, e i livelli con $M$
+diverso possono incrociarsi senza respingersi (incrocio protetto, non una
+singolarità --- il gap resta perfettamente definito, si annulla senza che
+nulla diverga). Con il DM acceso, quella protezione sparisce: l'incrocio
+si apre in un gap minimo finito.
+
+\messaggio{Non è un dettaglio isolato: è la ragione fisica per cui, nel
+passo successivo, un ansatz costruito per rispettare la conservazione di
+$M$ funziona perfettamente senza DM e fallisce con il DM acceso ---
+un'unica idea che attraversa tutto il lavoro.}
+
+\section{Il VQE}
+
+Circuito parametrico ottimizzato per trovare il fondamentale, confrontato
+con la diagonalizzazione esatta. Il confronto centrale è fra due ansatz:
+uno che rispetta la conservazione di $M$ (pochi parametri, blocco
+CNOT--$R_y$--CNOT o, nella versione raffinata, RBS) e uno generico che non
+rispetta nessuna simmetria particolare (sei parametri, sempre corretto ma
+più costoso). Senza DM il primo vince nettamente: stessa fidelity del
+generico, un sesto dei parametri. Con il DM acceso, vicino all'incrocio,
+il primo crolla ($\mathcal F\approx0.70$) --- non per pochi parametri, ma
+perché è confinato in un settore di $M$ che il vero fondamentale, con il
+DM acceso, non abita più per intero. Aggiungendo due rotazioni che rompono
+volutamente quella conservazione (ansatz esteso, RBS $+\,2$ parametri), la
+fidelity torna a $1$ ovunque.
+
+Oltre alla scansione principale, un secondo controllo puntuale: al punto
+``test 2'' ($b/J=0.35$, $D/J=0.80$), scelto apposta perché il
+fondamentale sia una sovrapposizione genuina e il DM sia ben acceso, la
+stessa storia si conferma --- $\mathcal F=0.9402$ per l'ansatz base,
+$\mathcal F=1$ (a dodici cifre) per quello esteso. Non è un punto
+qualsiasi: è quello che il passo dei correlatori userà più avanti come
+suo punto di lavoro principale, proprio perché già verificato qui.
+
+Un fatto che vale la pena rendere esplicito, richiamando la tabella
+d'apertura: le porte fisse dell'ansatz base, per $b/J$ sotto
+l'incrocio, trasformano il registro esattamente nel singoletto
+$\ket{0,0}$ --- e questo \emph{non} è un dettaglio qualsiasi: è
+\textbf{esattamente} il fondamentale vero a $D=0$, verificato per
+confronto diretto con la diagonalizzazione. La porta parametrizzata che
+segue non deve quindi costruire il fondamentale da zero: deve solo
+correggere la deviazione introdotta dal DM, allontanandosi da quel punto
+di partenza già esatto quando $D=0$. È proprio per questo che un solo
+parametro basta quando il DM è spento, e non basta più quando è acceso:
+la correzione da fare non è più una semplice rotazione dentro lo stesso
+settore.
+
+L'ansatz esteso non funziona allo stesso modo, ed è un punto facile da
+fraintendere: la sua porta fissa (una singola $X$, sempre la stessa,
+prima di RBS) prepara $\ket{10}$ --- uno stato \emph{prodotto}, non
+entangled, non il singoletto (sovrapposizione col vero singoletto:
+$1/\sqrt2$, non $1$). Non serve che lo sia: RBS esplora \emph{da sola}
+l'intero sottospazio $\{\ket{01},\ket{10}\}$, e il singoletto stesso è
+uno dei punti che raggiunge, esattamente a $\varphi=\pi/4$ --- verificato
+che $\text{RBS}(\pi/4)\ket{10}$ coincide col singoletto a precisione
+macchina. L'entanglement qui non è un dato di partenza: è il
+\emph{risultato} della stessa porta che l'ottimizzatore addestra.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}p{2.6cm}p{4.9cm}p{4.9cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{ansatz base} & \textbf{ansatz esteso} \\
+\midrule
+Porte fisse &
+$X,H,\text{CNOT},X$ (o $X,X$), due rami &
+$X$ soltanto, sempre la stessa \\
+Stato preparato &
+singoletto o $\ket{11}$ --- \textbf{già entangled} &
+$\ket{10}$ --- prodotto, \textbf{non entangled} \\
+Perché &
+il blocco dopo non sa cambiare settore: deve partire già in quello giusto &
+RBS sa muoversi da sola: il punto di partenza preciso non conta \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\messaggio{Il criterio di progetto che ne esce: un ansatz va costruito
+sulle simmetrie che l'Hamiltoniana ha davvero, non su quelle che sarebbe
+comodo avesse. Non è un risultato che resta qui --- è la struttura di
+circuito riusata, ri-ottimizzata da capo, nei due passi seguenti.}
+
+\section{La dinamica (Trotter)}
+
+Evoluzione temporale reale, $e^{-iHt}$ scomposto in passi di Trotter. Punto
+di lavoro diverso da quello del VQE principale ($D/J=1$, cinque volte più
+forte), scelto non per continuità con il VQE ma per una ragione propria:
+serve una dinamica con più frequenze visibili insieme, altrimenti l'errore
+di Trotter è quasi invisibile.
+
+Il passo si scompone in \textbf{tre confronti distinti}, non due, tutti
+allo stesso punto di lavoro ($b/J=-0.18$, $D/J=1$):
+\begin{enumerate}[label=(\arabic*),leftmargin=2.2em,itemsep=4pt]
+\item $\ket{1,1}\to$ Trotter, da solo --- quantifica l'errore di Trotter al
+  crescere di $N$; autosufficiente, non serve nient'altro perché conti già
+  come verifica del metodo (vedi sotto);
+\item PMA base (parte sempre dal registro $\ket{00}$, ri-ottimizzato qui)
+  $\to$ Trotter --- mostra l'effetto di una preparazione imperfetta
+  ($\mathcal F=0.9402$);
+\item PMA esteso (parte sempre dal registro $\ket{00}$, ri-ottimizzato qui)
+  $\to$ Trotter, come controllo --- preparazione quasi perfetta
+  ($\mathcal F\approx1$), resta solo l'errore di Trotter.
+\end{enumerate}
+Il primo è il grosso del passo; il secondo e il terzo compaiono insieme,
+affiancati in due pannelli, nella sezione finale.
+
+\subsection*{Il primo confronto: perché $\ket{1,1}$}
+
+Lo stato di partenza usato per il primo confronto è $\ket{\uparrow\uparrow}$
+--- equivalentemente $\ket{1,1}$, la componente $S{=}1,M{=}1$ del
+tripletto, che per due spin-$1/2$ coincide esattamente con il prodotto
+$\ket{\uparrow\uparrow}$, senza bisogno di sovrapposizioni --- non il
+fondamentale.
+
+La scelta non è un dettaglio implementativo: è essa stessa la condizione
+per cui questo confronto conti come una \textbf{verifica} del metodo, e
+non solo come una sua dimostrazione. Uno stato che fosse già autostato dei
+singoli blocchi $H_1$, $H_2$ evolverebbe in modo banale sotto ciascuno di
+essi, e non mostrerebbe l'errore di Trotter anche quando presente --- un
+test di convergenza fatto su uno stato simile darebbe un risultato ottimo,
+ma privo di significato, perché non starebbe davvero mettendo alla prova
+l'approssimazione. $\ket{1,1}$ non è autostato di nessuno dei due blocchi a
+questo punto di lavoro: la dinamica che ne segue è genuinamente
+multi-frequenza, ed è proprio questo a rendere il confronto al crescere di
+$N$ una verifica reale, non un caso scelto per apparire bene.
+
+\subsection*{Il secondo e terzo confronto: PMA base ed esteso}
+
+Qui si introduce lo stato del VQE --- non quello ottimizzato nel passo
+precedente a $D/J=0.2$, ma la \emph{stessa struttura di circuito} (PMA
+base, PMA esteso), che parte sempre dal registro $\ket{00}$ come ogni ansatz, e
+viene \textbf{ri-ottimizzata da zero} a questo nuovo punto ($b/J=-0.18$,
+$D/J=1$). Il risultato: con l'ansatz base, l'errore di preparazione
+($0.327$) è più di dieci volte quello di Trotter ($0.024$) --- aumentare
+$N$ non aiuta finché la preparazione resta quella. Con l'ansatz esteso
+l'errore di preparazione crolla a zero per costruzione, e quel che resta
+($0.033$) è solo Trotter.
+
+Restare sullo stesso punto, invece di tornare a quello originale del VQE
+($D/J=0.2$), non è un dettaglio secondario: è la condizione che rende il
+confronto interpretabile. Lo scopo di questi due confronti è isolare un
+solo effetto --- cosa cambia se la preparazione è imperfetta, a parità di
+tutto il resto --- e per farlo va cambiata una sola variabile alla volta.
+Cambiare anche il punto di lavoro mescolerebbe due effetti diversi
+(preparazione imperfetta \emph{e} fisica diversa: frequenze, gap e
+ricchezza della dinamica cambierebbero insieme), rendendo impossibile
+dire a quale dei due attribuire uno scarto osservato. Per questo il VQE
+rientra qui come \emph{metodo} di preparazione --- la stessa struttura di
+circuito, ri-ottimizzata sul posto --- non come uno stato riciclato da
+un punto diverso.
+
+\messaggio{Due errori del progetto, misurati separatamente per la prima
+volta: quello di preparazione (quanto bene l'ansatz raggiunge il
+fondamentale) e quello di evoluzione (quanto bene Trotter approssima
+$e^{-iHt}$). Non sono intercambiabili, e qui si vede quale dei due
+conviene attaccare per primo.}
+
+\section{I correlatori}
+
+Correlatori dinamici $C_{ij}^{\alpha\beta}(t)=\media{\sigma_i^\alpha(t)\,
+\sigma_j^\beta(0)}$, misurati con un circuito a tre qubit (due del dimero
+più un'ancilla, schema Hadamard test). Punto di lavoro ``test 2''
+($b/J=0.35$, $D/J=0.80$) --- lo stesso punto singolo già usato come
+verifica aggiuntiva nel passo del VQE, non il punto della dinamica.
+
+Perché proprio questo punto, e non uno dei due già incontrati: la
+scansione in campo (Documenti 1--2) serve a vedere l'incrocio, quindi
+copre un intervallo di $b/J$, non un punto singolo rappresentativo --- non
+avrebbe senso per un correlatore, che va calcolato in un punto preciso.
+Il punto dinamico ($b/J=-0.18$, $D/J=1$) è scelto per dare una dinamica
+con più frequenze visibili, una condizione su come uno stato
+\emph{fissato} risponde nel tempo --- non sulla natura dello stato
+fondamentale in sé. ``Test 2'' è invece scelto apposta perché il
+fondamentale \emph{stesso} sia non banale (una sovrapposizione genuina fra
+settori, non uno stato semplice) e il DM sia ben acceso: è la condizione
+giusta perché il confronto fra ansatz --- il cuore di questo passo quanto
+di quello del VQE --- abbia qualcosa di non ovvio da mostrare. Le due
+condizioni (dinamica ricca; fondamentale non banale) non coincidono per
+forza nello stesso punto, ed è per questo che restano due punti distinti,
+non uno.
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{2.6cm}p{3.2cm}p{7.6cm}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Punto} & \textbf{Parametri} & \textbf{Perché sì o perché no, qui} \\
+\midrule
+Scansione in campo &
+$D=0$, $D/J=0.2$, $b/J$ variabile &
+No: copre un intervallo, non è un punto singolo --- un correlatore va
+calcolato in un punto preciso \\
+Punto dinamico &
+$b/J=-0.18$, $D/J=1$ &
+No: scelto per dinamica ricca (proprietà di uno stato \emph{fissato} nel
+tempo), non per la natura del fondamentale \\
+``Test 2'' \textit{(usato qui)} &
+$b/J=0.35$, $D/J=0.80$ &
+Sì: fondamentale stesso non banale, DM ben acceso --- la condizione
+giusta per un confronto fra ansatz interessante \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il grosso del passo usa il fondamentale esatto; solo nella sezione finale si
+ripete l'operazione già vista nella dinamica --- e con la stessa
+distinzione fra i due ansatz, non uno stato generico ``del VQE'':
+
+\begin{itemize}[leftmargin=1.8em,itemsep=3pt]
+\item un correlatore singolo, confrontato preparandolo con \textbf{entrambi}
+gli ansatz (PMA base e PMA esteso, stessa struttura di circuito della
+dinamica, ri-ottimizzata a questo punto), affiancati in due pannelli
+--- stesso schema già visto;
+\item uno scan sistematico sulle $36$ combinazioni, con \textbf{entrambi}
+gli ansatz e \textbf{entrambi} i metodi di calcolo --- \emph{esatto}
+($e^{-iHt}$ diretto, anche sullo stato imperfetto del VQE) e \emph{vero}
+(circuito ad ancilla, $N=200$ passi di Trotter transpilati) --- tenuti
+separati, non l'uno al posto dell'altro, e confrontati alla fine. Griglie
+temporali diverse per i due metodi ($161$ punti l'esatto, $21$ il vero,
+per tempo di calcolo) --- verificato che non cambi la conclusione:
+infittendo a $81$ punti sulla combinazione peggiore, lo scarto si sposta
+da $0.641$ a $0.646$, sotto l'$1\%$.
+\end{itemize}
+
+Il documento presenta le due sezioni di metodo una dopo l'altra, ciascuna
+con le proprie figure e le proprie osservazioni, seguite da un confronto
+esplicito --- non una sostituzione silenziosa di un metodo con l'altro.
+
+Con il metodo \emph{esatto}, il PMA base mostra un fattore $\sim11\times$
+fra combinazione più protetta e più fragile (pattern netto); il PMA
+esteso dà scarti uniformemente minuscoli ($10^{-7}$--$10^{-8}$), senza
+nulla di fisico da leggere --- quel calcolo confronta due evoluzioni
+\emph{entrambe} esatte, un confronto che nessun circuito reale può
+realizzare.
+
+Con il metodo \emph{vero} (il circuito), il PMA base conferma lo stesso
+pattern ($\sim12\times$, scarto fra $0.053$ e $0.64$) --- la struttura del
+blocco CNOT--$R_y$--CNOT protegge la direzione $y$. Il PMA esteso, però,
+\textbf{non} conferma il risultato del metodo esatto: lo scarto è
+$0.011$--$0.032$, quattro-cinque ordini di grandezza più grande del
+rumore numerico trovato prima --- il vero errore di Trotter, piccolo ma
+reale, che il metodo esatto non può mostrare per costruzione.
+
+\messaggio{Per il PMA base i due metodi concordano: l'errore di
+preparazione domina, e qualunque modo si scelga di calcolare l'evoluzione
+non cambia la conclusione. Per il PMA esteso, dove l'errore di
+preparazione è quasi assente, il metodo di calcolo diventa la fonte
+principale dell'errore residuo --- e un metodo che assume un'evoluzione
+impossibile su hardware reale nasconde esattamente l'errore che il
+circuito vero rivela. Scegliere un solo correlatore, o un solo metodo,
+per riportare un risultato senza dichiararlo sarebbe fuorviante in
+entrambi i casi.}
+
+\clearpage
+\section{Schema visivo d'insieme}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw,thick,rounded corners=4pt,align=left,
+              font=\footnotesize,inner sep=8pt,
+              text width=5.6cm,minimum height=3.2cm},
+  lab/.style={font=\scriptsize\itshape,text=gray!70!black,align=center},
+  arrow/.style={-{Stealth[length=8pt]},thick},
+  darrow/.style={-{Stealth[length=8pt]},thick,dashed}
+]
+
+\node[box,draw=blu,fill=blu!5] (sis) at (0,4.6) {
+  \textbf{\textcolor{blu}{Il sistema}}\\[3pt]
+  spettro esatto, nessun circuito\\
+  $D{=}0$ vs $D/J{=}0.2$\\[3pt]
+  \textit{scopre:} il DM rompe la\\
+  conservazione di $M$
+};
+
+\node[box,draw=arancio,fill=arancio!7] (vqe) at (9.2,4.6) {
+  \textbf{\textcolor{arancio!80!black}{Il VQE}}\\[3pt]
+  sweep $b/J$, $D{=}0$/$0.2$\\
+  $+$ punto ``test 2''\\[3pt]
+  \textit{scopre:} ansatz-$M$ crolla\\
+  con $D{\neq}0$; RBS$+2$ lo ripara
+};
+
+\node[box,draw=verdes,fill=verdes!6] (din) at (2.3,-1.0) {
+  \textbf{\textcolor{verdes}{La dinamica}}\\[3pt]
+  $b/J{=}-0.18$,\ $D/J{=}1$\\
+  stato: $\ket{\uparrow\uparrow}$\\[3pt]
+  \textit{scopre:} errore preparazione\\
+  $10\times$ errore Trotter
+};
+
+\node[box,draw=violas,fill=violas!8] (cor) at (9.2,-1.0) {
+  \textbf{\textcolor{violas}{I correlatori}}\\[3pt]
+  punto ``test 2''\\
+  stato: fondamentale esatto\\[3pt]
+  \textit{scopre:} l'effetto dipende\\
+  dalla combinazione di spin ($10\times$)
+};
+
+\draw[arrow,blu] (sis) -- (vqe) node[midway,above,lab] {motiva};
+
+% un unico punto di biforcazione sotto il VQE, con l'etichetta condivisa
+% messa lì una volta sola, non ripetuta su ciascun ramo (altrimenti le due
+% etichette si sovrappongono dove i rami sono vicini)
+\coordinate (fork) at ($(vqe.south)+(0,-1.1)$);
+\draw[darrow,arancio!70!black] (vqe.south) -- (fork);
+\node[lab,align=center,text width=4.6cm] at ($(fork)+(1.9,0.15)$)
+  {stessa struttura di circuito,\\ri-ottimizzata a ogni punto};
+\draw[darrow,arancio!70!black] (fork) -- (din.north east);
+\draw[darrow,arancio!70!black] (fork) -- (cor.north);
+
+\end{tikzpicture}
+\caption{Frecce continue: collegamento diretto (un risultato motiva il
+passo successivo). Frecce tratteggiate: riuso della \emph{struttura di
+circuito} del VQE, ri-ottimizzata da zero al punto di lavoro proprio di
+ciascun passo --- non un dato che passa direttamente da un passo
+all'altro. La dinamica e i correlatori non sono collegati fra loro: sono
+due applicazioni indipendenti della stessa idea, a punti diversi.}
+\end{figure}
+
+\end{document}

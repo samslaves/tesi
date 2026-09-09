@@ -1,0 +1,185 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 9. Scan sui parametri di rumore}
+\input{preambolo_dimero}
+
+\title{\bfseries Un solo chip non basta a dire qualcosa di generale\\[2pt]
+\large Documento 9 --- come si sposta $N^*$ al variare del canale}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Perché non fermarsi al punto di calibrazione}
+
+I due documenti precedenti hanno trovato $N^*$ a un \textbf{singolo} punto
+della calibrazione di riferimento, \texttt{ibm\_torino}. Non è una domanda
+oziosa chiedersi cosa succeda altrove: un chip diverso, o lo stesso chip in un
+momento diverso, avrà calibrazioni diverse. Sapere come $N^*$ dipenda dai
+parametri del canale di rumore rende il risultato utile oltre il singolo punto
+già misurato --- ed è la prima volta, in questa serie, che si esplora un intero
+spazio di parametri invece di un punto fisso.
+
+\section{Una previsione, prima di guardare i numeri}
+
+Il rumore di gate entra nella fedeltà o nel correlatore in modo non banale:
+più forte è $\varepsilon_{1q}$ o $\varepsilon_{2q}$, più in fretta il rumore
+accumulato supera il guadagno dell'errore di Trotter al crescere di $N$. Ci si
+aspetta quindi che $N^*$ \textbf{diminuisca} al crescere del rumore di gate.
+
+Il readout, invece, entra --- come visto nel Documento 8 --- come un fattore
+puramente moltiplicativo, $(1-2p_\text{readout})$, applicato allo stesso modo a
+tutti gli $N$. Se una funzione $g(N)$ ha un massimo a $N^*$, allora $c\cdot
+g(N)$, per qualunque costante positiva $c$, ha il massimo allo \textbf{stesso}
+$N^*$: moltiplicare per una costante positiva non può mai spostare un argmax.
+La previsione, scritta prima di guardare i dati: $N^*$ dipende da
+$\varepsilon_{1q}$ e $\varepsilon_{2q}$, non da $p_\text{readout}$.
+
+\section{Monotonia rispetto al rumore di gate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.95\textwidth]{figure/fig_passo5_Nstar_vs_eps}
+\caption{$N^*$ in funzione di $\varepsilon_{2q}$ (sinistra) e $\varepsilon_{1q}$
+(destra), scala log, l'altro parametro fissato al valore di riferimento.
+Linea tratteggiata: valore di calibrazione \texttt{ibm\_torino}. Monotonia
+non-crescente confermata in entrambi i casi, con una transizione a $N^*=1$
+per rumore sufficientemente forte.}
+\end{figure}
+
+\FloatBarrier
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\varepsilon_{2q}$ & $N^*$\\
+\midrule
+$1.0\times10^{-3}$ & $10$\\
+$2.0\times10^{-3}$ & $9$\\
+$3.8\times10^{-3}$ (riferimento) & $8$\\
+$6.0\times10^{-3}$ & $7$\\
+$1.0\times10^{-2}$ & $1$\\
+$1.5\times10^{-2}$ & $1$\\
+$2.5\times10^{-2}$ & $1$\\
+\bottomrule
+\end{tabular}
+\qquad
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\varepsilon_{1q}$ & $N^*$\\
+\midrule
+$1.0\times10^{-4}$ & $9$\\
+$2.9\times10^{-4}$ (riferimento) & $8$\\
+$1.0\times10^{-3}$ & $7$\\
+$3.0\times10^{-3}$ & $1$\\
+$1.0\times10^{-2}$ & $1$\\
+$3.0\times10^{-2}$ & $1$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$N^*$ è monotono non-crescente in entrambi $\varepsilon_{1q}$ ed
+$\varepsilon_{2q}$, come previsto. La transizione a $N^*=1$ non è un
+artefatto numerico: oltre una certa soglia di rumore di gate, nessun numero di
+passi di Trotter maggiore di 1 vale il costo aggiuntivo in gate rumorosi ---
+un solo passo, per quanto impreciso, resta comunque la scelta meno rumorosa.
+
+\section{Invarianza rispetto al readout}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$p_\text{readout}$ & $N^*$ & $|C(N^*)|$\\
+\midrule
+$0.00$ & $2$ & $0.6155$\\
+$0.05$ & $2$ & $0.5534$\\
+$0.20$ & $2$ & $0.3688$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$N^*=2$ per tutti i valori di $p_\text{readout}$ testati, dallo 0\% al 20\% ---
+un intervallo enormemente più ampio del valore di calibrazione reale (2.3\%).
+Il valore assoluto $|C(N^*)|$ cambia in modo sensibile, da $0.62$ a $0.37$, ma
+la \emph{posizione} del massimo no. A differenza di una prima versione di
+questo documento, qui non è una conseguenza garantita dalla formula usata
+per calcolare i numeri: ogni valore di questa tabella viene da una vera
+istruzione di misura sull'ancilla, con un \texttt{ReadoutError} genuino
+agganciato al simulatore e campionato a $2\times10^5$ shot (Documento 8) ---
+la formula $(1-2p)\langle Z\rangle_\text{ideale}$ resta solo l'argomento
+teorico che spiega \emph{perché} aspettarsi l'invarianza, ma questa tabella
+la verifica su dati genuinamente campionati, non la presuppone.
+
+\messaggio{La previsione teorica regge, verificata su dati genuinamente
+campionati, non solo argomentata per plausibilità né garantita dalla
+struttura del calcolo. Questa proprietà --- il readout simmetrico è sempre
+un fattore moltiplicativo, mai additivo --- smette di valere non appena il
+readout diventa asimmetrico, come si vedrà nel Documento 11: lì
+l'argomento di invarianza usato qui non si estende automaticamente, ed è
+per questo che quella domanda resta aperta fino a essere verificata
+numericamente.}
+
+\section{Un affinamento: quanto è rapida la saturazione a $N^*=1$?}
+
+Un modello ingenuo per l'errore totale, $\varepsilon_\text{tot}(N)\sim
+a/N+g\,\varepsilon_{2q}N$ (Trotter decrescente più rumore crescente, entrambi
+additivi), predice per derivazione diretta un ottimo
+$N^*=\sqrt{a/(g\varepsilon_{2q})}\propto\varepsilon_{2q}^{-1/2}$: una pendenza
+$-0.5$ in scala log-log. Confrontando con i punti non ancora saturati della
+tabella sopra ($\varepsilon_{2q}$ da $10^{-3}$ a $6\times10^{-3}$, $N^*$ da
+$10$ a $7$):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore\\
+\midrule
+Pendenza log-log prevista (errore additivo) & $-0.5$\\
+Pendenza log-log osservata (fit sui 4 punti non saturati) & $-0.195$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Lo scostamento non indica un errore: indica che il modello additivo era
+pensato per un errore su una singola quantità, mentre qui l'osservabile è una
+\emph{fedeltà}. Con rumore depolarizzante accumulato su molti passi, una
+fedeltà si comporta più come un decadimento moltiplicativo,
+$F(N)\sim(1-\varepsilon_{2q})^{cN}$ per qualche costante $c$, che come una
+somma di due termini indipendenti. La forma funzionale esatta di
+$N^*(\varepsilon_{2q})$ per una fedeltà resta un affinamento possibile, non
+necessario per rispondere alla domanda del relatore --- ``come si sposta
+$N^*$'' --- a cui i dati sopra rispondono già direttamente.
+
+\section{Cosa non copre questo scan}
+
+Un parametro alla volta, con gli altri fissati al valore di riferimento: non
+l'intero spazio congiunto $(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$.
+Non copre inoltre punti di lavoro fisici diversi da quello usato in tutta la
+pipeline ($b/J=0.35$, $D/J=0.80$): se e quanto $N^*$ dipenda anche dal punto
+fisico è una domanda verificata separatamente, con due punti di lavoro,
+nell'estensione sul VQE noise-aware (Documento 10).
+
+\section{Dove chiude questa parte della pipeline}
+
+Cinque documenti, dal modello di rumore (due canali, quattro numeri, Documento
+5) fino a qui, ognuno aggiungendo un livello di struttura: energia statica,
+poi dinamica, poi un osservabile a due tempi che richiede una misura reale,
+poi la sensibilità del risultato ai parametri stessi del rumore. Il filo
+conduttore verificato a ogni stadio è lo stesso: il readout simmetrico è
+sempre un fattore moltiplicativo, mai additivo --- proprietà che smette di
+valere non appena il readout diventa asimmetrico (Documento 11), e che è alla
+base di ogni argomento di invarianza usato finora.
+
+\messaggio{$N^*$ dipende in modo monotono e prevedibile dal rumore di gate, e
+non dipende affatto dal readout simmetrico --- entrambi i fatti verificati,
+non solo previsti. I due documenti che seguono sono estensioni facoltative:
+cosa succede rioptimizzando il VQE già sotto rumore (Documento 10), e cosa
+succede quando il readout smette di essere simmetrico (Documento 11).}
+
+\end{document}

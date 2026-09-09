@@ -1,0 +1,371 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- Schema dei passi sotto rumore}
+\input{preambolo_dimero}
+\usepackage{pdflscape}
+\usepackage{array}
+
+\title{\bfseries Schema riassuntivo --- Parte 2\\[2pt]
+\large Punti di lavoro, risultati chiave e collegamenti sotto rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+Questo documento non introduce fisica nuova: raccoglie in un unico posto,
+per ciascuno dei sette documenti già scritti (cinque stadi più due
+estensioni facoltative), il punto di lavoro usato, il risultato chiave e
+il collegamento con quanto viene dopo --- pensato per essere consultato,
+non letto in ordine. Riassume quello che c'è davvero nei Documenti 5--11,
+non anticipa nulla.
+
+\section*{Attenzione: cosa misura $N^*$, e cosa non misura}
+
+Un chiarimento che vale per tutta la Parte 2, non solo per il documento in
+cui è stato scoperto (Documento 8) --- va tenuto presente leggendo
+qualunque $N^*$ da qui in avanti.
+
+$N^*=\arg\max_N|C(N)|$ (o $F(N)$) trova il punto in cui il \textbf{segnale
+è più misurabile sotto rumore} --- non quello in cui la stima del
+correlatore fisico $C(t)$ è più \textbf{accurata}. Per la fedeltà $F(N)$
+(Documento 7) questa distinzione non si pone: $F$ è per costruzione un
+overlap con lo stato bersaglio, limitato fra $0$ e $1$, e un $F$ più alto
+è sempre un'approssimazione migliore. Per il modulo di un correlatore
+$|C(N)|$ (Documento 8) invece no: è stato verificato che a $N^*=2$,
+$t=2$, $|C(N^*)|=0.5894$ --- ma il vero valore fisico, dalla somma
+spettrale esatta, è $|C_\text{esatto}(t{=}2)|=0.3177$, quasi la metà.
+L'errore di Trotter a $N$ piccolo non disperde il risultato attorno al
+valore vero: lo \textbf{gonfia sistematicamente} (confermato a rumore
+nullo: $0.6574$, ancora quasi il doppio del vero valore --- non è colpa
+del rumore).
+
+\messaggio{Per gli scopi di tutta la Parte 2 --- fissare un compromesso
+Trotter/rumore, verificare se $N^*$ si sposta sotto altre condizioni --- è
+il criterio giusto: serve un punto in cui il segnale emerga chiaramente
+dal rumore, non un valore fisicamente accurato. Ma $|C(N^*)|$ non va mai
+letto, in nessuno dei documenti che seguono, come ``il correlatore vale
+questo'' --- andrebbe corretto per questo effetto, non preso alla
+lettera.}
+
+\section{Tabella d'insieme --- i cinque stadi}
+
+\renewcommand{\arraystretch}{1.35}
+\begin{landscape}
+\thispagestyle{empty}
+\begin{center}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}>{\bfseries\raggedright}p{2.5cm} p{4.18cm} p{4.18cm} p{4.18cm} p{4.18cm} p{4.18cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{5. Il modello} & \textbf{6. Il VQE} & \textbf{7. La dinamica} & \textbf{8. I correlatori} & \textbf{9. Lo scan} \\
+\midrule
+Obiettivo &
+Definire il rumore: due canali (depolarizzante 1q/2q, readout simmetrico),
+calibrati su hardware reale &
+Degradazione di un VQE ideale (Documento 2) eseguito su simulatore
+rumoroso &
+$N^*$: compromesso fra errore di Trotter e rumore accumulato, per la
+fedeltà rispetto allo stato bersaglio fisico &
+$N^*$ per il modulo di un correlatore dinamico, con una misura reale
+sull'ancilla (readout genuinamente campionato) &
+Come si sposta $N^*$ al variare dei parametri del canale di rumore \\
+\addlinespace
+Punto/i di lavoro &
+$\varepsilon_{1q}=2.9\times10^{-4}$, $\varepsilon_{2q}=3.8\times10^{-3}$,
+$p_\text{readout}=2.3\times10^{-2}$ (mediane \texttt{ibm\_torino}) &
+``test 2'' ($b/J{=}0.35$, $D/J{=}0.80$) --- stesso punto singolo di
+Parte 1 &
+``test 2'', $t=2$ --- stesso punto, non quello della dinamica di Parte 1
+($D/J=1$) &
+``test 2'', $t=2$; correlatore $C_{11}^{yz}$, \textbf{lo stesso} già
+scelto in Parte 1 (non uno nuovo) &
+``test 2''; scan indipendente su $\varepsilon_{1q}$, $\varepsilon_{2q}$,
+$p_\text{readout}$ \\
+\addlinespace
+Risultato chiave &
+contrazione di Bloch piccola ($<1\%$) ma non nulla; identità
+CNOT$\equiv$CZ verificata a precisione macchina &
+$1-F\sim1.5\%$ a rumore di riferimento; costo di preparazione $2$ CNOT
+(il più piccolo di tutta la pipeline) &
+$N^*=8$, $F(N^*)=0.817725$; minimo locale a $N=3$ ($F\approx0.40$) ---
+Trotter puro, non il rumore &
+$N^*=2$, $|C(N^*)|=0.5894$ --- che sovrastima il vero
+$|C_\text{esatto}(t{=}2)|=0.3177$ di $\sim1.9\times$ (vedi riquadro sopra)
+&
+$N^*$ monotono non-crescente in $\varepsilon_{1q},\varepsilon_{2q}$;
+invariante rispetto a $p_\text{readout}$ simmetrico (dimostrato
+\emph{e} verificato) \\
+\addlinespace
+Collegamento &
+fornisce il \texttt{NoiseModel} riusato, senza modifiche, in tutta la
+Parte 2 &
+fissa la scala di degradazione ``di base'' (sola preparazione) per il
+passo successivo &
+introduce $N^*$ e la regola della transpilazione a blocchi, riusata tale
+e quale in Documento 8 &
+fornisce il correlatore e l'$N^*$ di riferimento per i Documenti 9, 10, 11
+&
+apre le due estensioni facoltative (Documenti 10, 11) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{landscape}
+
+\clearpage
+
+\section{Tabella d'insieme --- le due estensioni}
+
+\renewcommand{\arraystretch}{1.35}
+\begin{center}
+\small
+\setlength{\tabcolsep}{5pt}
+\begin{tabular}{@{}>{\bfseries\raggedright}p{2.6cm} p{5.6cm} p{5.6cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{10. VQE noise-aware} & \textbf{11. Readout asimmetrico} \\
+\midrule
+Obiettivo &
+Rioptimizzare l'ansatz vedendo il rumore, invece di riusare i parametri
+ideali --- cambia qualcosa a valle? &
+Il test opzionale del relatore: cosa succede a $N^*$ se $p_{01}\neq p_{10}$? \\
+\addlinespace
+Punto/i di lavoro &
+``test 2'' \emph{più} un secondo punto ($b/J{=}{-}0.18$, $D/J{=}1$, DM
+$5\times$ più forte), per generalità &
+``test 2''; split illustrativo $p_{10}{:}p_{01}=3\times$ alla stessa
+media --- nessun valore reale citabile trovato per \texttt{ibm\_torino} \\
+\addlinespace
+Risultato chiave &
+nessun cambiamento misurabile ($\Delta E\sim10^{-7}$--$10^{-8}$); $N^*$
+invariato ovunque testato, inclusa l'intera griglia del Documento 9
+($25/25$ punti) &
+$N^*$ invariato anche nel caso asimmetrico, verificato fino a un rapporto
+$50\times$ --- \textbf{non} garantito dalla teoria (a differenza del caso
+simmetrico), quindi un fatto verificato, non assunto \\
+\addlinespace
+Collegamento &
+chiude con un NO la domanda ``vale la pena rioptimizzare sotto rumore?'' &
+chiude la Parte 2 sul dimero; il passo successivo del progetto è la
+stessa pipeline sul sistema a tre spin (anello) \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Il modello di rumore}
+
+Due canali soli, non uno stack generico: depolarizzante (separato a 1 e 2
+qubit) e readout simmetrico, calibrati sulle mediane pubblicate per
+\texttt{ibm\_torino} (Stenger \emph{et al.}, arXiv:2504.15187). $T_1/T_2$
+esclusi per decisione esplicita del relatore, non per omissione. Un punto
+tecnico verificato, non assunto: il gate nativo a 2 qubit di
+\texttt{ibm\_torino} è il CZ, mentre il circuito di questa tesi usa CNOT
+--- i due sono legati da un'identità circuitale esatta
+($\text{CNOT}=(\mathbb1\otimes H)\cdot\text{CZ}\cdot(\mathbb1\otimes H)$),
+verificata a precisione macchina, quindi riusare $\varepsilon_{2q}$ del CZ
+per il CNOT non è un'approssimazione arbitraria.
+
+\messaggio{Il modello è deliberatamente minimale: due canali, quattro
+numeri, calibrati su un chip reale. Questa scelta ha una conseguenza
+diretta su tutto quello che segue --- ``rumoroso'', in questa parte della
+tesi, significa esattamente questi due canali a questi valori (o a quelli
+esplicitamente scansionati in Documento 9), non una replica generica di
+``un computer quantistico rumoroso''.}
+
+\section{Il VQE sotto rumore}
+
+Il documento più semplice della serie: stesso ansatz, stessi parametri
+$\theta^*$ di Parte 1, nessuna rioptimizzazione --- misura quanto degrada
+un risultato \emph{ideale} se eseguito su hardware rumoroso, non quanto
+bene converga un VQE che veda il rumore durante l'ottimizzazione (quella
+domanda è rimandata, per intero, al Documento 10). Il costo di
+preparazione, $2$ CNOT, è il più piccolo di tutta la pipeline: lascia poco
+spazio al rumore di accumularsi, ed è per questo che la perdita di
+fedeltà misurata qui ($\sim1.5\%$) è la scala più piccola di tutta la
+Parte 2 --- gli stadi successivi, con circuiti più lunghi, partono da
+questa scala e la degradano ulteriormente.
+
+\section{La dinamica sotto rumore}
+
+Primo punto della pipeline in cui il numero di passi di Trotter $N$
+smette di essere ``più è meglio'': con il rumore acceso, ogni passo in
+più costa $3$ CNOT --- il compromesso fra errore di Trotter (decrescente
+in $N$) e rumore accumulato (crescente in $N$) fissa un $N^*$ finito
+($N^*=8$), non $N\to\infty$ come nel sistema chiuso. Un dettaglio tecnico
+riusato ovunque da qui in avanti: il singolo passo va transpilato una
+sola volta al suo costo minimo e composto $N$ volte --- transpilare
+l'intero circuito assemblato fonde gli $N$ passi in un blocco a costo
+costante, cancellando silenziosamente la dipendenza da $N$ che è
+l'oggetto dello studio.
+
+\messaggio{Il minimo locale a $N=3$ (non un semplice calo, un vero
+minimo) è riprodotto identico a rumore nullo e a rumore acceso: è un
+effetto di Trotter puro, non un artefatto del modello di rumore --- lo
+stesso tipo di comportamento non perturbativo ricomparirà, in forma più
+marcata, nel correlatore del Documento 8.}
+
+\section{I correlatori sotto rumore}
+
+Qui il rumore di lettura entra per la prima volta in gioco: a differenza
+di energia e fedeltà (lette direttamente dall'operatore densità, nessuna
+misura), il correlatore passa da una vera istruzione di misura
+sull'ancilla. Il correlatore usato non è una nuova scelta indipendente:
+è \textbf{lo stesso} $C_{11}^{yz}$ già scelto e motivato in Parte 1
+(Documento 4), riusato qui per continuità diretta --- e lo scan
+sistematico sulle 36 combinazioni (rifatto sotto rumore, verifica non
+data per scontata) conferma che è un caso rappresentativo, non un
+estremo: sta nel secondo gruppo più popoloso ($N^*=2$, $12$ combinazioni
+su $36$).
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{3.4cm}p{3.0cm}p{7.0cm}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Correlatore} & \textbf{$a_2/a_1$, $N^*$} & \textbf{Dove si colloca} \\
+\midrule
+$C_{11}^{yz}$ \textit{(usato qui)} &
+$0.71$, $N^*=2$ &
+Stesso di Parte 1; secondo gruppo più popoloso su cinque --- rappresentativo,
+non un estremo \\
+$C_{21}^{xx}$ \textit{(usato in una versione precedente)} &
+$0.48$, $N^*=5$ &
+L'estremo più fragile di tutte le 36 combinazioni --- $N^*$ più alto,
+$|C(N^*)|$ più basso in assoluto \\
+Gruppo più ricco in assoluto &
+$0.96$, $N^*=1$ &
+Non usato: il massimo teorico di ricchezza spettrale non implica il
+comportamento più interessante sotto rumore \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\messaggio{Il meccanismo dietro la posizione di $N^*$, verificato su
+tutte e 36 le combinazioni: non è la ricchezza spettrale $a_2/a_1$ a
+deciderla direttamente, è se la dinamica di Trotter ha o no un guadagno
+non perturbativo disponibile appena oltre $N=1$. Le combinazioni con
+$N^*=1$ sono già vicine al proprio plateau asintotico fin da $N=1$; le
+altre hanno un guadagno sostanziale da inseguire (fino a $+1229\%$ nel
+caso più estremo) --- vale la pena pagare qualche CNOT in più.}
+
+\section{Lo scan sui parametri di rumore}
+
+L'unico documento dei cinque senza un equivalente diretto in Parte 1:
+un punto di calibrazione solo (Documenti 6--8) non dice come si comporti
+il risultato altrove. Una previsione scritta \emph{prima} di guardare i
+dati --- $N^*$ deve dipendere dal rumore di gate, non da quello di
+lettura simmetrico, perché quest'ultimo è un fattore puramente
+moltiplicativo e non può mai spostare un argmax --- è stata confermata
+su entrambe le metriche (fedeltà di Trotter, modulo del correlatore),
+non solo argomentata per plausibilità.
+
+\messaggio{Un limite dichiarato esplicitamente: la verifica di
+invarianza dal readout usa la stessa formula/lo stesso meccanismo
+moltiplicativo che la garantisce teoricamente --- per il caso simmetrico
+questo non è un problema (l'argomento matematico è comunque valido), ma
+è la ragione precisa per cui il caso \emph{asimmetrico} (Documento 11),
+dove quella garanzia matematica non c'è più, va verificato numericamente
+da zero, non dedotto per analogia da qui.}
+
+\section{Le due estensioni}
+
+Due documenti facoltativi, tenuti separati perché non condividono
+argomento fisico --- uno riguarda una strategia di ottimizzazione,
+l'altro un'assunzione diversa nel modello di rumore. Condividono solo
+l'esito (``non cambia $N^*$''), un filo troppo debole per giustificare di
+comprimerli insieme.
+
+\textbf{VQE noise-aware} (Documento 10): la domanda complementare al
+Documento 6 --- se il rumore fosse acceso già durante l'ottimizzazione,
+l'ansatz convergerebbe altrove? Un argomento fisico (il canale
+depolarizzante agisce come trasformazione affine sull'energia, che non
+sposta un minimo) prevede di no \emph{prima} di verificarlo; la verifica
+--- due metriche, due punti di lavoro, l'intera griglia del Documento 9
+--- conferma la previsione ovunque, non solo al punto di riferimento.
+
+\textbf{Readout asimmetrico} (Documento 11): qui la garanzia matematica
+del Documento 9 non si estende automaticamente --- il readout asimmetrico
+è una trasformazione affine, non più puramente moltiplicativa, e
+sommare una costante prima di prendere un modulo non commuta con
+l'operazione di modulo. La domanda resta genuinamente aperta fino alla
+verifica numerica: $N^*$ risulta invariante, ma è un fatto empirico
+specifico di questo correlatore e di questo punto di lavoro, non una
+conseguenza necessaria della struttura del problema.
+
+\clearpage
+\section{Schema visivo d'insieme}
+
+\begin{figure}[htbp]
+\centering
+\begin{tikzpicture}[
+  box/.style={draw,thick,rounded corners=4pt,align=left,
+              font=\footnotesize,inner sep=7pt,
+              text width=4.5cm,minimum height=2.6cm},
+  extbox/.style={draw,thick,dashed,rounded corners=4pt,align=left,
+              font=\footnotesize,inner sep=7pt,
+              text width=4.5cm,minimum height=2.6cm},
+  lab/.style={font=\scriptsize\itshape,text=gray!70!black,align=center},
+  arrow/.style={-{Stealth[length=7pt]},thick},
+]
+
+\node[box,draw=blu,fill=blu!5] (n5) at (0,4.8) {
+  \textbf{\textcolor{blu}{5. Modello}}\\[2pt]
+  2 canali, \texttt{ibm\_torino}\\[2pt]
+  \textit{fornisce:} il \texttt{NoiseModel}
+};
+
+\node[box,draw=arancio,fill=arancio!7] (n6) at (5.3,4.8) {
+  \textbf{\textcolor{arancio!80!black}{6. VQE}}\\[2pt]
+  $1{-}F\sim1.5\%$, $2$ CNOT\\[2pt]
+  \textit{fornisce:} scala di base
+};
+
+\node[box,draw=verdes,fill=verdes!6] (n7) at (10.6,4.8) {
+  \textbf{\textcolor{verdes}{7. Dinamica}}\\[2pt]
+  $N^*=8$, min. a $N=3$\\[2pt]
+  \textit{fornisce:} regola blocchi
+};
+
+\node[box,draw=violas,fill=violas!8] (n8) at (10.6,1.4) {
+  \textbf{\textcolor{violas}{8. Correlatori}}\\[2pt]
+  $N^*=2$, readout a shot\\[2pt]
+  \textit{fornisce:} correlatore rif.
+};
+
+\node[box,draw=rossos,fill=rossos!6] (n9) at (5.3,1.4) {
+  \textbf{\textcolor{rossos}{9. Scan}}\\[2pt]
+  $N^*$ vs $\varepsilon$; invariante $p_\text{ro}$\\[2pt]
+  \textit{apre:} le estensioni
+};
+
+\node[extbox,draw=arancio!70!black,fill=arancio!4] (n10) at (0,-2.0) {
+  \textbf{\textcolor{arancio!70!black}{10. Noise-aware}}\\[2pt]
+  rioptimizzare: nessun\\
+  cambiamento (25/25)
+};
+
+\node[extbox,draw=violas,fill=violas!4] (n11) at (5.3,-2.0) {
+  \textbf{\textcolor{violas}{11. Readout asim.}}\\[2pt]
+  $N^*$ invariato fino a $50\times$\\
+  (non garantito dalla teoria)
+};
+
+\draw[arrow,blu] (n5) -- (n6);
+\draw[arrow,arancio!80!black] (n6) -- (n7);
+\draw[arrow,verdes] (n7) -- (n8);
+\draw[arrow,violas] (n8) -- (n9);
+\draw[arrow,rossos] (n9) -- (n10);
+\draw[arrow,rossos] (n9) -- (n11);
+
+\end{tikzpicture}
+\caption{Frecce continue: collegamento diretto, stadio per stadio
+(Documenti 5--9). Riquadri tratteggiati: le due estensioni facoltative
+(Documenti 10, 11), entrambe aperte dallo scan del Documento 9 ma non
+collegate fra loro --- due applicazioni indipendenti della stessa
+domanda (``$N^*$ si sposta?''), a condizioni diverse.}
+\end{figure}
+
+\end{document}

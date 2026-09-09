@@ -1,0 +1,151 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 5. Rumore: il modello}
+\input{preambolo_dimero}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\title{\bfseries Da $\ket{\psi}$ a $\rho$: mettere un rumore vero nella pipeline\\[2pt]
+\large Documento 5 --- il modello di rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Perché il sistema chiuso non basta più}
+
+Tutto quello raccontato nei primi quattro documenti --- spettro esatto, VQE,
+evoluzione di Trotter, correlatori --- vive su uno stato puro $\ket{\psi}$ che
+evolve unitariamente. È un'idealizzazione utile per mettere a punto un metodo,
+ma non è quello che succede su un dispositivo vero: un computer quantistico
+reale accoppia i qubit a un ambiente che non si osserva, e ogni gate ha una
+probabilità non nulla di fare qualcosa di diverso da quello che dovrebbe.
+
+Il relatore ha chiesto di affrontare esattamente questo, come seconda parte
+della tesi: prendere la stessa catena di stadi già costruita --- preparazione,
+evoluzione, misura dei correlatori --- e ripeterla con un modello di rumore
+realistico agganciato. Non si tocca l'Hamiltoniana: si cambia il modo in cui
+il circuito viene eseguito.
+
+\messaggio{Questa serie racconta la Parte 2 nell'ordine in cui è stata fatta,
+esattamente come la serie precedente ha raccontato la Parte 1. Il filo
+conduttore resta lo stesso: dallo spettro esatto (Documento 1) al VQE
+(Documento 2) alla dinamica (Documento 3) ai correlatori (Documento 4) ---
+qui si ripercorre la stessa catena, ma sotto rumore.}
+
+\section{Il cambio di formalismo: perché serve $\rho$}
+
+Una volta che il sistema è accoppiato a un ambiente che si traccia via, uno
+stato puro non basta più a descriverlo: serve l'operatore densità $\rho$, e
+l'evoluzione non è più un'unitaria pura ma un'operazione quantistica più
+generale. In pratica, in Qiskit, questo significa passare da un simulatore a
+vettore di stato a \texttt{AerSimulator(method="density\_matrix")}. Ogni
+oggetto della pipeline --- energia, fedeltà, correlatore --- va riscritto in
+questo linguaggio: l'energia diventa $\Tr[\rho H]$ invece di
+$\bra\psi H\ket\psi$, e la fedeltà rispetto a un riferimento puro diventa
+$\bra{\psi_\text{rif}}\rho\ket{\psi_\text{rif}}$.
+
+\section{Due canali, non uno stack di rumore generico}
+
+Il primo bivio è quanto rumore modellare. Il relatore ha confermato uno scope
+preciso, non ``tutti i canali possibili'': due soli meccanismi, l'errore di
+gate (canale depolarizzante, separato a 1 e 2 qubit) e l'errore di lettura
+(readout). Rilassamento e defasamento ($T_1$, $T_2$) sono esclusi
+esplicitamente --- una decisione dichiarata, non un'omissione tecnica.
+
+Il canale depolarizzante a $n$ qubit ($d=2^n$) sostituisce lo stato con una
+miscela fra lo stato originale e lo stato massimamente misto,
+\begin{equation}
+\mathcal{E}(\rho) = (1-\lambda)\,\rho + \lambda\,\frac{\mathbf 1}{d}.
+\end{equation}
+Le calibrazioni pubblicate non danno $\lambda$ direttamente, ma l'errore medio
+di gate $\varepsilon$ misurato da randomized benchmarking; il legame fra i due
+è $\varepsilon=\lambda\,(d-1)/d$, da cui $\lambda_{1q}=2\varepsilon_{1q}$ e
+$\lambda_{2q}=\tfrac43\varepsilon_{2q}$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{figure/fig_depolarizzazione_bloch}
+\caption{Contrazione del vettore di Bloch, $1-\lambda$, in funzione di
+$\lambda$. Ai valori di calibrazione di riferimento (linee tratteggiate) la
+contrazione è piccola --- meno dell'1\% --- ma non nulla: l'intero punto di
+questa parte della tesi è misurare quanto questo effetto piccolo, accumulato
+su molti gate, degradi i risultati a valle.}
+\end{figure}
+
+\FloatBarrier
+
+Il readout simmetrico è descritto da un solo parametro $p$: la probabilità di
+leggere il risultato sbagliato è la stessa in entrambe le direzioni. La
+correzione sull'osservabile che interessa qui, $\langle Z\rangle$, è
+\begin{equation}
+\langle Z\rangle_\text{readout} = (1-2p)\,\langle Z\rangle_\text{ideale}
+\end{equation}
+--- un fattore puramente moltiplicativo. Questa singola proprietà, apparsa qui
+per la prima volta, torna a essere decisiva più avanti: è la ragione per cui
+il numero ottimale di passi di Trotter non dipenderà dal readout (Documento 9).
+
+\section{Calibrazione: un chip vero, non numeri di comodo}
+
+Piuttosto che inventare valori plausibili, i quattro numeri del modello sono
+presi dalle mediane di calibrazione pubblicate per \texttt{ibm\_torino} (IBM
+Heron r1, 133 qubit), da Stenger, Bazargan, Bronn, Gunlycke,
+\emph{``Method for simulating open-system dynamics using mid-circuit
+measurements on a quantum computer''}, arXiv:2504.15187 (2025), Appendice B:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llc@{}}
+\toprule
+\textbf{Canale} & \textbf{Gate di riferimento} & \textbf{Valore mediano}\\
+\midrule
+Errore di gate, 1 qubit & \texttt{sx} & $\varepsilon_{1q}=2.9\times10^{-4}$\\
+Errore di gate, 2 qubit & \texttt{CZ} & $\varepsilon_{2q}=3.8\times10^{-3}$\\
+Errore di lettura & --- & $p_\text{readout}=2.3\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Un punto delicato, che vale la pena rendere esplicito: il gate nativo a 2
+qubit di \texttt{ibm\_torino} è il CZ, mentre il circuito di questa tesi è
+scritto in una base che include il CNOT (\texttt{cx}). Usare comunque
+$\varepsilon_{2q}$ del CZ come rappresentativo dell'errore a 2 qubit non è
+un'approssimazione arbitraria: CNOT e CZ sono legati da un'identità
+circuitale \emph{esatta}, $\text{CNOT}=(\mathbb 1\otimes H)\cdot
+\text{CZ}\cdot(\mathbb 1\otimes H)$, verificata anche numericamente a
+precisione macchina. L'interazione fisica a due qubit --- dove si concentra
+la maggior parte dell'errore --- è la stessa identica operazione in entrambi i
+casi; quello che cambia è solo un cambio di base attorno, realizzato da due
+gate a 1 qubit il cui costo aggiuntivo ($\sim2\varepsilon_{1q}$, circa il
+15\% di $\varepsilon_{2q}$) resta dichiarato, non nascosto. Resta comunque
+corretto descrivere la scelta come ``valore rappresentativo dell'ordine di
+grandezza'', non come una replica esatta dell'hardware: il randomized
+benchmarking misura l'errore del CZ isolato, non del CNOT sintetizzato.
+
+\verifica{Costruito il \texttt{NoiseModel} con questi quattro numeri
+($\varepsilon_{1q}$, $\varepsilon_{2q}$, $p_\text{readout}$, e i
+$\lambda$ derivati) e ricalcolato: $\lambda_{1q}=5.8000\times10^{-4}$,
+$\lambda_{2q}=5.0667\times10^{-3}$, coerenti con la formula sopra a tutte le
+cifre mostrate. Le istruzioni rumorose del modello risultante sono esattamente
+\texttt{\{rz, sx, x, cx, measure\}}: i gate della base $\{rz,sx,x\}$ portano il
+canale a 1 qubit, il \texttt{cx} quello a 2 qubit, la \texttt{measure}
+l'errore di lettura --- nessun canale in più, nessun parametro nascosto.}
+
+\section{Cosa resta fuori, dichiarato}
+
+Per onestà di scope, come già nella serie precedente: $T_1/T_2$ sono esclusi
+per decisione del relatore; ogni canale è applicato indipendentemente qubit
+per qubit (nessun crosstalk); il readout è simmetrico in questo modello di
+base (l'asimmetria è un'estensione a sé, Documento 11); la calibrazione è un
+solo punto nel tempo, non un modello che tenga conto di quando viene eseguito
+il circuito.
+
+\messaggio{Il modello è deliberatamente minimale: due canali, quattro numeri,
+calibrati su un chip reale. Questa scelta ha una conseguenza diretta su tutto
+quello che segue --- ``rumoroso'', in questa tesi, significa esattamente
+questi due canali a questi valori (o a quelli esplicitamente scansionati nel
+Documento 9), non una replica generica di ``un computer quantistico
+rumoroso''.}
+
+\end{document}

@@ -1,0 +1,466 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 8. Correlatori sotto rumore}
+\input{preambolo_dimero}
+
+\title{\bfseries Quando il rumore incontra una misura vera\\[2pt]
+\large Documento 8 --- correlatori dinamici sotto rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{Una differenza qualitativa rispetto ai due documenti precedenti}
+
+Il VQE rumoroso (Documento 6) e la fedeltà di Trotter rumorosa (Documento 7)
+sono entrambi oggetti che si leggono direttamente dall'operatore densità:
+un'aspettazione, una fedeltà. Un correlatore dinamico
+$C_{ij}^{\alpha\beta}(t)=\bra{\psi_0}\sigma_i^\alpha(t)\sigma_j^\beta(0)\ket{\psi_0}$
+non è così: come già nel Documento 4, si estrae da un circuito di Hadamard
+test con un qubit ausiliario, e la quantità finale passa da una \emph{misura
+reale} sull'ancilla. È il primo punto della pipeline in cui il readout, fin
+qui rimasto sullo sfondo del modello di rumore (Documento 5), entra
+effettivamente in gioco.
+
+\section{Il circuito, con il rumore su ogni ingrediente}
+
+Lo schema è lo stesso del Documento 4: preparazione di $\ket{\psi_0}$,
+Hadamard sull'ancilla, controlled-$W$ sul sito $j$ prima di $U(t)$, evoluzione
+$U(t)$ non controllata (Trotter, come nel Documento 7), anti-controlled-$V$ sul
+sito $i$ dopo $U(t)$, rotazione di base e misura $Z$ sull'ancilla. Sotto
+rumore, ciascuno di questi ingredienti è imperfetto: la preparazione (Documento
+6), il blocco $U(t)$ ripetuto (Documento 7), e infine la misura, che include
+anche l'errore di lettura.
+
+L'unica differenza fra i due circuiti che seguono è l'ultima rotazione
+sull'ancilla, prima della misura: $H$ per la parte reale, $R_x(\pi/2)$ per
+quella immaginaria --- stesso schema, stessa preparazione, stesso $U(t)$,
+un solo gate diverso.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figure/circ_correlatore_schema_re}
+\caption{Circuito per la \textbf{parte reale} di $C_{ij}^{\alpha\beta}(t)$:
+rotazione finale $H$ sull'ancilla, prima della misura (blocchi concettuali,
+non transpilati --- il circuito davvero eseguito è molto più denso, in
+porte native $\{rz,sx,x,cx\}$).}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figure/circ_correlatore_schema_im}
+\caption{Circuito per la \textbf{parte immaginaria}: identico, tranne
+l'ultima rotazione sull'ancilla, $R_x(\pi/2)$ invece di $H$.}
+\end{figure}
+
+\FloatBarrier
+
+In entrambi i casi, $\langle Z\rangle$ --- ovunque compaia in questo
+documento e nei successivi --- è \textbf{sempre} il risultato della misura
+sul filo dell'ancilla (il box grigio in fondo, in alto in entrambe le
+figure), mai una misura su uno dei due siti fisici, e mai $\langle
+S_z\rangle$ di uno spin.
+
+\subsection*{Da un bit misurato a un numero: come, concretamente}
+
+$Z$ è la matrice di Pauli, $Z=\begin{psmallmatrix}1&0\\0&-1\end{psmallmatrix}$,
+autovalore $+1$ per $\ket0$, $-1$ per $\ket1$. Ogni shot restituisce un bit
+$b\in\{0,1\}$; su $M$ shot, con $n_0$ esiti ``0'' e $n_1=M-n_0$ esiti ``1'',
+\begin{equation}
+\langle Z\rangle \approx \frac{n_0\cdot(+1)+n_1\cdot(-1)}{M} = \frac{n_0-n_1}{M},
+\end{equation}
+implementato esattamente così nel codice (\texttt{correlatori\_shots\_dimero.py}):
+\begin{verbatim}
+n0 = sum(v for k, v in counts.items() if k[-1] == "0")  # ancilla
+n1 = shots - n0
+return (n0 - n1) / shots
+\end{verbatim}
+(l'ultimo carattere della stringa di bit, per la convenzione little-endian di
+Qiskit: il primo qubit dichiarato --- l'ancilla --- è il meno significativo).
+Applicato al circuito con $H$ finale, questo numero è $\Re[C_{ij}^{\alpha\beta}(t)]$;
+applicato al circuito con $R_x(\pi/2)$, è $\Im[C_{ij}^{\alpha\beta}(t)]$ --- i
+due circuiti sopra vanno eseguiti entrambi, uno per ciascuna parte del
+correlatore complesso.
+
+La preparazione può usare le ampiezze esatte oppure il circuito VQE reale ---
+la stessa opzione già in uso per anello e catena a $N=3$. Qui si usa il
+circuito VQE reale, verificato contro il modulo di riferimento della
+Parte 1 (stessa preparazione, nessun rumore): a $(i,\alpha,j,\beta,t,N)=
+(1,y,1,z,2.0,20)$ i due danno $+0.255778-0.101775i$ contro
+$+0.255775-0.101776i$, scarto $3.4\times10^{-6}$, compatibile con la
+preparazione VQE praticamente perfetta a questo punto (Documento 2).
+
+\section{Quale correlatore, e perché}
+\label{sec:scelta-correlatore}
+
+Con due siti e tre componenti le combinazioni possibili sono $36$, come già
+mappato in Parte 1 (Documento 4). Non tutte sono equivalenti: il criterio
+verificato lì per distinguere un segnale ``ricco'' (più transizioni di peso
+comparabile) da uno ``monocromatico'' (una riga dominante) è il rapporto
+$a_2/a_1$ fra le due righe spettrali più pesanti, calcolato dagli stessi
+autovalori/autovettori di $H$ usati per lo scan di Parte 1.
+
+Questo documento riusa il correlatore già scelto e motivato lì,
+$C_{11}^{yz}$ ($a_2/a_1=0.71$, tre pesi comparabili $0.170$, $0.049$,
+$0.121$) --- non ne introduce uno nuovo. La continuità è deliberata: lo
+stesso correlatore, prima senza rumore (Documento 4) e ora con rumore,
+rende il confronto fra le due parti diretto, invece di richiedere di
+fidarsi che una scelta indipendente sia equivalente.
+
+\verifica{Ricalcolati $a_2/a_1$ per tutte le $36$ combinazioni al punto
+``test 2'', con lo stesso metodo di Parte 1: $C_{11}^{yz}$ conferma
+$a_2/a_1=0.71$, coerente a tutte le cifre con il valore già citato in
+Parte 1. È risultato l'ottavo più ricco su $36$ (il gruppo più ricco in
+assoluto, otto combinazioni miste $x$--$y$, arriva a $a_2/a_1=0.96$) ---
+non il massimo teorico, ma genuinamente fra i più ricchi, non un caso
+mediocre.}
+
+\section{Il readout: misura genuina, non una formula}
+
+A differenza di una prima versione di questo documento, qui il readout non è
+una correzione applicata dopo la simulazione: è una vera istruzione di
+misura sull'ancilla, con un \texttt{ReadoutError} genuino agganciato al
+\texttt{NoiseModel} di Aer (simmetrico, $p_{01}=p_{10}=p$; il caso
+asimmetrico è un'estensione a sé, Documento 11), e $\langle Z\rangle$ si
+stima dai conteggi su $2\times10^5$ shot --- esattamente come si farebbe su
+hardware reale. Nessuna formula sostituisce questo passaggio in nessun
+punto della pipeline: è il metodo usato per produrre ogni numero di questo
+documento, non un'alternativa verificata a parte.
+
+Teoricamente ci si aspetta che il readout simmetrico agisca come un fattore
+puramente moltiplicativo,
+\begin{equation}
+\langle Z\rangle_\text{readout} \approx (1-2p)\,\langle Z\rangle_\text{ideale},
+\end{equation}
+lo stesso argomento del Documento 5 --- utile per capire \emph{perché} ci si
+aspetta che $N^*$ non dipenda da $p_\text{readout}$ (Documento 9), ma qui
+resta un argomento teorico, non il modo in cui i numeri sono stati
+calcolati: quelli vengono tutti da una misura campionata, mai dalla
+formula.
+
+\noindent\textit{Rumore statistico, dichiarato}: con $2\times10^5$ shot,
+l'incertezza statistica attesa su $\langle Z\rangle$ è
+$\sigma\approx1/\sqrt{2\times10^5}\approx0.0022$ --- piccola rispetto alle
+variazioni fra $N$ vicini nelle curve che seguono (tipicamente
+$0.05$--$0.1$), ma non nulla: un seme fisso (\texttt{seed\_simulator})
+rende ogni numero riproducibile esattamente, non solo statisticamente
+compatibile.
+
+\section{Il conteggio dei gate cresce come deve}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+$N$ & CNOT totali\\
+\midrule
+$1$ & $7$\\
+$2$ & $10$\\
+$5$ & $19$\\
+$10$ & $34$\\
+$20$ & $64$\\
+$40$ & $124$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Incremento costante di 3 CNOT per unità di $N$ --- il contributo di un passo
+di Trotter, lo stesso già visto in Parte 1 e nel Documento 7. Nessuna fusione
+spuria: la transpilazione a blocchi funziona come deve anche in questo
+circuito più complesso.
+
+\noindent\textit{Da dove viene il numero, blocco per blocco}: il circuito
+completo (preparazione + controlled-$W$ + $N$ passi di Trotter +
+anti-controlled-$V$ + rotazione di base) è composto da quattro blocchi
+transpilati separatamente, ciascuno una volta sola, come richiede la regola
+del Documento 7. Contati singolarmente:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Blocco & CNOT\\
+\midrule
+Preparazione (ansatz PMA esteso, Documento 6) & $2$\\
+Controlled-$W$ (Hadamard + un Pauli controllato) & $1$\\
+Un passo di Trotter (Documento 7) & $3$\\
+Anti-controlled-$V$ + rotazione di base & $1$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+I tre blocchi indipendenti da $N$ danno $2+1+1=4$; ogni passo di Trotter ne
+aggiunge $3$: totale $4+3N$. Verificato che riproduce esattamente la
+tabella sopra per ogni $N$ mostrato, contando ciascun blocco separatamente
+prima di sommarli --- non solo il totale finale.
+
+\section{Risultato: la curva $|C(N)|$ e $N^*$}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_passo4_correlatore_vs_N}
+\caption{Modulo del correlatore rumoroso $|C_{11}^{yz}(t{=}2,N)|$ in funzione
+di $N$, readout genuinamente campionato a $2\times10^5$ shot. Massimo a
+$N^*=2$. A differenza della fedeltà di Trotter (Documento 7), qui il massimo
+non nasce da un compromesso Trotter/rumore graduale: la curva scende
+bruscamente subito dopo $N=2$, risale leggermente attorno a
+$N\approx10$--$15$, poi torna a scendere --- una struttura più ricca di un
+singolo massimo, discussa sotto.}
+\end{figure}
+
+\FloatBarrier
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore\\
+\midrule
+$N^*$ & $2$\\
+$|C(N^*)|$ & $0.5894$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\verifica{Rieseguito indipendentemente il correlatore $C_{11}^{yz}(t{=}2)$
+per $N=1,2,3,4,5,\dots,40$, stesso seme del simulatore: il massimo a $N=2$
+è riprodotto esattamente, non un artefatto della griglia scelta per la
+figura né del particolare campionamento.}
+
+\subsection*{Cosa misura $N^*$, e cosa non misura}
+
+Un chiarimento necessario prima di andare avanti, perché riguarda come
+leggere $N^*$ in questo e nei documenti successivi: $|C(N^*)|=0.5894$
+\textbf{non} è una buona stima del vero $|C_{11}^{yz}(t{=}2)|$. Il valore
+fisico esatto, già citato più avanti in questo documento (somma spettrale,
+nessun Trotter, nessun rumore), è $|C_\text{esatto}(t{=}2)|=0.3177$ ---
+quasi la metà. Anche il valore Trotter puro allo stesso $N^*=2$
+--- \emph{``rumore nullo''}: qui vuol dire entrambi i canali spenti
+insieme, sia il rumore di gate sul circuito (\texttt{noise\_model=None})
+sia l'errore di lettura ($p_\text{readout}=0$), non uno dei due soltanto
+--- resta quasi il doppio del vero valore fisico ($0.6574$, già in
+tabella più sotto): non è il rumore a causare lo scarto (è spento del
+tutto, qui), è l'errore di Trotter a $N$ così piccolo, isolato da solo,
+che non disperde il risultato attorno al valore vero ma lo
+\textbf{gonfia sistematicamente}.
+
+$N^*=\arg\max_N|C(N)|$ trova quindi il punto di \textbf{segnale più
+misurabile sotto rumore}, non quello di \textbf{stima più accurata} di
+$C(t)$ --- due criteri diversi, che qui divergono in modo sostanziale
+(fattore $\sim2\times$). Per gli scopi di questo e dei prossimi documenti
+(fissare un compromesso Trotter/rumore, verificare se $N^*$ si sposta sotto
+altre condizioni) è il criterio giusto: non serve un valore fisicamente
+accurato, serve un punto in cui il segnale emerga chiaramente dal rumore.
+Ma va tenuto a mente: se in un punto qualunque della pipeline si volesse
+usare $|C(N^*)|$ come stima del correlatore fisico $C(t)$, andrebbe
+corretto per questo effetto, non preso alla lettera.
+
+\section{Perché il massimo non è dove ci si aspetterebbe}
+
+Il primo istinto --- lo stesso schema del Documento 7, un compromesso fra
+errore di Trotter (decrescente in $N$) e rumore di gate (crescente in $N$)
+--- non basta a spiegare $N^*=2$ da solo. La ragione emerge confrontando col
+caso a \textbf{rumore nullo}:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$N$ & $|C|$ (rumore nullo) & $|C|$ (\texttt{ibm\_torino}, shot finiti) & \\
+\midrule
+$1$ & $0.4844$ & $0.4339$ & \\
+$2$ & $0.6574$ & $0.5894$ & $\approx N^*$\\
+$3$ & $0.4998$ & $0.4298$ & \\
+$6$ & $0.2181$ & $0.1733$ & minimo locale\\
+$15$ & $0.2618$ & $0.1717$ & \\
+$20$ & $0.2753$ & $0.1630$ & \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_passo4_confronto_rumore}
+\caption{Le stesse due curve della tabella, sull'intera griglia $N=1$--$40$:
+il picco a $N=2$, il minimo locale a $N=6$, e la lenta risalita successiva
+sono visibili in entrambe --- rumore nullo e rumoroso --- confermando che
+la struttura non è un artefatto del rumore o del campionamento a shot
+finiti.}
+\end{figure}
+
+\FloatBarrier
+
+Anche \textbf{senza alcun rumore}, $|C(N)|$ non converge in modo monotono al
+valore esatto ($|C_\text{esatto}(t{=}2)|=0.3177$, da $\sum_n c_n
+e^{-i(E_n-E_0)t}$): ha un massimo locale a $N=2$, un minimo attorno a
+$N=6$--$7$, poi risale lentamente verso il valore vero. È lo stesso tipo di
+comportamento non perturbativo già incontrato nel Documento 7 per la fedeltà
+di Trotter (lì il minimo era a $N=3$) --- qui però il primo massimo locale
+dell'errore di Trotter, non un minimo, cade proprio a $N$ piccolo, ed è già
+più alto di quasi tutti i valori convergenti a $N$ grande. Il rumore di gate,
+sovrapposto, non fa che accentuare questo massimo già presente: non lo crea.
+
+\verifica{Il minimo locale a $N=6$--$7$ e la lenta risalita successiva sono
+riprodotti, nella stessa posizione, sia a rumore nullo sia a rumore acceso
+con shot finiti (tabella sopra) --- la firma di un effetto di Trotter
+puro, non un artefatto del modello di rumore né del campionamento,
+esattamente come verificato nel Documento 7 per il minimo a $N=3$ della
+fedeltà.}
+
+\section{Un solo correlatore non basta: lo scan completo sulle 36 combinazioni}
+\label{sec:scan36}
+
+Come già in Parte 1 (Documento 4): un solo correlatore non dice se sia un
+caso rappresentativo o un caso sfortunato. Vale la pena rifare, sotto
+rumore, lo stesso tipo di scan sistematico già fatto lì senza rumore ---
+questa volta con il circuito vero (non l'esponenziale diretto) e readout
+genuinamente campionato, sulla stessa griglia di $N$ usata sopra, per
+tutte e $36$ le combinazioni.
+
+\verifica{Scan completo: $36$ combinazioni $\times$ $16$ valori di $N$,
+readout campionato a $5\times10^4$ shot per punto --- ridotti rispetto ai
+$2\times10^5$ usati altrove in questo documento, per contenere il tempo di
+calcolo su $1152$ valutazioni indipendenti ($36\times16$); incertezza
+statistica attesa $1/\sqrt{5\times10^4}\approx0.0045$, ancora piccola
+rispetto ai salti fra $N$ vicini. Tempo di calcolo totale $\approx2$
+minuti.}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+$N^*$ & combinazioni (su 36)\\
+\midrule
+$1$ & $14$\\
+$2$ & $12$\\
+$3$ & $6$\\
+$4$ & $2$\\
+$5$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.78\textwidth]{figure/fig_scan36_rumore_dimero}
+\caption{\textbf{Sopra:} distribuzione di $N^*$ sulle 36 combinazioni,
+rumore di riferimento, readout a shot finiti. Media $2.06$, mediana $2$.
+\textbf{Sotto:} tutte le 36 curve $|C(N)|$ sovrapposte (grigio), con tre
+casi evidenziati: $C_{11}^{yz}$ (il correlatore di riferimento di questo
+documento), $C_{21}^{xx}$ (il correlatore usato in una versione precedente
+di questo stesso documento, prima della correzione), $C_{21}^{zz}$
+(l'estremo opposto, ampiezza massima). $|C(N^*)|$ varia da $0.25$ a $0.82$
+($\sim3.3\times$) --- nessun caso patologico isolato in cui il segnale
+collassi a un valore anomalo, coerente con il precedente già chiuso per il
+trimero ad anello
+(\texttt{circuito\_correlazioni\_trimero\_anello\_spiegato.tex}).}
+\label{fig:scan36-rumore}
+\end{figure}
+
+\FloatBarrier
+
+\subsection*{Dove cade il correlatore usato in precedenza}
+
+Il risultato più rilevante di questo scan non riguarda $C_{11}^{yz}$: riguarda
+$C_{21}^{xx}$, il correlatore usato in una versione precedente di questo
+documento. $C_{21}^{xx}$ (e il suo gemello per simmetria $C_{12}^{xx}$)
+hanno il $N^*$ più alto di tutte le 36 combinazioni ($N^*=5$) \textbf{e} il
+$|C(N^*)|$ più basso in assoluto ($\approx0.25$) --- non un caso mediocre,
+l'estremo fragile della distribuzione. $C_{11}^{yz}$, il correlatore
+attuale, sta comodamente nel secondo gruppo più popoloso ($N^*=2$, $12$
+combinazioni su $36$, contro le $14$ di $N^*=1$): un caso rappresentativo,
+non un estremo --- coerente con il criterio di scelta dichiarato in
+Sez.~\ref{sec:scelta-correlatore} ($a_2/a_1=0.71$, non il massimo teorico
+ma genuinamente fra i più ricchi).
+
+\subsection*{Perché $N^*$ varia così tanto}
+
+Confrontando con il caso a rumore nullo per l'intera griglia (non solo per
+$C_{11}^{yz}$ come sopra): le 14 combinazioni con $N^*=1$ sotto rumore hanno,
+senza eccezioni, un valore a $N=1$ già vicino al proprio plateau asintotico
+--- lo scarto fra $N=1$ e $N=40$ resta contenuto (tipicamente entro il
+10\%), e per il gruppo $yx$ è perfino negativo: il valore a $N=1$ è il
+massimo assoluto dell'intera curva, mai più raggiunto nemmeno a $N=40$. Fra
+$N=1$ e questo plateau, tutte mostrano lo stesso avvallamento --- un minimo
+pronunciato attorno a $N=2$--$3$ (in un caso vicino a zero) --- prima di
+risalire lentamente. A differenza di $C_{11}^{yz}$, qui non c'è un guadagno
+non perturbativo da inseguire aumentando $N$: il valore già disponibile a
+$N=1$ non migliora abbastanza da giustificare il costo in rumore di gate
+aggiuntivo. Sotto rumore, collassano subito a $N^*=1$: non c'è un
+compromesso da negoziare, semplicemente non conviene mai spingersi oltre.
+Le combinazioni con $N^*>1$ hanno invece, già a rumore nullo, un guadagno
+sostanziale disponibile appena oltre $N=1$ --- lo stesso fenomeno di picco
+non perturbativo discusso sopra per $C_{11}^{yz}$, dove il valore cresce di
+oltre un terzo da $N=1$ a $N=2$ ($0.484\to0.657$): lì vale la pena pagare
+qualche CNOT in più. Non è quindi la ricchezza spettrale $a_2/a_1$ a
+decidere direttamente $N^*$ --- lo decide quanto guadagno non perturbativo
+la dinamica di Trotter offre oltre $N=1$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_scan36_curve_rappresentative}
+\caption{Quattro casi rappresentativi, $|C(N)|$ a rumore nullo, $t=2$, zoom su
+$N\leq15$. Le due curve nere/grigie ($N^*_\text{rumoroso}=1$) mostrano
+l'avvallamento comune a tutto il gruppo, con $N=1$ già vicino o sopra il
+valore di plateau. Le due curve blu/rossa ($N^*_\text{rumoroso}=2,3$)
+mostrano invece un guadagno sostanziale appena oltre $N=1$ --- per
+$C_{11}^{xz}$ (rosso), il caso più estremo, il valore quasi si moltiplica
+per tredici, da $0.04$ a $0.52$.}
+\end{figure}
+
+\FloatBarrier
+
+\verifica{Controllate esplicitamente tutte e 36 le curve a rumore nullo,
+non solo il confronto $N=1$ contro $N=40$ riassunto sopra: le 14 con
+$N^*=1$ mostrano tutte lo stesso avvallamento a $N=2$--$3$ prima di
+risalire, mai una crescita monotona pura fin da $N=1$ come una prima
+versione di questa sezione affermava erroneamente. Le restanti 22, con
+$N^*>1$, mostrano tutte un guadagno positivo fra $N=1$ e il loro primo
+picco locale ($N\leq7$) --- dal $+11\%$ (il più piccolo, $C_{11}^{zx}$,
+$N^*=3$) al $+1229\%$ (il più grande, $C_{11}^{xz}$, $N^*=3$) --- mai
+un'eccezione, per quanto la dimensione del guadagno vari molto da caso a
+caso.}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.82\textwidth]{figure/fig_scan36_guadagno_early}
+\caption{Guadagno percentuale $N{=}1\to$ picco precoce ($N\leq7$), a $t=2$, tutte
+le 36 combinazioni, ordinate per guadagno crescente e colorate per
+$N^*_\text{rumoroso}$. La separazione è netta: il gruppo $N^*=1$ (nero)
+resta compresso fra $0\%$ e $4\%$, poi un salto di oltre un ordine di
+grandezza porta al gruppo $N^*=2$ (blu, $36\%$--$1017\%$) e oltre --- un
+solo caso limite, $C_{11}^{zx}$/$C_{22}^{zx}$ ($N^*=3$, $11\%$), si trova
+nella terra di mezzo fra i due regimi.}
+\end{figure}
+
+\FloatBarrier
+
+\messaggio{Lo scan sistematico conferma, non solo argomenta, che
+$C_{11}^{yz}$ era la scelta giusta: rappresentativo della distribuzione
+($N^*=2$, il secondo gruppo più popoloso su cinque), non un estremo. Il
+correlatore usato in precedenza, $C_{21}^{xx}$, era invece l'esatto
+opposto --- l'estremo più fragile su tutte e 36 le combinazioni, scoperto
+solo rifacendo lo scan, mai sospettato guardando il solo correlatore
+isolato. Il meccanismo dietro la variazione di $N^*$ (massimo locale di
+Trotter a $N$ piccolo, presente o assente) è più informativo del solo
+criterio di ricchezza spettrale usato per la scelta iniziale.}
+
+\messaggio{$N^*=2$ per $C_{11}^{yz}$ non è direttamente confrontabile con
+$N^*=8$ della fedeltà di Trotter (Documento 7): sono due quantità diverse
+(una fedeltà additiva, il modulo di un correlatore), su due punti di lavoro
+concettualmente vicini ma non identici nella loro sensibilità a $N$
+piccolo. Qui il primo picco dell'errore di Trotter puro, non il compromesso
+con il rumore di gate, decide la posizione del massimo --- il rumore di
+gate sposta di poco il valore assoluto ma non la posizione. Tre fatti da
+questo documento sono usati esplicitamente nel Documento 9: $N^*=2$ è
+specifico di questo correlatore, a questi parametri --- lo scan di
+Sez.~\ref{sec:scan36} ne verifica la rappresentatività, non la dà per
+scontata; il readout è sempre una misura genuinamente campionata, mai una
+formula, in ogni documento della pipeline da qui in avanti; il conteggio
+gate lineare in $N$ è la base per stimare come il rumore accumulato cresca
+al variare dei parametri del canale.}
+
+\end{document}

@@ -106,8 +106,11 @@ $R_y(\theta)$ su un solo qubit:
 \includegraphics[width=0.42\textwidth]{figure/circ_cnotry}
 \caption{Il blocco a un parametro usato nell'ansatz base: due CNOT, non due
 CZ, attorno a un'unica $R_y$. È una rotazione reale, confinata al
-sottospazio a due dimensioni generato dallo stato di preparazione (il
-singoletto sotto l'incrocio, $\ket{\!\downarrow\downarrow}$ sopra).}
+sottospazio a due dimensioni \emph{che contiene} lo stato di preparazione ---
+$\{\ket{01},\ket{10}\}$ sotto l'incrocio (dove vive il singoletto, non da
+solo ma insieme al tripletto $M=0$), $\{\ket{00},\ket{11}\}$ sopra (dove
+$\ket{\!\downarrow\downarrow}=\ket{11}$ è uno dei due vettori di base, non
+l'intero sottospazio).}
 \label{fig:cnotry}
 \end{figure}
 
@@ -176,9 +179,56 @@ non è che ha pochi parametri.
 Un dettaglio che vale la pena rendere esplicito, perché a un primo sguardo il
 grafico sembra dire qualcosa di più forte di quello che dice davvero: il
 circuito non prepara \emph{sempre} il singoletto. È costruito con due rami,
-scelti a seconda di $B/J$: sotto l'incrocio prepara il singoletto (che vive nel
-sottospazio $\{\ket{01},\ket{10}\}$), sopra prepara $\ket{\!\downarrow\downarrow}$
-(che vive nel sottospazio $\{\ket{00},\ket{11}\}$). Il blocco a un parametro
+scelti a seconda di $B/J$: sotto l'incrocio prepara il singoletto, sopra
+prepara $\ket{\!\downarrow\downarrow}=\ket{11}$.
+
+Vale la pena essere precisi su \emph{dove} vivono questi due stati, perché
+``vive nel sottospazio'' può suggerire più di quanto sia vero. Il singoletto
+non occupa l'intero sottospazio a due dimensioni $\{\ket{01},\ket{10}\}$: è
+una singola retta al suo interno,
+$\ket{\psi^-}=\tfrac{1}{\sqrt2}(\ket{01}-\ket{10})$ --- una sola direzione,
+non l'intero piano. Quello stesso sottospazio a due dimensioni contiene
+anche il tripletto $M=0$,
+$\ket{\Psi^+}=\tfrac{1}{\sqrt2}(\ket{01}+\ket{10})$: stessa ``casa'', ma
+simmetria opposta (antisimmetrico il primo, simmetrico il secondo). In modo
+speculare, $\ket{11}$ non è ``il sottospazio $\{\ket{00},\ket{11}\}$'': è
+uno dei due vettori di base che lo generano --- l'altro, $\ket{00}$, è il
+terzo stato di tripletto ($M=+1$), non uno stato qualsiasi. Il circuito, in
+entrambi i rami, prepara sempre una singola retta precisa, mai l'intero
+sottospazio a due dimensioni che la contiene.
+
+Per chiarezza, la mappa completa dei quattro stati di spin totale rispetto
+al registro di due qubit --- utile qui e ovunque nel seguito si parli di
+settori a $M$ fissato:
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llll@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{stato $\ket{S,M}$} & \textbf{stato di registro} & \textbf{settore ($M$)} & \textbf{tipo} \\
+\midrule
+$\ket{1,1}$ (tripletto) & $\ket{00}$ & $M=+1$, da solo & separabile \\
+$\ket{1,0}$ (tripletto) & $\tfrac{1}{\sqrt2}(\ket{01}+\ket{10})$ & $M=0$, con il singoletto & entangled \\
+$\ket{0,0}$ (singoletto) & $\tfrac{1}{\sqrt2}(\ket{01}-\ket{10})$ & $M=0$, con $\ket{1,0}$ & entangled \\
+$\ket{1,-1}$ (tripletto) & $\ket{11}$ & $M=-1$, da solo & separabile \\
+\bottomrule
+\end{tabular}
+\caption{I quattro stati di spin totale, verificato per ciascuno se sia
+separabile (fattorizzabile come prodotto di due stati a un qubit,
+verificato via SVD sulla matrice $2\times2$ delle ampiezze) o entangled. I
+due settori $M=\pm1$ contengono un solo stato ciascuno --- $\ket{00}$ e
+$\ket{11}$ non ``vivono in'' un sottospazio più grande, sono l'intero
+settore, da soli. Il settore $M=0$ ne contiene invece due, e nessuno dei
+due è separabile: sia il singoletto sia il tripletto $\ket{1,0}$ sono
+combinazioni genuine di $\ket{01}$ e $\ket{10}$, non uno stato prodotto
+scritto in modo complicato.}
+\label{tab:quattro-stati-bell}
+\end{table}
+
+Il blocco a un parametro
 ruota \emph{dentro} qualunque sottospazio sia partito, e non ne esce mai --- lo
 si verifica applicandolo a entrambe le preparazioni per diversi valori
 dell'angolo: le ampiezze restano rigorosamente nulle sulle due componenti non
@@ -205,9 +255,10 @@ raggiungibili da quel ramo, per ogni $\theta$.
    rami, produce ampiezza nell'altro};
 \end{tikzpicture}
 \caption{I due rami del circuito minimo, visti come due sottospazi disgiunti.
-Il singolo parametro $\theta$ ruota liberamente \emph{dentro} il sottospazio di
-partenza, ma non può mai farlo uscire verso l'altro: sono due rette parallele,
-non un unico spazio esplorato per intero.}
+Il singolo parametro $\theta$ ruota liberamente \emph{dentro} il sottospazio a
+due dimensioni di partenza, ma non può mai farlo uscire verso l'altro: sono
+due piani distinti dentro lo spazio a quattro dimensioni, che si incontrano
+solo nell'origine --- non un unico spazio esplorato per intero.}
 \label{fig:due-rami}
 \end{figure}
 
@@ -510,6 +561,55 @@ $\varphi=\pi/4$: $\text{RBS}(\pi/4)\ket{10}$ coincide col singoletto a
 precisione macchina, verificato direttamente. L'entanglement, qui, non è un
 dato di partenza costruito da porte fisse: è il \emph{risultato} della
 stessa porta che l'ottimizzatore sta addestrando.
+
+\subsubsection*{Il meccanismo, passo per passo}
+
+Vale la pena vedere esplicitamente \emph{come} le due rotazioni $R_y$ dopo
+RBS riescano a raggiungere tutti e quattro gli stati di base, non solo
+enunciarlo. Il circuito è
+\[
+\ket{00} \;\xrightarrow{X\text{ su }q_1}\; \ket{10}
+\;\xrightarrow{\mathrm{RBS}(\varphi)}\; \ket{\psi_1}
+\;\xrightarrow{R_y(\theta_1)\text{ su }q_0,\ R_y(\theta_2)\text{ su }q_1}\;
+\ket{\psi_{\rm finale}}.
+\]
+
+\noindent\textbf{Passo 1 --- RBS da sola.} Partendo da $\ket{10}$, RBS produce
+\begin{equation}
+\ket{\psi_1} = \mathrm{RBS}(\varphi)\ket{10} = -\sin\varphi\,\ket{01} +
+\cos\varphi\,\ket{10},
+\end{equation}
+verificato direttamente contro il circuito eseguito porta per porta. Il
+sistema resta, a questo stadio, rigorosamente confinato nel sottospazio
+$M=0$: qualunque $\varphi$, l'ampiezza su $\ket{00}$ e su $\ket{11}$ è
+esattamente nulla --- è lo stesso fatto già usato per dire che RBS da sola
+non basta.
+
+\noindent\textbf{Passo 2 --- le due rotazioni, dopo.} $R_y(\theta_1)$ e
+$R_y(\theta_2)$ agiscono ciascuna su un solo qubit, indipendentemente da
+cosa succede sull'altro. Applicate a $\ket{\psi_1}$, agiscono \emph{separatamente}
+su ciascuno dei due termini della sovrapposizione: la $R_y(\theta_1)$ mescola
+$\ket0$ e $\ket1$ sul primo qubit, la $R_y(\theta_2)$ fa lo stesso sul
+secondo, indipendentemente da quale termine di $\ket{\psi_1}$ stiano
+toccando. Poiché $\ket{\psi_1}$ ha componenti sia su $\ket{01}$ sia su
+$\ket{10}$, e ciascuna rotazione locale trasforma un $\ket0$ ``puro'' in una
+combinazione di $\ket0$ e $\ket1$ (e viceversa), il risultato acquista
+ampiezza su \emph{tutte e quattro} le combinazioni:
+\begin{equation}
+\ket{\psi_{\rm finale}} = \alpha\ket{00} + \beta\ket{01} + \gamma\ket{10} +
+\delta\ket{11},
+\end{equation}
+con $\alpha,\beta,\gamma,\delta$ funzioni di $\varphi,\theta_1,\theta_2$.
+Verificato numericamente su un caso arbitrario ($\varphi=0.6$,
+$\theta_1=0.5$, $\theta_2=-0.8$): tutte e quattro le ampiezze sono diverse
+da zero, la somma dei moduli quadri resta $1$. Non è un'approssimazione né
+un caso fortunato --- è esattamente il meccanismo per cui, nella Tab.~\ref{tab:confronto-preparazioni},
+il ``perché'' dell'ansatz esteso è ``sa muoversi da sola'': le rotazioni
+locali, applicate \emph{dopo} un blocco entangling, rompono la conservazione
+di $M$ perché agiscono sui singoli qubit, non sul sistema come oggetto
+unico --- lo stesso principio, generalizzato, che rende $K$ blocchi
+$M$-conservanti in più (Tab.~\ref{tab:tetto}) inutili: non è il numero di
+parametri a contare, è se la porta aggiunta possa lasciare il settore.
 
 \begin{table}[htbp]
 \centering

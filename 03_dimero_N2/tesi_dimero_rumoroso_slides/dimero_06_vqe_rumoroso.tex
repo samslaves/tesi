@@ -1,0 +1,117 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero di spin --- 6. VQE sotto rumore}
+\input{preambolo_dimero}
+\newcommand{\Tr}{\operatorname{Tr}}
+
+\title{\bfseries Un risultato ideale, eseguito su un simulatore imperfetto\\[2pt]
+\large Documento 6 --- VQE con termine DM sotto rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{La prima domanda della Parte 2}
+
+Con il modello di rumore pronto (Documento 5), la prima cosa naturale da
+chiedere è la più semplice della catena: il VQE con termine DM del Documento
+2 --- gli stessi parametri $\theta^*$, lo stesso ansatz PMA esteso, lo
+stesso punto di lavoro ``test 2'' ($b/J=0.35$, $D/J=0.80$) --- trova ancora
+uno stato buono se il circuito gira su un simulatore rumoroso invece che a
+vettore di stato esatto?
+
+Un breve richiamo di cosa sia questo circuito, per non dover tornare al
+Documento 2: tre parametri $\theta=(\theta_0,\theta_1,\theta_2)$, su 2
+qubit --- $X$ sul qubit 1 (prepara $\ket{01}$), il blocco RBS($\theta_0$)
+(la rotazione di Givens reale scelta al posto di $W$, Documento 2), poi
+$R_y(\theta_1)$ sul qubit 0 e $R_y(\theta_2)$ sul qubit 1. Transpilato nella
+stessa base nativa del modello di rumore ($\{rz,sx,x,cx\}$), questo
+circuito costa esattamente $2$ CNOT --- da lì il numero in tabella sotto.
+In tutta questa sezione, ideale e rumoroso sono \textbf{lo stesso identico
+circuito}: cambia solo se un \texttt{NoiseModel} è agganciato o no al
+simulatore, non il circuito stesso.
+
+Una scelta di modellazione va dichiarata subito, perché guida come leggere
+tutto il resto di questo documento: si \emph{riusano} i parametri già
+ottimizzati nel caso ideale, senza rioptimizzare vedendo il rumore durante
+l'ottimizzazione. Questo documento misura quindi la degradazione di un
+risultato ideale, non la convergenza di un VQE che ottimizzi già sotto
+rumore --- quella è una domanda diversa, affrontata a parte (Documento 10).
+
+\section{Energia e fedeltà, versione rumorosa}
+
+Con il circuito rumoroso lo stato preparato non è più puro: è un operatore
+densità $\rho$. L'energia si generalizza in modo diretto,
+$E_\text{rumoroso}=\Tr[\rho H]$. La fedeltà rispetto allo stato di riferimento
+esatto $\ket{\psi_\text{ideale}}$ (fedeltà di Uhlmann, semplificata quando uno
+dei due stati è puro) diventa
+\begin{equation}
+F(\rho,\ket{\psi_\text{ideale}}) = \bra{\psi_\text{ideale}}\rho\ket{\psi_\text{ideale}},
+\end{equation}
+verificata contro la routine standard di Qiskit su uno stato misto casuale ---
+non il caso specifico di questo problema, apposta per evitare una verifica
+circolare.
+
+\section{Risultato}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\textbf{Condizione} & $E$ & $F$ & CNOT\\
+\midrule
+Rumore nullo (verifica di coerenza) & $-3.57321145$ & $1.0000000000$ & $2$\\
+Rumore di riferimento (\texttt{ibm\_torino}) & $-3.50164605$ & $0.9850060074$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Il caso a rumore nullo riproduce l'energia esatta della Parte 1 a precisione
+numerica: un primo controllo di coerenza interna, superato prima di guardare
+al caso rumoroso. Al rumore di riferimento, lo scostamento di energia è
+$+0.071565$ e la perdita di fedeltà $1-F=0.014994$, poco sotto l'1.5\%.
+
+\verifica{Il caso a rumore nullo ripete a precisione macchina l'energia
+$E_0=-3.57321145$ già trovata nel Documento 2 --- il primo controllo che va
+sempre fatto prima di fidarsi di un numero rumoroso: se il ramo ``rumore
+spento'' non torna, non ha senso guardare il ramo acceso.}
+
+\messaggio{Un ansatz a soli 2 CNOT lascia poco spazio al rumore di
+accumularsi: $1.5\%$ di fedeltà persa è la scala di riferimento più piccola
+di tutta la pipeline --- gli stadi successivi, con circuiti più lunghi,
+partiranno da qui e la degraderanno ulteriormente.}
+
+\section{Come degrada al variare del rumore di gate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.92\textwidth]{figure/fig_passo2_scan_eps2q}
+\caption{Energia e fedeltà rumorose in funzione di $\varepsilon_{2q}$, a
+$\varepsilon_{1q}$ e $p_\text{readout}$ fissati al valore di riferimento. La
+linea tratteggiata segna il punto di calibrazione \texttt{ibm\_torino}.
+Degradazione monotona e liscia, nessuna soglia o comportamento anomalo
+nell'intervallo esplorato --- non ci si aspetta un massimo o un minimo qui,
+a differenza di quanto succederà con la dinamica temporale.}
+\end{figure}
+
+\FloatBarrier
+
+\section{Che cosa non dice ancora questo documento}
+
+Un solo punto (o uno scan di un solo parametro) fissa la scala della
+degradazione per uno stato \emph{statico}: non dice come si comporti la
+fedeltà se il circuito viene allungato --- qui non c'è alcuna dinamica --- né
+se il rumore possa essere assorbito da un'ottimizzazione diversa dei
+parametri. La prima domanda è quella naturale del passo successivo
+(Documento 7); la seconda è affrontata a parte (Documento 10).
+
+\messaggio{I parametri $\theta^*$ e il loro costo minimo (2 CNOT, solo per la
+preparazione) sono il punto di partenza del documento successivo, che
+aggiunge sopra questa stessa preparazione $N$ passi di evoluzione temporale.
+La scala di degradazione qui misurata ($1-F\sim1.5\%$) sarà lì il contributo
+costante, indipendente da $N$, dentro una fedeltà totale che invece dipende
+da $N$ in modo tutt'altro che monotono.}
+
+\end{document}

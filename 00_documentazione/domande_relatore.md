@@ -376,3 +376,77 @@ Trotter a costo zero). **Il relatore ha confermato: "va bene".**
 
 Domanda chiusa. Nessuna azione ulteriore richiesta prima di iniziare la
 Parte 2 sull'anello.
+
+**Nota di chiusura (10 settembre 2026, verifica indipendente):** la
+richiesta di questa sezione è ora soddisfatta anche sul trimero ad
+anello, non solo sul dimero. Confronto esplicito contro il testo della
+risposta del relatore:
+
+- (a) transpilazione che minimizza i gate: verificato esplicitamente
+  (non solo assunto per analogia col dimero) --- fattore $2\times$ sul
+  passo di Trotter ($30\to15$ CNOT, livello 2/3 contro 0/1); nessun
+  beneficio sull'ansatz VQE (6 CNOT a ogni livello, struttura senza
+  ridondanza da fondere). Un gap trovato durante questa verifica:
+  `optimization_level=3` era stato usato correttamente ma senza mai
+  dimostrare che fosse il livello minimo — colmato in
+  `risultati_trotter_rumoroso_trimero_anello.tex`.
+- (b)/(c) conversione $\varepsilon\to\lambda$ e calibrazione reale
+  (`ibm_torino`, arXiv:2504.15187): riusate identiche dal dimero,
+  verificate indipendenti dal numero di qubit.
+- "rifarei il conto per vari valori dei parametri di errore": soddisfatto
+  con uno scan 2D $(\varepsilon_{1q},\varepsilon_{2q})$ su due scenari
+  fisici (7+6 valori ciascuno), non un singolo punto.
+- (d) readout simmetrico: dimostrato invariante $N^*$ per tre valori di
+  $p_\text{readout}$ (0, 0.05, 0.20), non solo assunto dall'argomento
+  analitico. Asimmetrico non fatto — resta opzionale come da risposta
+  originale, nessun obbligo di consegna.
+
+Nessuna azione richiesta al relatore: nota informativa, non una domanda.
+
+## Nota di correzione (10 settembre 2026) — N* sui correlatori dinamici del dimero, ricalcolato
+
+Correzione alla nota informativa "Parte 2 completata sul dimero" (sopra):
+il valore $N^*=5$ lì riportato per i correlatori dinamici usava
+$C_{21}^{xx}$ come correlatore di riferimento — lo stesso già segnalato
+al punto 6 come non ottimale per criterio spettrale ($a_2/a_1$, 27°/36
+in quella prima stima, caso ideale). Rifacendo lo scan sistematico sulle
+36 combinazioni **sotto rumore** (non solo nel caso ideale del punto 6):
+$C_{21}^{xx}$ risulta l'estremo più fragile in assoluto ($N^*$ più alto,
+$|C(N^*)|$ più basso di tutte le 36) — non solo "non ottimale", il caso
+peggiore possibile.
+
+Sostituito con $C_{11}^{yz}$ (lo stesso correlatore già usato in Parte 1
+come esempio "ricco", $a_2/a_1=0.71$, verificato rappresentativo:
+secondo gruppo più popoloso su cinque nella distribuzione di $N^*$).
+Valore corretto: $N^*=2$, non $5$. La conclusione qualitativa non
+cambia ($N^*$ dipende dall'osservabile, non solo dal livello di rumore)
+— cambia solo il numero.
+
+In questa stessa occasione: il readout è stato reso genuinamente
+campionato a shot finiti in tutta la pipeline dei correlatori (prima
+era una formula analitica applicata dopo la simulazione del rumore di
+gate) — stesso $N^*=2$ confermato anche così. Aggiunto anche un
+chiarimento esplicito, utile se emergesse in discussione: $|C(N^*)|$
+non è una buona stima del correlatore fisico $C(t)$ (a $t=2$,
+$|C(N^*)|=0.589$ contro il vero $|C_\text{esatto}(t{=}2)|=0.318$,
+quasi il doppio) — $N^*$ massimizza il segnale misurabile sotto
+rumore, non l'accuratezza della stima.
+
+Se la nota "Parte 2 completata sul dimero" è già stata comunicata al
+relatore con il valore $N^*=5$, andrebbe seguita da questa correzione.
+
+## Nota di chiusura (10 settembre 2026, sessione separata) — verifica di non-regressione sul trimero ad anello
+
+A seguito della correzione sopra (correlatore $C_{21}^{xx}$ del dimero
+risultato il più fragile su 36 combinazioni sotto rumore), verificato se
+lo stesso rischio riguarda il correlatore usato come baseline sull'anello
+(Stadio 4 della pipeline di rumore, $C_{21}^{xx}$, $N^*=3$) — mai
+controllato prima con questo criterio.
+
+**Esito: nessuna azione necessaria.** Scan sistematico sulle 81
+combinazioni sotto il rumore di riferimento (`ibm_torino`): $C_{21}^{xx}$
+conferma $N^*=3$ (coincide col baseline già noto) e si colloca 64°/81 per
+robustezza del segnale — sopra la mediana, condiviso da altre 20
+combinazioni su 81, non un estremo fragile come sul dimero. Il baseline
+dell'anello resta quindi valido così com'è. Nota informativa, non una
+domanda: non richiede risposta del relatore.

@@ -1,0 +1,238 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Scan sui parametri di rumore (anello)}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+
+\title{\vspace{-1.5em}\color{inkblue}Scan sui parametri di rumore --- trimero ad anello\\[0.2em]
+\Large\normalfont\color{softgray}Come si sposta $N^*$, in entrambi gli scenari}
+\author{Note di lavoro --- Tesi triennale, Samuele\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+File di codice: \texttt{scan\_\allowbreak parametri\_rumore\_trimero\_anello.py}
+(mirror di \texttt{scan\_parametri\_rumore\_dimero.py}, esteso a due
+scenari). Metrica: fedeltà di Trotter (Stadio 3, osservabile più
+economico), entrambi gli scenari A (VQE) e B ($R_0$). Invarianza da
+$p_\text{readout}$ verificata sul correlatore (Stadio 4).
+
+\tableofcontents
+
+\section{Obiettivo}
+
+Gli stadi precedenti hanno trovato $N^*$ a un \textbf{singolo} punto
+della calibrazione di riferimento (\texttt{ibm\_torino}): $N^*_A=3$,
+$N^*_B=9$ (fedeltà, Stadio 3, valori corretti --- Sez.~\ref{sec:correzione}),
+$N^*=3$ per il correlatore (Stadio 4, stesso punto dello scenario A).
+Questo documento chiede: $N^*$ si sposta se il rumore è più o meno
+forte? E se il readout cambia? A differenza del dimero, qui la domanda
+va posta per \textbf{due} scenari fisici distinti, non uno solo.
+
+\begin{keyeq}[title={Previsione, prima della verifica --- stessa del dimero}]
+Rumore di gate ($\varepsilon_{1q},\varepsilon_{2q}$): ci si aspetta
+$N^*$ \textbf{decrescente}. Readout ($p_\text{readout}$): fattore
+puramente moltiplicativo $(1-2p_\text{readout})$ su ogni $N$ allo stesso
+modo (Stadio 4) --- non sposta mai un argmax, quindi $N^*$ atteso
+\textbf{invariante}.
+\end{keyeq}
+
+\section{Correzione: i valori di \texorpdfstring{$N^*$}{N*} dello Stadio 3 erano da una griglia troppo grezza}
+\label{sec:correzione}
+
+\begin{okbox}{Correzione, propagata anche agli Stadi 3 e 4}
+Nel costruire lo scan qui è emerso (Sez.~\ref{sec:regressione}) che la
+griglia $N\in\{1,2,5,10,\ldots\}$ usata allo Stadio 3 saltava $N=3$ e
+$N=4$: i veri massimi, con griglia continua $N=1,\ldots,20$, sono
+$N^*_A=3$ (non $2$) e $N^*_B=9$ (non $10$). Corretto retroattivamente
+nei documenti degli Stadi 3 e 4 (figura e testo rigenerati), non solo
+qui. Conseguenza non banale: $N^*_A=3$ \textbf{coincide} con $N^*$ del
+correlatore (Stadio 4, stesso punto di lavoro) --- prima sembravano
+tre valori diversi, ora sono due.
+\end{okbox}
+
+\section{Risultato: nessuna regressione, griglia fine confermata}
+\label{sec:regressione}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Scenario} & $\boldsymbol{N^*}$ \textbf{(griglia fine)} & $\boldsymbol{F(N^*)}$\\
+\midrule
+A (VQE) & 3 & 0.700335\\
+B ($R_0$) & 9 & 0.381896\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato}
+Ricalcolato con \texttt{trova\_N\_star} (funzione generale, cammino di
+codice diverso dalla ricerca manuale degli Stadi 3-4): stessi valori,
+coincidenza esatta.
+\end{okbox}
+
+\section{Risultato: monotonia rispetto a \texorpdfstring{$\varepsilon_{1q},\varepsilon_{2q}$}{eps}, entrambi gli scenari}
+
+\begin{figure}[h]
+\centering
+\includegraphics[width=0.98\linewidth]{figure/fig_Nstar_vs_eps_trimero_anello.pdf}
+\caption{\textit{$N^*$ in funzione di $\varepsilon_{2q}$ (sinistra) ed
+$\varepsilon_{1q}$ (destra), scala log-log, l'altro parametro fissato al
+riferimento. Linea tratteggiata grigia: valore di calibrazione
+\texttt{ibm\_torino}. Monotonia non-crescente confermata in entrambi gli
+scenari e in entrambi i parametri, con saturazione a $N^*=1$ per rumore
+sufficientemente forte --- lo scenario B satura più bruscamente
+(transizione netta fra $\varepsilon_{2q}=6\times10^{-3}$ e
+$10^{-2}$), lo scenario A più gradualmente.}}
+\end{figure}
+
+\begin{okbox}{Verificato}
+$N^*$ monotono non-crescente in $\varepsilon_{1q}$ e $\varepsilon_{2q}$,
+per \textbf{entrambi} gli scenari --- non assunto che valesse per uno
+solo. La saturazione a $N^*=1$ conferma lo stesso meccanismo del dimero:
+oltre una certa soglia di rumore, nessun $N>1$ vale il costo aggiuntivo
+in gate rumorosi.
+\end{okbox}
+
+\section{Risultato: invarianza rispetto a \texorpdfstring{$p_\text{readout}$}{p readout}}
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}ccc@{}}
+\toprule
+$\boldsymbol{p_\text{readout}}$ & $\boldsymbol{N^*}$ (correlatore) & $|\boldsymbol{C(N^*)}|$\\
+\midrule
+$0.00$ & $3$ & $0.5292$\\
+$0.05$ & $3$ & $0.4763$\\
+$0.20$ & $3$ & $0.3175$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{okbox}{Verificato: la previsione teorica regge}
+$N^*=3$ per tutti i valori di $p_\text{readout}$ testati, dallo $0\%$ al
+$20\%$. Il valore assoluto $|C(N^*)|$ cambia sensibilmente, la
+\emph{posizione} del massimo no --- firma di un fattore moltiplicativo
+costante in $N$, stessa proprietà verificata sul dimero e già
+argomentata (non solo assunta) allo Stadio 1.
+\end{okbox}
+
+\section{Sul modello additivo: nessuna ragione di aspettarsi che funzioni qui}
+
+Sul dimero, il modello ingenuo $\varepsilon_\text{tot}(N)\sim
+a/N+g\varepsilon_{2q}N$ prevedeva una pendenza log-log di $-0.5$ per
+$N^*(\varepsilon_{2q})$; osservata invece $-0.195$ --- dichiarato
+esplicitamente nel documento del dimero come mismatch atteso (la
+fedeltà si comporta più come un decadimento moltiplicativo che come una
+somma di due termini). Nessuna ragione di aspettarsi un accordo migliore
+qui: due osservabili di fedeltà (scenari A e B) più un correlatore, tutte
+governate dallo stesso meccanismo di rumore depolarizzante accumulato.
+Non è stato quindi eseguito un fit di pendenza per l'anello --- sarebbe
+un esercizio di conferma di un disaccordo già capito, non un'informazione
+nuova.
+
+\section{Cosa non è coperto da questo scan}
+
+Un parametro alla volta, con gli altri fissati al riferimento --- non
+l'intero spazio congiunto $(\varepsilon_{1q},\varepsilon_{2q},
+p_\text{readout})$. Il correlatore è stato scansionato solo per
+l'invarianza da readout (Sez.~4), non per $\varepsilon_{1q}/\varepsilon_{2q}$
+--- per costo computazionale, stessa scelta motivata del dimero
+(l'osservabile più economico, la fedeltà, basta a rispondere alla
+domanda "come si sposta $N^*$" per il rumore di gate).
+
+\section{Considerazioni finali sulla pipeline di rumore}
+
+Questo chiude la pipeline in cinque stadi sul trimero ad anello: dal
+modello di rumore (wrapper sul dimero, Stadio 1) fino a qui, ogni stadio
+ha aggiunto un livello di struttura --- energia statica (Stadio 2), poi
+dinamica in due scenari fisici distinti (Stadio 3), poi un osservabile a
+due tempi con misura reale (Stadio 4), poi la sensibilità del risultato
+ai parametri del rumore stesso (qui). Il filo conduttore verificato ad
+ogni stadio: il readout simmetrico è sempre un fattore moltiplicativo,
+mai additivo.
+
+Una correzione di percorso, non nascosta: una griglia $N$ troppo
+grezza allo Stadio 3 aveva riportato $N^*_A=2$ invece di $3$
+(Sez.~\ref{sec:correzione}) --- scoperta solo costruendo lo scan di
+questo stadio con una griglia più fitta, poi propagata a ritroso. Lo
+stesso principio già applicato più volte in questa sessione: un
+controllo diretto batte un'estensione per analogia, e un numero riportato
+resta provvisorio finché non è ricontrollato con una risoluzione
+sufficiente.
+
+\begin{okbox}{Sintesi in una riga}
+$N^*$ dipende in modo monotono e prevedibile dal rumore di gate, in
+entrambi gli scenari fisici; non dipende affatto dal readout simmetrico
+--- entrambi i fatti verificati, non solo previsti; e la griglia $N$
+usata per trovarlo deve essere abbastanza fine da non saltare il vero
+massimo, lezione imparata a proprie spese in questo stadio.
+\end{okbox}
+
+\needspace{4\baselineskip}
+\section*{File prodotti}
+\addcontentsline{toc}{section}{File prodotti}
+
+\texttt{scan\_\allowbreak parametri\_rumore\_trimero\_anello.py},
+\texttt{validate\_\allowbreak scan\_\allowbreak parametri\_rumore\_trimero\_anello.py},
+\texttt{generate\_figure\_\allowbreak Nstar\_vs\_eps\_trimero\_anello.py},
+questo documento. File corretti retroattivamente:
+\texttt{risultati\_\allowbreak trotter\_\allowbreak rumoroso\_trimero\_anello.tex/.pdf},
+\texttt{risultati\_\allowbreak correlatori\_\allowbreak rumorosi\_trimero\_anello.tex/.pdf}
+(Sez.~\ref{sec:correzione}).
+
+\end{document}

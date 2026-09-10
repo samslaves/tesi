@@ -1,0 +1,580 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Dimero e trimero ad anello --- punti di lavoro e ansatz}
+\input{preambolo_dimero}
+\providecommand{\Tr}{\operatorname{Tr}}
+
+\title{\bfseries Punti di lavoro e ansatz nel dimero e nel trimero ad anello\\[2pt]
+\large Riepilogo esaustivo --- dimero, trimero ad anello, estensioni facoltative}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Questo documento raccoglie, per il dimero e per il trimero ad anello, tutti i
+punti di lavoro $(b,D)$ usati nel progetto, gli ansatz variazionali impiegati
+a ciascuno stadio, e lo stato delle due estensioni facoltative della pipeline
+di rumore (ottimizzazione VQE noise-aware, readout asimmetrico). Include la
+verifica appena condotta (``Passo 0'') sull'utilizzabilità del punto $R_0$
+dell'anello come secondo punto di lavoro VQE, con la tabella completa dei
+risultati. Nota di scope: il filone \emph{catena aperta} è stato messo da
+parte per decisione esplicita e non compare qui se non per contestualizzare
+la biforcazione fra ansatz $W$ e RBS.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\section{Il dimero: due punti di lavoro, non uno}
+% =====================================================================
+
+Il dimero usa lo stesso ansatz variazionale (\textbf{PMA-2q$\cdot$3}, 3
+parametri, 2 CNOT) su \emph{due} punti di lavoro fisici distinti, entrambi
+validati come stati fondamentali VQE genuini con $\mathcal F=1$ a precisione
+di macchina.
+
+\begin{table}[htbp]
+\centering
+\caption{Punti di lavoro del dimero.}
+\label{tab:dimero-punti}
+\begin{tabular}{lccl}
+\toprule
+Nome & $b/J$ & $D/J$ & Ruolo \\
+\midrule
+\textbf{test 2} & $0.35$ & $0.80$ & punto principale: VQE $\to$ ground state
+$\to$ correlazioni \\
+\textbf{$R_1$} & $-0.18$ & $1.00$ & nato per la dimostrazione Trotter
+(dinamica non monocromatica);\\
+& & & validato \emph{a posteriori} anche come punto VQE genuino \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\messaggio{$R_1$ non sostituisce ``test 2'': è stato aggiunto come secondo
+punto di lavoro VQE, per verificare che i risultati delle estensioni non
+fossero un caso isolato di un singolo punto.}
+
+\subsection{Baseline della pipeline di rumore (cinque stadi), punto principale}
+
+Al punto ``test 2'', calibrazione di riferimento \texttt{ibm\_torino}
+(arXiv:2504.15187):
+\begin{itemize}[nosep]
+  \item $N^*=8$ sulla fedeltà di Trotter;
+  \item $N^*=2$ sul modulo del correlatore dinamico $C_{11}^{yz}(t=2)$
+  (valore corretto dopo revisione: $C_{21}^{xx}$, usato inizialmente, è
+  risultato l'estremo più fragile su tutte le 36 combinazioni sotto
+  rumore, sostituito con $C_{11}^{yz}$ --- vedi nota a fine sezione);
+  \item $N^*$ dimostrato \textbf{analiticamente indipendente} da
+  $p_\text{readout}$ nel caso simmetrico (la correzione di readout è un
+  fattore moltiplicativo costante in $N$, non può spostare un massimo).
+\end{itemize}
+
+\begin{center}
+\begin{minipage}{0.93\textwidth}
+\small\textcolor{rossos}{\rule{2.2em}{1.1pt}}\enspace
+\textcolor{rossos}{\textbf{Correzione (10 settembre 2026).}}\enspace
+$C_{21}^{xx}$ è risultato, con uno scan sistematico sulle 36 combinazioni
+sotto rumore, l'estremo più fragile in assoluto ($N^*$ più alto, segnale
+più basso di tutte) --- non solo ``non ottimale'' come già segnalato nel
+caso ideale. Sostituito con $C_{11}^{yz}$ (già usato come esempio ``ricco''
+in Parte 1, verificato rappresentativo nella nuova distribuzione). Le
+conclusioni qualitative delle estensioni (invarianza sotto riottimizzazione,
+25/25 sulla griglia, stress test readout fino a $50\times$) restano confermate
+con il nuovo correlatore --- cambiano solo i valori numerici di $N^*$. Nello
+stesso giro, il readout è stato reso genuinamente campionato (shot finiti +
+\texttt{ReadoutError} vero), non più formula analitica: stessa posizione di
+$N^*$ confermata. \textbf{Nota aggiuntiva}: $|C(N^*)|$ sovrastima il
+correlatore fisico vero di un fattore $\sim2\times$ al punto usato in tutta
+la pipeline --- colpa dell'errore di Trotter a $N$ piccolo, non del rumore;
+$N^*$ massimizza il segnale misurabile, non l'accuratezza della stima. Il
+valore corretto di $N^*$ per $R_1$ (dopo la stessa sostituzione) non è
+ancora noto a questo documento --- il valore $3\to3$ in Tabella 2 sotto è
+quindi il numero \emph{precedente la correzione}, da verificare.
+\end{minipage}
+\end{center}
+\medskip
+
+% =====================================================================
+\subsection{Estensione 1 --- VQE noise-aware, su entrambi i punti}
+% =====================================================================
+
+Due strategie a confronto: riuso dei parametri ideali $\theta^*_\text{ideale}$
+su un simulatore a operatore densità, contro una riottimizzazione con il
+rumore acceso fin dall'inizio della valutazione dell'energia
+($\theta^*_\text{noise-aware}$), stesso schema (multistart COBYLA + polish
+L-BFGS-B).
+
+\textbf{Argomento teorico.} Per un canale depolarizzante isotropo,
+$$E_\text{rumoroso}(\theta) = (1-\lambda)\,E_\text{ideale}(\theta) +
+\lambda\,\frac{\Tr[H]}{d},$$
+trasformazione \emph{affine} dell'energia ideale, indipendente da $\theta$ ---
+vale per qualunque $\lambda$ e qualunque punto di lavoro. Questo non
+garantisce da solo l'invarianza di $N^*$ su metriche diverse dall'energia
+(fedeltà, modulo di un correlatore): va verificato direttamente.
+
+\begin{table}[htbp]
+\centering
+\caption{Estensione VQE noise-aware sul dimero, confronto sui due punti di
+lavoro. Riga $N^*$ correlatore: valori \emph{precedenti} la correzione del
+correlatore (10 settembre) --- l'invarianza qualitativa (riuso $=$
+noise-aware) resta confermata col nuovo correlatore $C_{11}^{yz}$, i valori
+numerici esatti post-correzione non sono ancora disponibili a questo
+documento (noto solo per test 2: $N^*=2$, non più $5$).}
+\label{tab:dimero-noiseaware}
+\begin{tabular}{lcc}
+\toprule
+Quantità & test 2 & $R_1$ \\
+\midrule
+$\Delta E = E_\text{noise-aware} - E_\text{riuso}$ & $-1.16\times10^{-7}$ & $-2.56\times10^{-8}$ \\
+$\Delta \mathcal F$ & $+1.76\times10^{-8}$ & $+3.96\times10^{-9}$ \\
+$N^*$ Trotter (riuso $\to$ noise-aware) & $8\to8$ & $8\to8$ \\
+$N^*$ correlatore (riuso $\to$ noise-aware, \emph{pre-correzione}) & $5\to5$ & $3\to3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\verifica{Argomento di continuità reso quantitativo:
+$|\Delta f|\le\|\nabla f(\theta^*_\text{ideale})\|\,\|\Delta\theta\|+O(\|\Delta\theta\|^2)$.
+La previsione lineare riproduce lo scostamento osservato entro lo
+\textbf{0.1\%} su entrambe le metriche (fedeltà di Trotter: predetto
+$4.150\times10^{-5}$ vs osservato $4.147\times10^{-5}$; correlatore: predetto
+$-6.794\times10^{-5}$ vs osservato $-6.792\times10^{-5}$). Scan completo sulla
+griglia del Passo 5 (7 valori di $\varepsilon_{2q}$, 6 di $\varepsilon_{1q}$
+per la fedeltà; 5, 4, 3 valori di $\varepsilon_{2q},\varepsilon_{1q},
+p_\text{readout}$ per il correlatore): \textbf{25/25 punti con $N^*$
+invariato}.}
+
+\textbf{Robustezza del multistart} ($R=6$, come nel Passo 2 originale): senza
+seme, può restare intrappolato in un minimo locale peggiore
+($E\approx-3.4753$ contro il vero $-3.50164605$). Risolto includendo
+$\theta^*_\text{ideale}$ come uno dei punti di partenza; verificato
+indipendentemente che non è un artefatto del seme, un multistart più ampio
+($R=20$, nessun seme) converge allo stesso ottimo rumoroso entro
+$2.6\times10^{-6}$.
+
+\textbf{Esito}: nessun vantaggio misurabile dalla riottimizzazione, su
+entrambi i punti, entrambe le metriche, tutta la griglia esplorata.
+
+% =====================================================================
+\subsection{Estensione 2 --- readout asimmetrico}
+% =====================================================================
+
+Formula generale di correzione per $p_{01}\neq p_{10}$:
+$$\langle Z\rangle_\text{readout}=\alpha\langle Z\rangle_\text{ideale}+\beta,
+\qquad \alpha = 1-p_{01}-p_{10},\ \ \beta = p_{10}-p_{01},$$
+che per il correlatore complesso diventa una traslazione costante nel piano
+complesso, $C_\text{readout}(N)=\alpha\,C_\text{ideale}(N)+\beta(1+i)$ ---
+\textbf{non} garantita a priori preservare l'invarianza di
+$N^*=\arg\max_N|C(N)|$ dimostrata per il caso simmetrico (somma e modulo non
+commutano).
+
+\textbf{Valori usati}: rapporto illustrativo $3\times$ ($p_{01}=0.0115$,
+$p_{10}=0.0345$, stessa media $p_\text{readout}=2.3\times10^{-2}$ già in uso),
+scelto confrontando split reali su chip IBM comparabili (IBM-Quito
+$3.5\times$, esempio documentazione IBM $3.1\times$, ibmq\_montreal
+$2.0\times$ --- nessuno specifico per \texttt{ibm\_torino} risultava
+citabile).
+
+\verifica{$N^*$ non si sposta (verificato $N^*=5$ con il correlatore
+originale $C_{21}^{xx}$; valore atteso $N^*=2$ dopo la sostituzione con
+$C_{11}^{yz}$, non ancora riverificato su questo test specifico), né al
+punto illustrativo né in uno stress test fino a rapporti
+$p_{10}/p_{01}=50\times$ (ben oltre il range realistico osservato su
+hardware). Cross-check Monte Carlo con \texttt{ReadoutError} vero
+(asimmetrico) conferma la formula analitica entro l'errore statistico
+atteso.}
+
+% =====================================================================
+\section{Il trimero ad anello: due punti di lavoro con ruoli diversi}
+% =====================================================================
+
+\subsection{Biforcazione dell'ansatz: RBS e $W$}
+
+A $D=0$ le due famiglie di ansatz sono state sviluppate \textbf{in
+parallelo}, per entrambe le topologie (anello e catena): un ansatz PMA con
+blocco RBS (produzione principale, più efficiente in questo regime) e uno
+speculare con blocco $W$ (mirror dell'ansatz ``originale'' del dimero).
+
+Sotto il termine DM (Fase 5), il confronto sistematico condotto nel notebook
+dedicato dell'anello (15 ansatz: 10 RBS, 5 $W$, 60 restart, ottimizzazione
+diretta della fidelity) ha dato un esito netto:
+\begin{align*}
+\text{RBS-2q (1 giro)} &\ \to\ \mathcal F\approx0.9999\quad\text{(tetto strutturale)},\\
+W\text{-2q.6} &\ \to\ \mathcal F=1\quad\text{esatto}.
+\end{align*}
+
+Da quel momento \textbf{\texttt{W-2q.6}} (6 parametri, blocco
+CNOT--$R_y(\theta)$--CNOT, un solo giro sui tre legami $(1,2),(2,3),(3,1)$) è
+diventato l'ansatz canonico unico per tutto ciò che segue nella pipeline
+dell'anello --- circuito dei correlatori, riferimento Trotter, VQE+DM sotto
+rumore. RBS non è stato portato avanti oltre il notebook di confronto.
+
+\begin{center}
+\begin{minipage}{0.93\textwidth}
+\small\textcolor{rossos}{\rule{2.2em}{1.1pt}}\enspace
+\textcolor{rossos}{\textbf{Precisazione trovata a posteriori.}}\enspace
+La frase ``RBS-2q ha un tetto strutturale vero'' vale solo per la variante a
+\emph{un giro} effettivamente testata: nello sweep sistematico, \texttt{RBS-2qC.K2}
+(due giri) raggiunge anch'esso $\mathcal F=1$ esatto sotto DM. Nessuna azione
+correttiva sui file consegnati --- la conclusione operativa (\texttt{W-2q.6}
+canonico) resta valida, solo la portata della frase è più stretta di una
+lettura letterale.
+\end{minipage}
+\end{center}
+\medskip
+
+\subsection{I due punti di lavoro dell'anello}
+
+A differenza del dimero, l'anello usa due punti \textbf{nati per scopi
+diversi} in Parte 1, non entrambi originariamente pensati come punti VQE.
+
+\begin{table}[htbp]
+\centering
+\caption{Punti di lavoro del trimero ad anello ($J=1$, $J'=0.4$ in entrambi).}
+\label{tab:anello-punti}
+\begin{tabular}{lccl}
+\toprule
+Nome & $b$ & $D$ & Ruolo originario \\
+\midrule
+\textbf{Scenario A} & $b_c=2.4$ & $0.15$ & punto VQE (Fase 5), gap $E_1-E_0=0.2547$ \\
+\textbf{$R_0$} & $0.05$ & $1.93$ & dimostrazione Trotter (dinamica non
+monocromatica),\\
+& & & \emph{dichiarato provvisorio}, gap $E_1-E_0=0.0393$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\messaggio{Il gap di $R_0$ è $6.5\times$ più piccolo di quello dello Scenario
+A --- $R_0$ è vicino alla quasi-degenerazione di Kramers che il modello ha
+esattamente a $b=0$ (per qualunque $D$, con un numero dispari di spin
+$1/2$).}
+
+\subsection{Baseline della pipeline di rumore (cinque stadi), entrambi gli scenari}
+
+A differenza del dimero, la pipeline di rumore dell'anello tratta
+\textbf{entrambi} gli scenari fin dallo Stadio 3, non uno scelto a scapito
+dell'altro.
+
+\begin{table}[htbp]
+\centering
+\caption{Baseline dei cinque stadi della pipeline di rumore, trimero ad anello.}
+\label{tab:anello-stadi}
+\begin{tabular}{lll}
+\toprule
+Stadio & Contenuto & Esito \\
+\midrule
+1 & modello di rumore & calibrazione \texttt{ibm\_torino} riusata dal dimero \\
+2 & VQE+DM sotto rumore & $E=-5.37687489$ (ideale $-5.53437002$), $1-\mathcal F=2.98\%$\\
+  & & (doppio del dimero, $1.50\%$: 6 CNOT contro 2) \\
+3 & Trotter sotto rumore & $N^*_A=3$, $N^*_B=9$ (dopo correzione griglia) \\
+4 & correlatori sotto rumore & $N^*=3$ per $C_{21}^{xx}$ (coincide con $N^*_A$) \\
+5 & scan parametri di rumore & $N^*$ monot.\ non-cresc.\ in $\varepsilon_{1q},\varepsilon_{2q}$;\\
+  & & invarianza da $p_\text{readout}\in\{0,0.05,0.20\}$ confermata \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{center}
+\begin{minipage}{0.93\textwidth}
+\small\textcolor{arancio}{\rule{2.2em}{1.1pt}}\enspace
+\textcolor{arancio}{\textbf{Correzione numerica non banale.}}\enspace
+Una griglia $N$ troppo grezza nel primo giro dello Stadio 3 aveva dato
+$N^*_A=2$, $N^*_B=10$ invece dei valori corretti $3$ e $9$ --- scoperta
+costruendo lo Stadio 5, propagata retroattivamente. Conseguenza: $N^*_A=3$
+\textbf{coincide} esattamente con l'$N^*=3$ del correlatore (Stadio 4), prima
+sembravano tre valori distinti.
+\end{minipage}
+\end{center}
+\medskip
+
+\textbf{Verifica di minimizzazione dei gate} (richiesta esplicita del
+relatore, ``farei prima la transpilazione, aiuterà a ridurre i gate''):
+fattore $2\times$ sul passo esterno di Trotter ($30\to15$ CNOT, livelli 0/1
+contro 2/3); \textbf{nessun beneficio} sull'ansatz VQE a nessun livello (6
+CNOT costanti, struttura senza ridondanza da fondere).
+
+% =====================================================================
+\section{Passo 0 --- verifica che $R_0$ sia un punto VQE valido}
+% =====================================================================
+
+Prerequisito individuato prima di poter riusare $R_0$ come secondo punto di
+lavoro nell'estensione VQE noise-aware (per analogia col ruolo di $R_1$ sul
+dimero): $R_0$ non era mai stato validato come stato fondamentale VQE, solo
+come punto di dimostrazione della dinamica Trotter da $|000\rangle$.
+
+\textbf{Preoccupazione motivata}: $b=0.05$ è vicino a $b=0$, dove il modello
+ha una degenerazione di Kramers esatta per qualunque $D$ (numero dispari di
+spin $1/2$) --- un paesaggio di ottimizzazione vicino a una quasi-degenerazione
+può presentare direzioni piatte o convergenza instabile a seconda del seed.
+
+\subsection{Metodo}
+
+VQE con ansatz \texttt{W-2q.6} al punto $R_0$ ($J=1,J'=0.4,b=0.05,D=1.93$,
+Opzione DM B), stesso schema multistart COBYLA (\texttt{maxiter}$=2000$) +
+polish L-BFGS-B già usato per lo Scenario A, ripetuto su 5 seed indipendenti
+con $R=12$ riavvii ciascuno, più un controllo di robustezza a $R=24$ su un
+seed indipendente.
+
+\subsection{Risultati}
+
+\begin{table}[htbp]
+\centering
+\caption{Passo 0: VQE su \texttt{W-2q.6} al punto $R_0$, multistart su 5 seed
+indipendenti più un controllo di robustezza. $E_0=-6.2971308468$ (esatto),
+gap $=0.039274$.}
+\label{tab:passo0}
+\begin{tabular}{ccccc}
+\toprule
+seed & $R$ & $E_\text{vqe}$ & $\Delta E$ & $\mathcal F$ \\
+\midrule
+0   & 12 & $-6.2971308468$ & $9.299\times10^{-13}$ & $0.999999999998$ \\
+1   & 12 & $-6.2971308468$ & $5.063\times10^{-14}$ & $0.999999999999$ \\
+2   & 12 & $-6.2971308468$ & $1.368\times10^{-13}$ & $0.999999999997$ \\
+3   & 12 & $-6.2971308468$ & $1.757\times10^{-12}$ & $0.999999999956$ \\
+4   & 12 & $-6.2971308468$ & $8.260\times10^{-14}$ & $0.999999999998$ \\
+100 & 24 & $-6.2971308468$ & $8.882\times10^{-14}$ & $0.999999999998$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Tutti e 6 i run convergono allo \textbf{stesso ottimo globale}: nessuna
+traccia di minimi locali spuri. I parametri ottimi differiscono
+numericamente da seed a seed (dispersione alta componente per componente),
+ma a parità di energia e fidelity --- coerente con simmetrie interne
+dell'ansatz (parametrizzazioni multiple equivalenti dello stesso stato
+fisico), non con ottimi distinti.
+
+\verifica{5 seed a $R=12$ più un controllo indipendente a $R=24$, tutti
+convergenti allo stesso ottimo entro $\Delta E\lesssim2\times10^{-12}$ e
+$\mathcal F\geq0.999999999956$ --- lo stesso standard di verifica già
+applicato allo Scenario A (12/12 multistart convergenti).}
+
+\messaggio{Il gap più piccolo di $R_0$ non si traduce in un problema di
+ottimizzazione: il multistart converge in modo pulito su tutti i tentativi.
+$R_0$ è un secondo punto di lavoro VQE genuino, utilizzabile direttamente
+nell'estensione VQE noise-aware --- nessuno scan alternativo necessario.}
+
+% =====================================================================
+\section{Stato delle estensioni sull'anello e piano di lavoro}
+% =====================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Stato delle due estensioni facoltative, trimero ad anello.}
+\label{tab:anello-estensioni-stato}
+\begin{tabular}{lll}
+\toprule
+Estensione & Fattibilità & Stato \\
+\midrule
+1. VQE noise-aware & con adattamenti & Passo 0 chiuso; Passo 1 \\
+   & & (solo Scenario A) \textbf{chiuso} \\
+2. Readout asimmetrico & senza modifiche concettuali & \textbf{da fare} \\
+   & & (solo l'ancilla è misurata nel circuito \\
+   & & a 4 qubit --- stesso schema del dimero) \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+\begin{center}
+\begin{minipage}{0.93\textwidth}
+\small\textcolor{rossos}{\rule{2.2em}{1.1pt}}\enspace
+\textcolor{rossos}{\textbf{Scoping del Passo 1, deciso dopo il Passo 0.}}\enspace
+Verificato nel codice (\texttt{trotter\_rumoroso\_trimero\_anello.py},
+\texttt{correlatori\_rumorosi\_trimero\_anello.py}) che $R_0$, nella
+pipeline attuale, non ha alcuna preparazione VQE da riottimizzare: il
+Trotter a $R_0$ parte da $\ket{000}$ (non dal ground state VQE), e il
+modulo dei correlatori dichiara esplicitamente di non usare mai $R_0$.
+``VQE noise-aware'' presuppone una preparazione VQE da riottimizzare sotto
+rumore --- condizione soddisfatta solo dallo Scenario A. Si procede quindi
+con \textbf{Scenario A soltanto}, su entrambe le metriche (fedeltà di
+Trotter e modulo del correlatore, baseline $N^*_A=3$ ed $N^*=3$) ---
+analogo diretto di ``test 2'' sul dimero. $R_0$ resta quello già definito
+in Parte 1 (dimostrazione Trotter da $\ket{000}$), non toccato da questa
+estensione; l'uso del punto VQE $R_0$ scoperto nel Passo 0 resta
+disponibile per un'eventuale estensione futura, non inclusa qui.
+\end{minipage}
+\end{center}
+\medskip
+
+\textbf{Ostacoli concreti identificati per l'estensione 1} (rispetto al
+dimero): paesaggio a 6 parametri invece di 3; costo per valutazione
+$\sim4$--$10\times$ maggiore (operatore densità $8\times8$ contro $4\times4$,
+6 CNOT contro 2); disciplina di transpilazione da replicare da zero.
+
+\subsection{Passo 1 (VQE noise-aware, Scenario A) --- chiuso: un comportamento nuovo, non visto sul dimero}
+
+Primo multistart ($R=12$ + seme $\theta^*_\text{ideale}$, rumore di
+riferimento \texttt{ibm\_torino}): $\Delta E\approx-0.046$ (tre ordini di
+grandezza più grande del $\Delta E\sim10^{-7}$ del dimero), ma
+$\Delta\mathcal F<0$ --- la fedeltà \textbf{peggiora}, non migliora.
+
+\begin{center}
+\begin{minipage}{0.93\textwidth}
+\small\textcolor{arancio}{\rule{2.2em}{1.1pt}}\enspace
+\textcolor{arancio}{\textbf{Meccanismo isolato: sfruttamento del transpilatore.}}\enspace
+I parametri trovati hanno due componenti quasi esatte a $0$ e $\pi$
+($\theta_1/\pi\approx0.99999637$, $\theta_2/\pi\approx0.00889$). A questi
+valori speciali il blocco CNOT--$R_y(\theta)$--CNOT si semplifica, e il
+transpilatore (livello 3, quello di produzione) elimina 2 CNOT su 6.
+Verificato su più seed ($R=12$, seed 0--4, più un controllo a $R=24$): il
+comportamento a livello 3 è \textbf{fortemente instabile}
+($E\in[-5.423,-5.377]$, $\mathcal F\in[0.70,0.96]$, CNOT oscilla fra 4 e 6
+a seconda del seed) --- l'ottimizzatore sta in parte sfruttando un effetto
+discontinuo del transpilatore, non solo esplorando la fisica del problema.
+\end{minipage}
+\end{center}
+\medskip
+
+\textbf{Isolato il meccanismo con un controllo a struttura fissa}
+(\texttt{optimization\_level=0}, verificato dare \emph{sempre} lo stesso
+conteggio di gate --- 18 rz + 12 sx + 6 cx --- qualunque $\theta$, anche ai
+valori speciali sopra):
+
+\begin{table}[htbp]
+\centering
+\caption{VQE noise-aware, Scenario A: struttura di circuito variabile
+(produzione) contro struttura fissa. 3/3 seed a struttura fissa
+convergono identici; a struttura variabile il risultato dipende fortemente
+dal seed.}
+\label{tab:anello-noiseaware-preliminare}
+\begin{tabular}{lccc}
+\toprule
+& $E$ & $\mathcal F$ & CNOT \\
+\midrule
+Riuso ideale (livello 3) & $-5.37687$ & $0.97021$ & 6 \\
+Noise-aware, livello 3, seed 0 & $-5.42250$ & $0.96383$ & 4 \\
+Noise-aware, livello 3, seed 1 & $-5.42279$ & $0.90994$ & 4 \\
+Noise-aware, livello 3, seed 2 & $-5.37707$ & $0.69969$ & 4 \\
+Noise-aware, livello 3, seed 3 & $-5.37779$ & $0.93575$ & 6 \\
+Noise-aware, livello 3, seed 4 & $-5.37809$ & $0.96246$ & 6 \\
+\midrule
+Riuso ideale (livello 0, struttura fissa) & $-5.36232$ & $0.96728$ & 6 \\
+Noise-aware, livello 0, seed 0/1/2 & $-5.36649$ & $0.95154$ & 6 \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A struttura fissa il paesaggio è ben comportato, e mostra un effetto fisico
+piccolo ma reale, di segno inatteso: $\Delta E=-0.00416$ (ancora tre ordini
+di grandezza più grande del dimero) accompagnato da $\Delta\mathcal
+F=-0.0158$ --- energia migliore, fedeltà peggiore, un compromesso che il
+dimero non mostrava affatto.
+
+\messaggio{Sull'anello, a differenza del dimero, riottimizzare sotto
+rumore non è innocuo: porta a un'energia più bassa ma a una fedeltà più
+bassa. Il comportamento erratico a struttura variabile (livello di
+produzione) è un fenomeno distinto e reale --- il transpilatore introduce
+un incentivo implicito a raggiungere configurazioni particolari di
+$\theta$ --- da documentare a parte, non da scartare come errore.}
+
+\subsubsection*{Controlli $N^*$ a valle --- completati}
+
+\begin{table}[htbp]
+\centering
+\caption{$N^*$ a valle, Scenario A, riuso ideale contro noise-aware, sulle
+due metodologie. Baseline noto: $N^*_A=3$ (Trotter), $N^*=3$ (correlatore).}
+\label{tab:anello-Nstar-passo1}
+\begin{tabular}{lcc}
+\toprule
+Metodologia & $N^*$ Trotter & $N^*$ correlatore \\
+\midrule
+Struttura fissa (livello 0, risultato fisico) & $3\to3$ & $3\to3$ \\
+Struttura di produzione (livello 3, punto anomalo) & $3\to\mathbf{4}$ & $3\to3$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+A struttura fissa, $N^*$ resta invariato su \textbf{entrambe} le metriche
+--- stesso schema qualitativo del dimero, nonostante il segno diverso
+dell'effetto a monte (energia migliore, fedeltà peggiore anziché
+entrambe quasi invariate). Sul punto anomalo (struttura variabile,
+produzione reale), $N^*$ \textbf{si sposta} per la fedeltà di Trotter
+($F(3)=0.700335$ contro $F(4)=0.693018$, scarto piccolo ma il massimo
+cambia posizione) mentre resta invariato per il correlatore ---
+un'asimmetria fra le due metriche mai osservata sul dimero, dove
+l'invarianza reggeva sempre su entrambe.
+
+\messaggio{Passo 1 chiuso. Risultato centrale: isolando l'effetto fisico a
+struttura di circuito fissa, la riottimizzazione sotto rumore non sposta
+$N^*$ sull'anello, esattamente come sul dimero --- ma la pipeline di
+produzione (struttura variabile) può occasionalmente farlo su una sola
+delle due metriche, un comportamento specifico dell'ansatz a più
+parametri, da riportare come nota metodologica a sé.}
+
+\subsection{Verifica di non-regressione: fragilità del correlatore sull'anello}
+
+A seguito della correzione ricevuta dalla revisione del dimero
+($C_{21}^{xx}$ risultato l'estremo più fragile su 36 combinazioni sotto
+rumore, sostituito da $C_{11}^{yz}$, $N^*=5\to2$): verificato se lo stesso
+rischio riguarda il baseline dell'anello ($C_{21}^{xx}$, $N^*=3$, Stadio 4),
+mai controllato prima con questo criterio.
+
+\begin{table}[htbp]
+\centering
+\caption{Scan sotto rumore sulle 81 combinazioni, trimero ad anello
+(\texttt{ibm\_torino}, griglia $N\in\{1,2,3,4,5,7,10,14,20\}$).}
+\label{tab:anello-scan81}
+\begin{tabular}{lccc}
+\toprule
+& $N^*$ & $|C(N^*)|$ & posizione per segnale (su 81) \\
+\midrule
+$C_{21}^{xx}$ (baseline Stadio 4) & 3 & 0.5048 & 64° (sopra la mediana) \\
+$C_{33}^{xz}$ (il più fragile) & 2 & 0.0461 & 1° \\
+$C_{33}^{yz}$ (il più robusto) & 1 & 0.7255 & 81° \\
+\bottomrule
+\end{tabular}
+\end{table}
+
+Distribuzione di $N^*$ sulle 81 combinazioni: $N^*{=}1$: 40, $N^*{=}2$: 18,
+$N^*{=}3$: 21, $N^*{=}4$: 2 (solo $C_{23}^{yz}$ e $C_{13}^{zz}$). Il valore
+$N^*=3$ di $C_{21}^{xx}$ coincide esattamente col baseline già noto ed è
+condiviso da altre 20 combinazioni --- non un caso isolato.
+
+\messaggio{Nessuna correzione necessaria sul baseline dell'anello: a
+differenza del dimero, $C_{21}^{xx}$ è una scelta rappresentativa anche
+sotto rumore, non solo nel caso ideale.}
+
+\textbf{Nessun ostacolo concettuale per l'estensione 2}: verificato
+direttamente dal codice (\texttt{circuito\_correlazioni\_trimero\_anello.py})
+che il circuito misura un solo bit classico, sempre e solo l'ancilla
+(\texttt{qc.measure(ANCILLA, 0)}) --- la correzione di readout asimmetrico si
+applica alla stessa, singola matrice di confusione indipendentemente dal
+numero di qubit di registro (3 sull'anello contro 2 sul dimero). Da
+allineare, quando affrontata, alla metodologia ora in uso sul dimero
+(readout genuinamente campionato, non solo formula analitica).
+
+% =====================================================================
+\section{Riepilogo comparativo finale}
+% =====================================================================
+
+\begin{table}[htbp]
+\centering
+\caption{Confronto dimero / trimero ad anello: ansatz, dimensione, costo.}
+\label{tab:confronto-finale}
+\begin{tabular}{lcc}
+\toprule
+& Dimero & Trimero ad anello \\
+\midrule
+Ansatz canonico sotto DM & PMA-2q$\cdot$3 & $W$-2q.6 \\
+Parametri & 3 & 6 \\
+CNOT (ansatz) & 2 & 6 \\
+Qubit di registro & 2 & 3 \\
+Qubit circuito correlatori (+ancilla) & 3 & 4 \\
+Punti di lavoro usati & test 2, $R_1$ & Scenario A, $R_0$ \\
+$N^*$ Trotter (rumore rif.) & 8 & $3$ (A) / $9$ ($R_0$) \\
+$N^*$ correlatore (rumore rif.) & 2 (era 5, corretto) & 3 (verificato non fragile) \\
+Estensione VQE noise-aware & chiusa & Passo 0 e Passo 1 chiusi \\
+Estensione readout asimmetrico & chiusa$^\dagger$ & da fare \\
+\bottomrule
+\end{tabular}
+
+\vspace{2pt}
+{\footnotesize $^\dagger$ da riallineare alla metodologia ora in uso sul
+dimero (readout genuinamente campionato, non solo formula analitica).}
+\end{table}
+
+\end{document}

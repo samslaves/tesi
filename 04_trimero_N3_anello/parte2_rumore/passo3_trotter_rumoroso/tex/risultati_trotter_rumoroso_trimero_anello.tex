@@ -106,6 +106,36 @@ DM $H_\text{DM}$ --- stesso ordine di \texttt{trotter\_circuit} in Parte
 1) viene transpilato \textbf{una sola volta} in base $\{rz,sx,x,cx\}$,
 poi il blocco già compilato è composto $N$ volte.
 
+\begin{okbox}{Corretto: livello di ottimizzazione, dimostrato minimo (non assunto)}
+Richiesta esplicita del relatore (\texttt{domande\_relatore.md},
+sez.~12): transpilare per \textbf{minimizzare} i gate, non usare il
+default. Sul dimero questo fu dimostrato con un confronto esplicito
+($10\to3$ CNOT, fattore $3.3\times$). Su questo documento,
+inizialmente, \texttt{optimization\_level=3} era stato usato per
+convenzione ereditata dal dimero, \textbf{senza} il confronto
+esplicito --- gap trovato in una verifica indipendente successiva,
+colmato qui:
+\begin{center}
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\textbf{Livello} & \textbf{CNOT/passo (Trotter)} & \textbf{CNOT (ansatz VQE)}\\
+\midrule
+0 & 30 & 6\\
+1 & 30 & 6\\
+2 & 15 & 6\\
+3 & 15 & 6\\
+\bottomrule
+\end{tabular}
+\end{center}
+\textbf{Confermato}: livello 3 (usato in tutta la pipeline) è
+effettivamente minimo per il passo di Trotter (fattore $2\times$ su
+livello 0/1). Sull'ansatz VQE nessun beneficio a nessun livello (6
+CNOT costanti) --- risultato legittimo: la struttura a blocchi $W$
+sequenziali su coppie di qubit diverse non offre ridondanza da fondere,
+non un errore o un'occasione mancata.
+\end{okbox}
+
 \section{Risultati: conteggio dei gate}
 
 \begin{center}
@@ -167,8 +197,21 @@ massimo è a un $N$ finito --- il compromesso fra errore di Trotter
 passo) si manifesta concretamente, non solo previsto teoricamente.}}
 \end{figure}
 
+\begin{okbox}{Corretto (griglia $N$ infittita in Stadio 5)}
+Valore originale di questo documento: $N^*_A\approx2$,
+$N^*_B\approx10$, da una griglia $N\in\{1,2,5,10,15,20,30,40,60,80\}$
+che \textbf{saltava} $N=3$ e $N=4$. Rieseguendo con una griglia continua
+$N=1,\ldots,20$ (Stadio 5, \texttt{scan\_parametri\_rumore\_trimero\_
+anello.py}) sono emersi i veri massimi: $N^*_A=3$
+($F(N^*)=0.700335$, contro $0.697$ al vecchio $N=2$ --- vicini ma non
+uguali) e $N^*_B=9$ ($F(N^*)=0.381896$, contro $0.380$ al vecchio
+$N=10$ --- praticamente indistinguibili). La conclusione qualitativa
+(due $N^*$ diversi, entrambi finiti) non cambia; i valori numerici sì,
+e sono stati corretti qui e nella figura.
+\end{okbox}
+
 \begin{okbox}{Verificato}
-$N^*_A\approx2$ ($F(N^*)=0.697$), $N^*_B\approx10$ ($F(N^*)=0.380$) ---
+$N^*_A=3$ ($F(N^*)=0.700335$), $N^*_B=9$ ($F(N^*)=0.381896$) ---
 \textbf{diversi fra loro}, non assunti identici al dimero né fra i due
 scenari stessi. Lo scenario B mostra inoltre un comportamento non
 monotono a $N$ piccolo ($F$ crolla a $N=2$ prima di risalire): a rumore
@@ -226,7 +269,7 @@ Sez.\ ``Cosa non è ancora stato controllato qui''.
 La strategia di transpilazione a blocchi, scritta qui per la prima volta
 per l'anello, funziona identicamente in entrambi gli scenari (crescita
 lineare confermata); il compromesso Trotter/rumore produce un $N^*$
-finito ma \textbf{diverso} nei due scenari ($N^*_A=2$, $N^*_B=10$),
+finito ma \textbf{diverso} nei due scenari ($N^*_A=3$, $N^*_B=9$),
 segno che il punto di lavoro conta quanto il livello di rumore.
 \end{okbox}
 

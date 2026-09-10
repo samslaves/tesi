@@ -437,3 +437,162 @@ narrativa equivalente sulla Parte 2 (`tesi_dimero_rumoroso_slides`).
 concretamente la Parte 2 (rumore) sul trimero ad anello, e la serie
 narrativa per la Parte 2 del dimero — nessuno dei due filoni ancora
 iniziato.
+
+## Aggiornamento 9-10 settembre 2026 — Parte 2 (rumore) sul trimero ad anello: chiusa
+
+**Completata Parte 2 (rumore) sul trimero ad anello**, tutti e cinque
+gli stadi verificati: modello di rumore (wrapper sul dimero), VQE+DM
+sotto rumore, quantum simulation Trotter sotto rumore (entrambi i punti
+di lavoro di Parte 1, non uno solo — vedi nota sotto), correlatori
+dinamici sotto rumore, scan sui parametri di rumore. Dettaglio completo
+in `log_decisioni.md`.
+
+**Un punto emerso durante il lavoro, non noto prima**: Parte 1
+dell'anello usa due punti di lavoro diversi per VQE ($b=b_c=2.4,D=0.15$)
+e per la dimostrazione Trotter ($R_0$: $b=0.05,D=1.93$, ancora
+provvisorio) — trattati entrambi nella pipeline di rumore, non uno
+scelto a scapito dell'altro.
+
+**Una correzione numerica non banale**: una griglia $N$ troppo grezza
+nel primo giro dello Stadio 3 aveva riportato $N^*=2$ per lo scenario
+VQE invece del vero $3$ — scoperta costruendo lo Stadio 5, corretta
+retroattivamente in tutti i documenti coinvolti. Conseguenza: il valore
+corretto coincide esattamente con $N^*$ del correlatore (Stadio 4),
+prima sembravano tre valori distinti.
+
+**Prodotti anche i due pacchetti riproducibili** per il trimero
+(`pacchetto_trimero_riproducibile.zip` per la Parte 1,
+`pacchetto_trimero_rumoroso_riproducibile.zip` per la Parte 2),
+verificati end-to-end da zero su copia estratta indipendente — stesso
+standard già applicato al dimero.
+
+**Prossimo passo**: nessuno stabilito con urgenza. Filoni possibili, non
+prioritari: topologia catena aperta per il rumore (estensione
+menzionata ma non decisa), o la serie narrativa di tesi per la Parte 2
+del trimero (equivalente di `tesi_dimero_rumoroso_slides`, non ancora
+iniziata per l'anello).
+
+## Aggiornamento 10 settembre 2026 — serie narrativa `tesi_dimero_rumoroso_slides`: completata, con una revisione sostanziale
+
+**Completata la serie narrativa per la Parte 2 (rumore) sul dimero**
+(`tesi_dimero_rumoroso_slides`, l'ultimo dei due filoni rimasti aperti
+nell'aggiornamento precedente): sette documenti narrativi
+(`dimero_05_rumore_modello.tex` ... `dimero_11_readout_asimmetrico.tex`)
+più uno schema riassuntivo dedicato (`schema_riassuntivo_passi.tex`,
+stesso formato di quello già esistente per Parte 1), stesso stile e
+disciplina della serie senza rumore.
+
+**Non una semplice trascrizione**: una revisione approfondita in corso
+di scrittura ha trovato e corretto un errore sostanziale, non solo
+terminologico.
+
+- **Correlatore di riferimento sbagliato.** La pipeline usava
+  $C_{21}^{xx}$ (coerente con la scelta già segnalata come non ottimale
+  in `domande_relatore.md`, punto 6). Rifatto lo scan sistematico sulle
+  36 combinazioni **sotto rumore**: $C_{21}^{xx}$ è risultato l'estremo
+  più fragile in assoluto ($N^*$ più alto, segnale più basso di tutte e
+  36). Sostituito con $C_{11}^{yz}$ — lo stesso correlatore già usato
+  in Parte 1, verificato rappresentativo (non un estremo) nella nuova
+  distribuzione. Valore corretto: $N^*=2$, non $5$ come registrato in
+  precedenza.
+- **Readout reso genuinamente campionato**, non più una formula
+  analitica applicata dopo la simulazione del rumore di gate: ogni
+  $N^*$ della Parte 2 sul dimero ricalcolato da capo con una vera
+  istruzione di misura e un `ReadoutError` campionato a shot finiti —
+  stessa posizione di $N^*$ confermata con il nuovo metodo, in tutti i
+  documenti coinvolti (8, 9, 10, 11).
+- **Trovato un limite d'interpretazione di $N^*$, non solo un bug**:
+  $|C(N^*)|$ sovrastima sistematicamente il vero correlatore fisico
+  $C(t)$ (fattore $\sim1.9$–$2\times$ al punto usato in tutta la
+  pipeline) — colpa dell'errore di Trotter a $N$ piccolo, non del
+  rumore. $N^*$ massimizza il segnale misurabile sotto rumore, non
+  l'accuratezza della stima; chiarito esplicitamente nel Documento 8 e
+  nello schema riassuntivo, perché vale per come si legge $N^*$ in
+  tutta la Parte 2.
+
+**Verificato di nuovo, non solo corretto una volta**: lo scan sulle 36
+combinazioni, la griglia completa del Documento 10 (25/25 punti), e lo
+stress test del Documento 11 (fino a un rapporto $50\times$) sono stati
+tutti ripetuti con il correlatore e il metodo di readout corretti —
+stesse conclusioni qualitative del lavoro originale, numeri aggiornati.
+
+**Da segnalare al relatore**: se la relazione già inviata (6 settembre
+2026, vedi aggiornamento precedente) citava $N^*=5$ per i correlatori
+dinamici, andrebbe seguita da una correzione — vedi la nota aggiunta in
+`domande_relatore.md`.
+
+**Stato dei due filoni della sessione del 7 settembre**: entrambi ora
+chiusi — Parte 2 sul trimero ad anello (9-10 settembre) e la serie
+narrativa sul dimero (questo aggiornamento). Prossimo passo non ancora
+stabilito con urgenza: la serie narrativa equivalente per la Parte 2 del
+trimero, o l'estensione alla catena aperta.
+
+## Aggiornamento 10 settembre 2026 (continua) — estensioni facoltative sul trimero ad anello: Passo 0 chiuso, Passo 1 in corso; verifica di non-regressione sul correlatore
+
+In una chat separata da quella della revisione sopra: avviate le due
+estensioni facoltative (VQE noise-aware, readout asimmetrico) sulla
+Parte 2 dell'anello, con lo stesso standard gia' applicato al dimero.
+
+**Passo 0 (verifica $R_0$ come punto VQE) — CHIUSO.** $R_0$ ($b=0.05$,
+$D=1.93$) validato come stato fondamentale VQE genuino con l'ansatz
+`W-2q.6` ($\mathcal F\geq0.999999999956$ su 6 run indipendenti), nonostante
+un gap $6.5\times$ piu' piccolo dello Scenario A. **Scope deciso**: Passo 1
+usa solo Scenario A (unico punto con preparazione VQE gia' integrata nella
+pipeline Trotter/correlatori) — $R_0$ resta quello gia' definito in Parte 1
+($\ket{000}$, mai preparazione VQE), non toccato da questa estensione.
+
+**Passo 1 (VQE noise-aware) — CHIUSO.**
+A differenza del dimero (nessun vantaggio misurabile), sull'anello la
+riottimizzazione sotto rumore mostra un effetto piccolo ma reale
+($\Delta E\sim10^{-3}$, tre ordini di grandezza piu' grande del dimero)
+accompagnato da una fedelta' che **peggiora** invece di migliorare — isolato
+verificando a struttura di circuito fissa (altrimenti l'ottimizzatore
+sfrutta valori speciali di $\theta$ che il transpilatore semplifica,
+riducendo i CNOT rumorosi a scapito della fedelta' al vero stato: effetto
+distinto, documentato a parte). **Controlli $N^*$ a valle completati**: a
+struttura fissa, $N^*$ invariato su entrambe le metriche (Trotter $3\to3$,
+correlatore $3\to3$), stesso schema qualitativo del dimero. Sulla pipeline
+di produzione (struttura variabile), il punto anomalo sposta $N^*$ per la
+fedelta' di Trotter ($3\to4$) ma non per il correlatore ($3\to3$) —
+un'asimmetria fra metriche mai vista sul dimero, da documentare come nota
+metodologica a se'.
+
+**Verifica di non-regressione**: alla luce della correzione ricevuta dalla
+chat del dimero (correlatore $C_{21}^{xx}$ risultato il piu' fragile su 36
+sotto rumore, sostituito da $C_{11}^{yz}$, $N^*=5\to2$), controllato se lo
+stesso rischio riguarda il baseline dell'anello ($C_{21}^{xx}$, $N^*=3$,
+Stadio 4). **Nessuna correzione necessaria**: scan sulle 81 combinazioni
+sotto rumore conferma $C_{21}^{xx}$ in posizione robusta (64°/81 per
+segnale, $N^*=3$ condiviso da altre 20 combinazioni su 81, non un estremo).
+
+**Prossimo passo**: Passo 2 (readout asimmetrico) — da allineare alla
+metodologia ora in uso sul dimero (readout genuinamente campionato, non
+piu' solo formula analitica).
+
+Vedi `log_decisioni.md` per il dettaglio completo (numeri, seed, parametri
+trovati) e `punti_di_lavoro_riepilogo.tex/pdf` per il riepilogo tabellare
+aggiornato.
+
+## Aggiornamento 10 settembre 2026 (continua) — Passo 2 (readout asimmetrico) sull'anello: CHIUSO
+
+A differenza del Passo 1, nessuna sorpresa: fattibilita' confermata come
+previsto nella valutazione iniziale. Unico punto che richiedeva
+attenzione — la diversa convenzione dei qubit (ancilla = qubit 3
+sull'anello, non 0 come sul dimero, quindi bit in prima posizione nella
+stringa di misura, non ultima) — verificato esplicitamente con un
+circuito di controllo prima di scrivere il resto del codice.
+
+**Risultati**: $N^*=3$ (baseline Stadio 4) invariato su limite simmetrico,
+split illustrativo (rapporto $3\times$, cross-check Monte Carlo concorde
+entro l'errore statistico atteso) e stress test fino a $50\times$ — stesso
+esito qualitativo del dimero. Metodologia allineata al nuovo standard
+(formula analitica + Monte Carlo sempre insieme, non piu' solo analitica).
+
+**Entrambe le estensioni facoltative sull'anello sono ora chiuse.**
+File prodotti: `correlatori_readout_asimmetrico_trimero_anello.py`,
+`validate_correlatori_readout_asimmetrico_trimero_anello.py`,
+`risultati_readout_asimmetrico_trimero_anello_definitivo.tex/pdf`.
+
+**Prossimo passo**: non stabilito con urgenza. Filoni possibili: la serie
+narrativa di tesi per le due estensioni sull'anello, o la catena aperta
+(messa da parte per decisione esplicita, non ripresa in questa sessione).

@@ -1,0 +1,179 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{xcolor}
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Guida d'uso --- pacchetto riproducibile\\Parte 1 (sistema chiuso), trimero ad anello}
+\author{Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\tableofcontents
+
+\section{Scope di questo pacchetto: cosa copre, cosa no}
+
+Copre la pipeline computazionale canonica di Parte 1 sull'anello:
+diagonalizzazione esatta, VQE con termine DM (ansatz $W$-2q.6), dinamica
+di Trotter, correlatori dinamici (Hadamard test). \textbf{Non} copre: i
+notebook esplorativi del confronto ansatz ($W$ vs RBS-2q --- conclusione
+già stabilita, non ripetuta qui: $W$-2q.6 raggiunge $\mathcal F=1$ dove
+RBS-2q satura a $\mathcal F\approx0.9999$, vedi
+\texttt{log\_decisioni.md}), lo scan sistematico delle 81 combinazioni
+correlatore (\texttt{scan81\_*}, catalogazione, non riproduzione
+dati/figure), il diagramma schematico del circuito (illustrativo, non
+derivato da dati). Questi restano nel Project come documentazione, non
+duplicati qui.
+
+\section{Struttura del pacchetto}
+
+\begin{verbatim}
+codice/            moduli .py (libreria, mai eseguiti direttamente)
+dati/              output .npz/.png degli script di generazione dati
+figure/            figure finali (PNG --- vedi nota sotto)
+genera_figure/     script di generazione figure
+01_..., 05_...     script di dati/validazione, numerati nell'ordine d'uso
+esegui_tutto.py    orchestratore
+\end{verbatim}
+
+\begin{verbatim}
+python3 esegui_tutto.py
+\end{verbatim}
+Richiede: \texttt{qiskit}, \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}.
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}p{4cm}p{6cm}p{4cm}@{}}
+\toprule
+\textbf{Nota su PNG vs PDF} & \\
+\midrule
+\multicolumn{3}{p{14cm}}{A differenza del pacchetto di Parte 2, le figure
+qui sono \textbf{raster PNG}, non PDF vettoriale --- fedele al
+comportamento originale degli script del Project
+(\texttt{generate\_figures\_circuito\_trimero\_anello.py} salva solo
+\texttt{.png}, mai modificato). Non un difetto introdotto qui.}\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Le onde di dipendenza reale}
+
+\textbf{Onda 1} (nessun ingresso, indipendenti fra loro): \texttt{01},
+\texttt{02}, \texttt{03}, \texttt{04}. \textbf{Onda 2} (dipende da
+\texttt{02}): \texttt{05}. \textbf{Onda 3} (dipende da \texttt{04} solo
+concettualmente --- la funzione \texttt{classical\_exact} è copiata
+localmente, non importata, per evitare un side-effect di \texttt{chdir}):
+\texttt{genera\_figure/genera\_figure\_correlatori.py}.
+
+\section{Script 01--05}
+
+\subsection{01\_diagonalizzazione\_esatta.py}
+\textbf{Ingresso}: nessuno. \textbf{Uscita}: nessun file dati, ma un
+effetto collaterale del self-test: \texttt{dati/trimer\_ring\_exact.png}
+(spettro + magnetizzazione, percorso hard-coded nello script originale,
+non modificato). \textbf{Chi lo consuma}: nessuno.
+\begin{verbatim}
+python3 01_diagonalizzazione_esatta.py
+\end{verbatim}
+
+\subsection{02\_genera\_vqe\_dm.py}
+\textbf{Ingresso}: nessuno (ottimizzazione multistart da zero).
+\textbf{Uscita}: \texttt{dati/w2q6\_params\_optimal.npz} (campi:
+\texttt{params}, \texttt{E\_vqe}, \texttt{E\_exact}, \texttt{fidelity}).
+\textbf{Chi lo consuma}: \texttt{05}, e l'intera pipeline di Parte 2
+(pacchetto separato).
+\begin{verbatim}
+python3 02_genera_vqe_dm.py
+\end{verbatim}
+
+\subsection{03\_self\_test\_trotter.py}
+\textbf{Ingresso}: nessuno. \textbf{Uscita}: nessun file, solo resoconto
+a schermo (4 self-test: coerenza $S_z$, equivalenza circuito/matrice,
+convergenza $N\to\infty$, fattorizzazione $H_0$). \textbf{Chi lo
+consuma}: nessuno.
+\begin{verbatim}
+python3 03_self_test_trotter.py
+\end{verbatim}
+
+\subsection{04\_valida\_correlatori\_esatti.py}
+\textbf{Ingresso}: nessuno (confronto contro benchmark classico
+\texttt{scipy.linalg.expm}, calcolato internamente). \textbf{Uscita}:
+nessun file, solo resoconto a schermo. \textbf{Chi lo consuma}: nessuno
+direttamente --- la funzione \texttt{classical\_exact} è \textbf{copiata}
+(non importata) in \texttt{genera\_figure/genera\_figure\_correlatori.py}
+per evitare il side-effect di \texttt{chdir} che questo script esegue.
+\begin{verbatim}
+python3 04_valida_correlatori_esatti.py
+\end{verbatim}
+
+\subsection{05\_valida\_correlatori\_vqe.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz} (da
+\texttt{02}). \textbf{Uscita}: nessun file, solo resoconto a schermo
+(81 combinazioni siti$\times$componenti, preparazione VQE reale vs
+ampiezze esatte). \textbf{Chi lo consuma}: nessuno.
+\begin{verbatim}
+python3 05_valida_correlatori_vqe.py
+\end{verbatim}
+
+\section{Script genera\_figure/}
+
+\subsection{genera\_figure\_correlatori.py}
+\textbf{Ingresso}: nessuno (calcola tutto da zero: Hamiltoniana esatta +
+circuito, stessa logica di \texttt{04} ma con \texttt{classical\_exact}
+copiata localmente). \textbf{Uscita}:
+\texttt{figure/fig\_trotter\_trimero.png} (convergenza Trotter,
+$C_{11}^{yy}(t{=}1.3)$), \texttt{figure/fig\_validazione\_trimero.png}
+(validazione continua su un intervallo di $t$),
+\texttt{figure/fig\_sito3\_zero\_trimero.png} (zero strutturale del sito
+3, $C_{33}^{xz}(t)\equiv0$).
+\begin{verbatim}
+python3 genera_figure/genera_figure_correlatori.py
+\end{verbatim}
+
+\section{Documentazione del codice aggiunta in questo pacchetto}
+
+Le copie di partenza in \texttt{codice/} sono state verificate
+bit-per-bit identiche al Project (\texttt{diff}), poi arricchite con
+docstring di funzione mancanti (\texttt{vqe\_w2q6\_trimero\_anello.py}:
+1/7 $\to$ 7/7; \texttt{trotter\_trimero\_anello.py}: 5/11 $\to$ 11/11),
+ciascuna con ruolo nel modulo e ruolo nell'insieme, come richiesto.
+Verificato funzionalmente dopo ogni modifica (sintassi + riesecuzione
+del self-test corrispondente): nessuna modifica di logica, solo
+documentazione.
+
+\section{Sequenza completa (copia-incolla)}
+
+\begin{verbatim}
+python3 01_diagonalizzazione_esatta.py
+python3 02_genera_vqe_dm.py
+python3 03_self_test_trotter.py
+python3 04_valida_correlatori_esatti.py
+python3 05_valida_correlatori_vqe.py
+python3 genera_figure/genera_figure_correlatori.py
+\end{verbatim}
+Equivalente, in un solo comando: \texttt{python3 esegui\_tutto.py}.
+
+\section{Verifica end-to-end effettuata}
+
+\texttt{dati/} e \texttt{figure/} svuotate, \texttt{esegui\_tutto.py}
+rieseguito da zero: \texttt{exit code 0}, nessun \texttt{FALLITO} né
+\texttt{Traceback} reale nel log (un falso positivo testuale nel
+self-test di \texttt{01}, verificato: fa parte del messaggio esplicativo
+del test, non un errore). Numeri rigenerati confrontati con quelli già
+noti: $E_\text{VQE}=-5.534370017393404$,
+$\mathcal F=0.9999999999996096$ --- coincidenti.
+
+\end{document}

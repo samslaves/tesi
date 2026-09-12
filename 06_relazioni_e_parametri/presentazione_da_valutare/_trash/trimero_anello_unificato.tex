@@ -156,7 +156,7 @@ rispetta esattamente la simmetria.
 forma & $D'\big[(X_2Z_3{-}Z_2X_3)-(X_3Z_1{-}Z_3X_1)\big]$, $D_{12}=0$ &
 $D(X_1Z_2{-}Z_1X_2)+0.4D(X_2Z_3{-}Z_2X_3)+0.4D(X_3Z_1{-}Z_3X_1)$ \\
 simmetria $P_{12}$ & rispettata esattamente & rotta \\
-$\lVert[H,S_{12}^2]\rVert$ & $\sim10^{-16}$ (esatto) & $1.379$ a
+$\lVert[H,S_{12}^2]\rVert$ & $\sim10^{-16}$ (esatto) & $\sim1.4$ a
 $D/J{=}0.15$ \\
 struttura residua & blocco $2{\times}2$ (C) $+$ blocco $6{\times}6$
 (A$+$B) & nessuna, $8\times8$ pieno \\
@@ -657,7 +657,7 @@ Il modello adottato include due soli canali di rumore, non uno stack
 generico di rumore hardware: un canale \textbf{depolarizzante di gate}, a
 uno e due qubit, e un canale di \textbf{readout}. I processi $T_1,T_2$
 sono esclusi dal modello. La calibrazione è basata su valori mediani
-reali del dispositivo \texttt{ibm\_torino} (Stenger et al., 2025):
+reali del dispositivo \texttt{ibm\_torino}:
 
 \begin{table}[htbp]
 \centering
@@ -967,19 +967,6 @@ casi; scostamento piccolo, su scala $\sim10^{-2}$.}
 \end{figure}
 \FloatBarrier
 
-Questa invarianza di $N^*$ è verificata a struttura di circuito fissa,
-la metodologia usata per isolare l'effetto fisico dall'artefatto del
-transpilatore descritto sopra. A struttura di circuito variabile (di
-produzione), dove quell'artefatto è presente, l'esito non è identico per
-le due metriche: $N^*$ della fedeltà di Trotter si sposta da $3$ a $4$,
-mentre $N^*$ del correlatore resta a $3$. La conclusione principale di
-questa sezione --- un compromesso energia/fedeltà reale che non si
-traduce in uno spostamento di $N^*$ del correlatore --- non ne risulta
-invalidata, ma lo spostamento dell'$N^*$ di Trotter a struttura variabile
-mostra che la pipeline di produzione, usata senza accorgimenti per
-un'estensione noise-aware su un ansatz a più parametri, può restituire
-conclusioni dipendenti da un artefatto del transpilatore.
-
 L'invarianza di $N^*$ qui non si spiega, come nel dimero, con un
 argomento di continuità (lì $\theta^*_\text{noise-aware}$ era quasi
 indistinguibile da $\theta^*_\text{ideale}$): in questo caso lo
@@ -1086,15 +1073,11 @@ punto di lavoro considerati.
 \noindent\footnotesize\textit{Riferimenti.}\\
 K.~Kambe, \emph{On the Paramagnetic Susceptibilities of Some Polynuclear
 Complex Salts}, J.\ Phys.\ Soc.\ Jpn.\ \textbf{5}, 48 (1950).\\
-M.~Crippa et al., \emph{Simulating Static and Dynamic Properties of
+A.~Crippa et al., \emph{Simulating Static and Dynamic Properties of
 Magnetic Molecules with Prototype Quantum Computers}, Magnetochemistry
 \textbf{7}, 117 (2021).\\
-J.~P.~T.~Stenger, G.~Bazargan, N.~T.~Bronn, D.~Gunlycke, \emph{Method for
-simulating open-system dynamics using mid-circuit measurements on a
-quantum computer}, arXiv:2504.15187 (2025).\\
-M.~Suzuki, \emph{Generalized Trotter's formula and systematic
-approximants of exponential operators and inner derivations with
-applications to many-body problems}, Commun.\ Math.\ Phys.\ \textbf{51},
-183--190 (1976).
+N.~Hatano, M.~Suzuki, \emph{Finding Exponential Product Formulas of
+Higher Orders}, in \emph{Quantum Annealing and Other Optimization
+Methods}, Lecture Notes in Physics \textbf{679}, Springer (2005).
 
 \end{document}

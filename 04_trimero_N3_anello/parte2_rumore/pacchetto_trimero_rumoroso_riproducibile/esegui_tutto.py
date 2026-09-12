@@ -6,7 +6,7 @@ Uso: python3 esegui_tutto.py   (dalla radice del pacchetto)
 
 Struttura a onde di dipendenza reale (non ordine "logico"):
   Onda 1: 01 (nessuna dipendenza)
-  Onda 2: 02-07 (dipendono tutti da 01, indipendenti fra loro)
+  Onda 2: 02-10 (dipendono tutti da 01, indipendenti fra loro)
   Onda 3: genera_figure/ (dipendono dai .npz prodotti nell'Onda 2)
 """
 import subprocess
@@ -23,6 +23,9 @@ SCRIPT_DATI_VALIDAZIONI = [
     "05_valida_correlatori_rumorosi.py",
     "06_genera_scan_parametri.py",
     "07_valida_scan_parametri.py",
+    "08_valida_correlatori_shots.py",
+    "09_valida_vqe_noise_aware.py",
+    "10_valida_readout_asimmetrico.py",
 ]
 
 SCRIPT_FIGURE = sorted(

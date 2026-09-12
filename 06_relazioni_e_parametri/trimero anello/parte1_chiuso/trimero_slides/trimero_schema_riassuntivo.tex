@@ -1,0 +1,180 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Trimero ad anello --- Schema dei quattro passi}
+\input{preambolo_dimero}
+\usepackage{pdflscape}
+\usepackage{array}
+
+\title{\bfseries Schema riassuntivo\\[2pt]
+\large Punti di lavoro e collegamenti nei quattro passi, trimero ad anello}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+Questo documento non introduce fisica nuova: raccoglie in un unico posto,
+per ciascuno dei quattro passi, il punto di lavoro, lo stato iniziale, il
+risultato chiave e il collegamento con quanto viene dopo --- pensato per
+essere consultato, non letto in ordine. Mirror diretto dello schema
+analogo della serie sul dimero.
+
+\section{Tabella d'insieme}
+
+\renewcommand{\arraystretch}{1.35}
+\begin{landscape}
+\thispagestyle{empty}
+\begin{center}
+\small
+\setlength{\tabcolsep}{4pt}
+\begin{tabular}{@{}>{\bfseries\raggedright}p{2.7cm} p{5.15cm} p{5.15cm} p{5.15cm} p{5.15cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{Il sistema} & \textbf{Il VQE} & \textbf{La dinamica (Trotter)} & \textbf{I correlatori} \\
+\midrule
+Obiettivo &
+Spettro esatto (Kambe); frustrazione; due opzioni DM, effetti opposti &
+Trovare il fondamentale; confronto RBS contro $W$ sotto DM &
+$e^{-iHt}$ con due livelli di Trotter interno (scambio e DM annidati sui
+tre legami) &
+Correlatori $C_{ij}^{\alpha\beta}(t)$, circuito a 4 qubit (3+ancilla) \\
+\addlinespace
+Punto/i di lavoro &
+sweep in $b/J$; $D=0$ vs opzioni DM A/B\textsuperscript{*} ($D/J=0.15$) &
+Scenario A\textsuperscript{**}: $b/J=b_c=2.4$, $D/J=0.15$ (opzione DM B)
+--- risultati principali qui, ma verificato anche su sweep (13 punti,
+$\mathcal F=1$ ovunque) &
+$R_0$: $b/J=0.05$, $D/J=1.93$ --- \emph{dichiarato provvisorio} &
+Scenario A\textsuperscript{**} --- stesso punto singolo del VQE \\
+\addlinespace
+Stato iniziale &
+nessuno (solo diagonalizzazione) &
+$X\ket{000}$ per costruzione (registro), poi porte parametrizzate &
+registro $\ket{000}$, nessuna preparazione &
+fondamentale esatto, fase fissata reale --- più un confronto dedicato con
+la preparazione reale via $W$-2q.6 \\
+\addlinespace
+Risultato chiave &
+incrocio a $b_c/J=2.4$ ($D{=}0$); a $D/J=0.15$, opzione DM A non lo apre
+(gap $2.3\times10^{-8}$ a $b/J{=}2.372$), opzione DM B sì (gap vero
+$0.254$ a $b/J{=}2.407$) --- entrambi i minimi spostati da $b_c$, non a
+$b_c$ fisso &
+RBS-2q ha un tetto vero ($\mathcal F=0.99991$, non si ripara con più giri);
+$W$-2q.6 raggiunge $\mathcal F=1$ esatto, con meno gate &
+errore $\sim1/N$ (operatori), $\sim1/N^2$ (fidelity), ma convergenza molto
+più lenta del dimero: servono centinaia-migliaia di passi, non decine &
+4 zeri strutturali su 81 (contro 32 nulli solo a $t{=}0$); ricchezza
+spettrale indipendente dall'ampiezza, come sul dimero; preparazione VQE
+reale contro esatta: scarto medio $2.9\times10^{-7}$, nessuna correlazione
+con l'ampiezza (a differenza del dimero, l'ansatz qui è quasi esatto) \\
+\addlinespace
+Collegamento &
+motiva la scelta dell'opzione DM B per tutto il resto della serie &
+fornisce l'ansatz canonico ($W$-2q.6) riusato nei due passi seguenti, ad
+ogni punto proprio &
+introduce il costo in gate (15 CNOT/passo) che la pipeline di rumore
+riprende direttamente &
+chiude la serie; circuito più lungo del pacchetto, primo banco di prova
+per il sistema aperto \\
+\bottomrule
+\end{tabular}
+
+\bigskip
+\noindent{\footnotesize
+\textsuperscript{*}\textbf{Opzioni DM A/B} (Documento 1): due forme
+candidate del termine di Dzyaloshinskii--Moriya, non due punti di lavoro
+--- l'Opzione A non apre mai l'incrocio (commuta con $S_{12}^2$), l'Opzione
+B lo apre (non commuta). Per tutta la serie a valle del Documento 1 si usa
+solo l'Opzione B.\quad
+\textsuperscript{**}\textbf{Scenario A} (Documento 2 in poi): un punto di
+lavoro del VQE/correlatori, $b/J=b_c=2.4$, $D/J=0.15$ --- \emph{non} legato
+all'Opzione A del DM (che qui non è usata: Scenario A lavora sempre con
+l'Opzione B). La stessa lettera ``A'' indica due cose diverse in due
+contesti diversi; tenerle distinte.}
+\end{center}
+\end{landscape}
+
+\clearpage
+
+\section{Il sistema}
+
+Diagonalizzazione esatta della matrice $8\times8$, decomposizione di Kambe
+in tre multipletti (A, B, C). Il risultato che conta per il resto del
+lavoro: la frustrazione geometrica (ciclo dispari) è strutturale, mentre
+l'apertura dell'incrocio dipende da \emph{quale} forma di DM si accende.
+Non è una scelta libera fra due candidati equivalenti: verificato
+sistematicamente (tutte le combinazioni di segno sui tre legami, contro la
+simmetria di scambio $1\leftrightarrow2$) che l'Opzione A è l'\textbf{unica}
+forma che rispetta quella simmetria; l'Opzione B è la proposta del
+relatore, più semplice ma non derivata dalla simmetria --- e l'unica delle
+due che apre davvero l'incrocio.
+
+\messaggio{Con un solo legame il dimero non poteva porre la domanda ``quale
+DM?''. Con tre legami la risposta cambia la fisica: solo l'Opzione B apre
+l'incrocio, ed è per questo l'unica scelta usata nel resto della serie.}
+
+\section{Il VQE}
+
+Due famiglie di ansatz a confronto, stessa struttura esterna (sei
+parametri: tre sui legami, tre rotazioni $R_y$ finali), diverso blocco a
+due qubit (RBS o $W$). Senza DM, equivalenti ($\mathcal F=1$ per entrambe).
+Con DM acceso, a Scenario A: RBS ha un tetto reale ($\mathcal
+F=0.9999110739$), verificato non rimuovibile aggiungendo altri giri dello
+stesso blocco; $W$ raggiunge l'esatto ($\mathcal F=1$ a sedici cifre), con
+meno gate a un qubit. Ansatz canonico per il seguito: \textbf{$W$-2q.6}.
+
+Verificato anche oltre il punto singolo: multistart su 13 valori di $b/J$
+fra $0.3$ e $4.5$ (DM Opzione B acceso), incluso il punto dell'incrocio
+stesso --- $\mathcal F=1.00000000$ ovunque, nessun ramo di preparazione
+necessario.
+
+\messaggio{Sul dimero, RBS batte $W$ (stesso potere espressivo, meno gate).
+Sul trimero, per questo particolare stato di partenza, $W$ batte RBS anche
+in potere espressivo, non solo in costo --- un'inversione rispetto al
+dimero che vale la pena tenere a mente quando si generalizza da un sistema
+all'altro.}
+
+\section{La dinamica}
+
+Struttura a tre livelli (non due, come sul dimero): campo e scambio isotropo
+fattorizzano esattamente fra loro, ma lo scambio stesso richiede un Trotter
+interno sui tre legami condivisi --- stesso per il termine DM. Verificato:
+circuito Qiskit e matrice compatta coincidono a precisione macchina
+($4\times10^{-15}$) --- controllo di coerenza interna (la matrice compatta
+usa l'operatore dello stesso circuito, non una derivazione indipendente),
+a patto che rispetti anch'essa il Trotter interno (non basta
+l'esponenziale diretto di $H_0$). Convergenza
+molto più lenta del dimero: centinaia-migliaia di passi contro decine, per
+via dei due livelli interni aggiuntivi. Costo: 15 CNOT per passo dopo
+compilazione ottimizzata (dimezzato rispetto alla traduzione diretta, 30).
+
+\messaggio{Il Trotter interno sui legami condivisi non è un dettaglio
+implementativo: è la ragione fisica per cui il trimero converge molto più
+lentamente del dimero a parità di soglia di accuratezza --- un costo che
+il dimero, con un solo legame, non paga mai.}
+
+\section{I correlatori}
+
+Stesso schema Hadamard test del dimero, esteso a un registro di tre qubit
+più ancilla (4 qubit totali; ancilla = qubit 3, non 0 come sul dimero).
+Punto di lavoro Scenario A, lo stesso del VQE. Su 81 combinazioni: 32 nulle
+solo all'istante iniziale (stesso argomento del dimero, stato reale), ma
+solo \textbf{4 strutturalmente nulle per ogni $t$} --- tutte sullo stesso
+sito (sito 3), non ancora spiegate in forma chiusa.
+
+Chiuso anche il confronto con la preparazione reale (Documento 4, ultima
+sezione): a differenza del dimero, dove l'ansatz base imperfetto
+($\mathcal F=0.940$) produce uno scarto marcato e dipendente dal
+correlatore, qui l'ansatz canonico $W$-2q.6 è quasi esatto
+($1-\mathcal F\sim4\times10^{-13}$) --- lo scarto propagato resta
+uniformemente minuscolo ($\sim3\times10^{-7}$), senza la stessa struttura
+ricco/monocromatico osservata sul dimero: non c'è un ansatz imperfetto da
+confrontare, quindi non c'è la stessa storia da raccontare.
+
+\messaggio{Il numero di combinazioni cresce da 36 (dimero) a 81 (trimero),
+ma la disciplina resta identica: distinguere zeri iniziali da zeri
+strutturali, e non confondere ampiezza grande con ricchezza spettrale ---
+due criteri indipendenti, verificato di nuovo su un sistema più grande.}
+
+\end{document}

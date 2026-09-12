@@ -31,7 +31,7 @@ codice/            moduli .py (libreria, mai eseguiti direttamente)
 dati/              output .npz degli script di generazione dati
 figure/            figure finali, PDF+PNG
 genera_figure/     uno script per figura
-01_..., 07_...     script di dati/validazione, numerati nell'ordine d'uso
+01_..., 10_...     script di dati/validazione, numerati nell'ordine d'uso
 esegui_tutto.py    orchestratore: dati -> validazioni -> figure
 \end{verbatim}
 
@@ -57,8 +57,24 @@ cosa viene preso da ciascuno.
 
 \textbf{Onda 1} (nessun ingresso): solo \texttt{01}. \textbf{Onda 2}
 (dipendono tutti da \texttt{01}, indipendenti fra loro):
-\texttt{02}--\texttt{07}. \textbf{Onda 3} (dipendono dai \texttt{.npz}
+\texttt{02}--\texttt{10}. \textbf{Onda 3} (dipendono dai \texttt{.npz}
 prodotti nell'Onda 2): gli script in \texttt{genera\_figure/}.
+
+\section{Nota: evoluzione del metodo di lettura (readout)}
+\label{sec:nota-readout}
+
+Gli script \texttt{01}--\texttt{07} (e i moduli che importano) applicano
+l'errore di lettura \textbf{analiticamente}:
+$\langle Z\rangle_\text{readout}=(1-2p)\langle Z\rangle_\text{ideale}$ ---
+corretto, ma mai verificato contro una misura vera in questo pacchetto.
+Gli script \texttt{08}--\texttt{10} (Sez.~\ref{sec:script-estensioni})
+usano invece un \texttt{ReadoutError} vero agganciato al
+\texttt{NoiseModel}, con misura a shot finiti campionata da
+\texttt{AerSimulator} --- il metodo poi effettivamente citato nella
+documentazione dei risultati finale. Le due strade sono state verificate
+coincidere entro l'errore statistico atteso (script \texttt{08},
+controllo 1) prima di scartare la formula analitica come riferimento
+primario.
 
 \section{Script 01--07}
 
@@ -127,6 +143,50 @@ monotonia, invarianza da readout). \textbf{Chi lo consuma}: nessuno.
 python3 07_valida_scan_parametri.py
 \end{verbatim}
 
+\section{Script 08--10 (estensioni)}
+\label{sec:script-estensioni}
+
+Coprono le due estensioni facoltative (VQE noise-aware, readout
+asimmetrico) e il passaggio al readout a shot finiti --- assenti dalla
+prima versione di questo pacchetto, aggiunti per allinearlo alla
+documentazione dei risultati finale. Vedi Sez.~\ref{sec:nota-readout}
+per il perché del cambio di metodo.
+
+\subsection{08\_valida\_correlatori\_shots.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: \texttt{dati/scan\_N\_\allowbreak correlatore\_shots\_trimero\_anello.npz}
+(Stadio 4bis). \textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_correlatore\_\allowbreak shots\_trimero\_anello.py}.
+Verifica: coerenza con la formula analitica (Stadio 4) entro l'errore
+statistico; $N^*=3$; convenzione dell'ancilla (qubit 3, primo carattere).
+\begin{verbatim}
+python3 08_valida_correlatori_shots.py
+\end{verbatim}
+
+\subsection{09\_valida\_vqe\_noise\_aware.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: \texttt{dati/vqe\_noise\_aware\_\allowbreak validato.npz} (Stadio 2bis).
+\textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_vqe\_\allowbreak noise\_aware\_trimero\_anello.py}.
+Verifica: l'artefatto del transpilatore (conteggio CX deve restare 6 a
+struttura fissa); riproducibilità dei valori di riferimento
+($\Delta E\approx-4.16\times10^{-3}$, $\Delta F\approx-1.58\times10^{-2}$);
+il segno atteso ($E_\text{noise-aware}\leq E_\text{riuso}$).
+\begin{verbatim}
+python3 09_valida_vqe_noise_aware.py
+\end{verbatim}
+
+\subsection{10\_valida\_readout\_asimmetrico.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: \texttt{dati/readout\_\allowbreak asimmetrico\_validato.npz} (Stadio 6bis).
+\textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_readout\_\allowbreak asimmetrico\_trimero\_anello.py}.
+Verifica: il caso simmetrico si riduce al risultato dello Stadio 4bis;
+$N^*=3$ invariante su un rapporto $p_{10}/p_{01}$ da $1\times$ a $50\times$.
+\begin{verbatim}
+python3 10_valida_readout_asimmetrico.py
+\end{verbatim}
+
 \section{Script genera\_figure/}
 
 \subsection{genera\_depolarizzazione\_bloch.py}
@@ -167,6 +227,27 @@ python3 genera_figure/genera_correlatore_rumoroso_trimero_anello.py
 python3 genera_figure/genera_Nstar_vs_eps_trimero_anello.py
 \end{verbatim}
 
+\subsection{genera\_correlatore\_shots\_trimero\_anello.py}
+\textbf{Ingresso}: \texttt{dati/scan\_N\_\allowbreak correlatore\_shots\_trimero\_anello.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_correlatore\_\allowbreak shots\_trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_correlatore_shots_trimero_anello.py
+\end{verbatim}
+
+\subsection{genera\_vqe\_noise\_aware\_trimero\_anello.py}
+\textbf{Ingresso}: \texttt{dati/vqe\_noise\_aware\_\allowbreak validato.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_vqe\_\allowbreak noise\_aware\_trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_vqe_noise_aware_trimero_anello.py
+\end{verbatim}
+
+\subsection{genera\_readout\_asimmetrico\_trimero\_anello.py}
+\textbf{Ingresso}: \texttt{dati/readout\_\allowbreak asimmetrico\_validato.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_readout\_\allowbreak asimmetrico\_trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_readout_asimmetrico_trimero_anello.py
+\end{verbatim}
+
 \section{Nota: correzione della griglia \texorpdfstring{$N$}{N} (Stadio 3)}
 
 Una prima versione dello script 04 usava una griglia $N$ troppo grezza
@@ -187,11 +268,17 @@ python3 04_valida_trotter_rumoroso.py
 python3 05_valida_correlatori_rumorosi.py
 python3 06_genera_scan_parametri.py
 python3 07_valida_scan_parametri.py
+python3 08_valida_correlatori_shots.py
+python3 09_valida_vqe_noise_aware.py
+python3 10_valida_readout_asimmetrico.py
 python3 genera_figure/genera_depolarizzazione_bloch.py
 python3 genera_figure/genera_scan_eps2q_trimero_anello.py
 python3 genera_figure/genera_trotter_rumoroso_trimero_anello.py
 python3 genera_figure/genera_correlatore_rumoroso_trimero_anello.py
 python3 genera_figure/genera_Nstar_vs_eps_trimero_anello.py
+python3 genera_figure/genera_correlatore_shots_trimero_anello.py
+python3 genera_figure/genera_vqe_noise_aware_trimero_anello.py
+python3 genera_figure/genera_readout_asimmetrico_trimero_anello.py
 \end{verbatim}
 Equivalente, in un solo comando: \texttt{python3 esegui\_tutto.py}.
 
@@ -202,8 +289,11 @@ rieseguito da zero: \texttt{exit code 0}, nessun \texttt{FALLITO} n\'e
 \texttt{Traceback} nel log. Numeri rigenerati confrontati con quelli nei
 documenti di risultati: $E_\text{VQE}=-5.534370017393404$,
 $N^*_A=3$ ($F=0.700335$), $N^*_B=9$ ($F=0.381896$), $N^*$
-correlatore$=3$ ($|C|=0.505$) --- tutti coincidenti. Tutte le cinque
-figure verificate vettoriali (\texttt{pdffonts}: zero Type 3;
-\texttt{pdfimages -list}: zero immagini raster incorporate).
+correlatore (formula analitica)$=3$ ($|C|=0.505$), $N^*$ correlatore
+(shot finiti)$=3$ ($|C|=0.502$, scarto dalla formula analitica coerente
+con l'errore statistico atteso), VQE noise-aware
+($\Delta E=-4.16\times10^{-3}$, $\Delta F=-1.58\times10^{-2}$), $N^*$
+invariante da $1\times$ a $50\times$ nel readout asimmetrico --- tutti
+coincidenti.
 
 \end{document}

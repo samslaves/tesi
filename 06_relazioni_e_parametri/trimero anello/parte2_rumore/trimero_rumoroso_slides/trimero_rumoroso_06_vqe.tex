@@ -1,0 +1,83 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Trimero ad anello --- 6. Il VQE sotto rumore}
+\input{preambolo_dimero}
+\providecommand{\Tr}{\operatorname{Tr}}
+
+\title{\bfseries Un risultato ideale, eseguito su un simulatore imperfetto\\[2pt]
+\large Documento 6 --- quanto degrada il VQE della Parte 1}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\section{La prima domanda della Parte 2}
+
+I parametri $\theta^*$ dell'ansatz $W$-2q.6 sono già stati trovati al punto
+di lavoro \textbf{Scenario A} ($b/J=2.4$, $D/J=0.15$, Opzione DM B --- Parte
+1, Documento 2), senza rumore. Domanda diversa qui: se si esegue
+\emph{quel} circuito, con \emph{quei} parametri, su un simulatore rumoroso
+--- quanto si allontana il risultato? Non si riottimizza: si misura
+solo la degradazione di un risultato già ideale. La riottimizzazione sotto
+rumore è il Documento 10, non questo.
+
+\section{Energia e fedeltà, versione rumorosa}
+
+$E_\text{rumoroso}=\Tr[\rho H]$, $F_\text{rumorosa}=\langle\psi_0|\rho|
+\psi_0\rangle$ --- stessa semplificazione della fedeltà di Uhlmann già
+derivata e usata sul dimero (valida perché lo stato di confronto,
+$\ket{\psi_0}$, è puro).
+
+\section{Risultato}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Quantità} & \textbf{valore} \\
+\midrule
+$E$ (rumoroso, riferimento \texttt{ibm\_torino}) & $-5.37687489$ \\
+$E_\text{esatto}$ & $-5.53437002$ \\
+$F$ (rumorosa) & $0.97021471$ \\
+$1-F$ & $2.98\%$ \\
+CNOT nel circuito & $6$ \\
+\bottomrule
+\end{tabular}
+\caption{VQE+DM sotto rumore, Scenario A, parametri ideali riusati.}
+\end{table}
+\FloatBarrier
+
+\messaggio{$1-F=2.98\%$ --- circa il \textbf{doppio} della perdita di
+fedeltà corrispondente sul dimero ($1.50\%$, stesso punto di riferimento
+relativo). Non è un caso: l'ansatz del dimero usa $2$ CNOT, questo ne usa
+$6$ --- tre volte tanti canali di rumore attraversati, per un ansatz che,
+a differenza del dimero, è anche il \textbf{più costoso in gate} di tutta
+la pipeline dell'anello, non il più economico.}
+
+\section{Come degrada al variare del rumore di gate}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig_passo2_scan_eps2q_anello}
+\caption{Energia e fedeltà rumorose in funzione di $\varepsilon_{2q}$, a
+$\varepsilon_{1q}$ e $p_\text{readout}$ fissati al riferimento. La linea
+verticale segna il valore di calibrazione \texttt{ibm\_torino}. Nessuna
+sorpresa nella forma della curva --- monotona, come sul dimero --- la
+sorpresa è nella scala verticale, più ampia a parità di $\varepsilon_{2q}$.}
+\end{figure}
+\FloatBarrier
+
+\section{Che cosa non dice ancora questo documento}
+
+Questo è solo il costo di \emph{preparazione}. Non dice ancora come si
+propaga a valle, nella dinamica (Documento 7) o nei correlatori (Documento
+8) --- né se riottimizzare sotto rumore (Documento 10) possa recuperare
+qualcosa. Sul dimero la risposta a quest'ultima domanda era ``no, nulla di
+misurabile''; sull'anello, si vedrà, la risposta è diversa.
+
+\end{document}

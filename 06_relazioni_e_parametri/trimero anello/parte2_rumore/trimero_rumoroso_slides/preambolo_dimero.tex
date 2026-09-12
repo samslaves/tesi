@@ -1,0 +1,69 @@
+% =====================================================================
+%  Preambolo comune ai documenti sul dimero (serie "che cosa abbiamo fatto")
+%  Incluso con \input{preambolo_dimero} subito dopo \documentclass.
+% =====================================================================
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb,mathtools}
+\usepackage{graphicx}
+\usepackage{booktabs}
+\usepackage{colortbl}
+\usepackage{xcolor}
+\usepackage{geometry}
+\usepackage{placeins}
+\usepackage{caption}
+\usepackage{enumitem}
+\usepackage{fancyhdr}
+\usepackage{needspace}
+\usepackage{tikz}
+\usetikzlibrary{arrows.meta,positioning,shapes.geometric,calc,fit,backgrounds}
+\usepackage{hyperref}
+\hypersetup{colorlinks=true,linkcolor=blu,citecolor=blu,urlcolor=blu}
+
+\geometry{margin=2.5cm}
+
+% --- colori coerenti con quelli delle figure (palette Okabe-Ito)
+\definecolor{blu}{HTML}{0072B2}
+\definecolor{arancio}{HTML}{E69F00}
+\definecolor{verdes}{HTML}{009E73}
+\definecolor{rossos}{HTML}{D55E00}
+\definecolor{violas}{HTML}{CC79A7}
+\definecolor{grigetto}{HTML}{E8E8E8}
+
+\captionsetup{font=small,labelfont=bf,width=0.92\textwidth}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{\small\itshape\intestazione}
+\fancyhead[R]{\small\thepage}
+\renewcommand{\headrulewidth}{0.3pt}
+
+% --- notazione
+\newcommand{\ket}[1]{\lvert #1\rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+\newcommand{\media}[1]{\langle #1 \rangle}
+\newcommand{\vs}[1]{\mathbf{s}_{#1}}
+
+% --- riquadro "in una riga": il messaggio da portare a casa
+\newcommand{\messaggio}[1]{%
+  \begin{center}
+  \begin{minipage}{0.93\textwidth}
+  \setlength{\fboxsep}{9pt}%
+  \colorbox{grigetto}{\begin{minipage}{\dimexpr\textwidth-2\fboxsep}
+  \small\textbf{In una riga.}\enspace #1
+  \end{minipage}}
+  \end{minipage}
+  \end{center}
+}
+
+% --- riquadro "come lo sappiamo": la verifica numerica dietro un'affermazione
+\newcommand{\verifica}[1]{%
+  \begin{center}
+  \begin{minipage}{0.93\textwidth}
+  \small\textcolor{verdes}{\rule{2.2em}{1.1pt}}\enspace
+  \textcolor{verdes}{\textbf{Come lo sappiamo.}}\enspace #1
+  \end{minipage}
+  \end{center}
+  \medskip
+}

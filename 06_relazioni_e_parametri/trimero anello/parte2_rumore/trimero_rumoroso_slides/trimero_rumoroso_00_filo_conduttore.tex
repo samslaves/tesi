@@ -1,0 +1,108 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Trimero ad anello --- Parte 2, il filo conduttore}
+\input{preambolo_dimero}
+
+\title{\bfseries Il trimero ad anello come sistema aperto\\[2pt]
+\large Documento 0 --- il filo conduttore della Parte 2}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Questa serie racconta l'estensione al trimero ad anello della Parte 2 già
+completata sul dimero: introdurre il rumore, passare dal vettore di stato
+all'operatore densità, e chiedersi non più ``il metodo funziona?'' ma
+``il metodo funziona abbastanza bene da sopravvivere all'hardware reale?''.
+Sette documenti, mirror diretto della serie sul dimero (Documenti 5--11):
+cinque stadi della pipeline di rumore, più due estensioni facoltative già
+chiuse. Riusa senza modifiche il modello di rumore, l'ansatz canonico
+($W$-2q.6) e i punti di lavoro stabiliti nella Parte 1 di questa stessa
+topologia.
+\end{abstract}
+
+\section{Perché un sistema aperto}
+
+Tutta la Parte 1 (Documenti 0--4) è a simulazione ideale: vettore di stato
+esatto, nessun errore di gate, nessun conteggio finito di shot. È il
+prerequisito corretto --- serve sapere che il metodo dà la risposta giusta
+prima di chiedersi quanto rumore tollera --- ma non è la domanda che conta
+per l'hardware disponibile oggi. Questa parte introduce due canali di
+rumore (depolarizzante di gate, readout), calibrati su un chip reale, e
+misura come si degradano gli stessi quattro strumenti già costruiti:
+stato fondamentale (VQE), evoluzione temporale (Trotter), correlatori
+dinamici.
+
+\messaggio{Il rumore non è un capitolo a parte aggiunto in fondo: è la
+domanda per cui tutta la Parte 1 è stata costruita con la disciplina che
+ha --- verifica indipendente dove possibile (dichiarato apertamente quando
+non lo è), verifiche esplicite, niente dato per buono. Qui si vede perché
+quella disciplina serviva.}
+
+\section{I sette documenti}
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}cp{6.3cm}p{6.7cm}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Doc.} & \textbf{Argomento} & \textbf{Punto di lavoro} \\
+\midrule
+5 & Modello di rumore: due canali, calibrazione reale & --- \\
+6 & VQE sotto rumore (degradazione, non riottimizzazione) & Scenario A \\
+7 & Dinamica (Trotter) sotto rumore, $N^*$ & Scenario A \emph{e} $R_0$ \\
+8 & Correlatori sotto rumore, readout a shot finiti & Scenario A \\
+9 & Scan sui parametri di rumore & Scenario A \\
+10 & Estensione --- VQE noise-aware & Scenario A \\
+11 & Estensione --- readout asimmetrico & Scenario A \\
+\bottomrule
+\end{tabular}
+\caption{I sette documenti di questa serie. A differenza della Parte 1, dove
+Scenario A e $R_0$ avevano ruoli diversi (VQE il primo, dimostrazione
+Trotter il secondo), qui Scenario A è il punto principale ovunque --- $R_0$
+compare solo nel Documento 7, perché è l'unico che riprende direttamente la
+dimostrazione Trotter della Parte 1.}
+\end{table}
+\FloatBarrier
+
+\section{Che cosa si riusa dalla Parte 1, senza modifiche}
+
+\begin{itemize}[leftmargin=1.6em,itemsep=3pt]
+\item \textbf{L'ansatz canonico}, $W$-2q.6 (Documento 2): sei parametri,
+scelto perché --- a differenza di RBS --- raggiunge $\mathcal F=1$ esatto
+sotto DM.
+\item \textbf{Il blocco di Trotter} (Documento 3), coi suoi tre livelli
+annidati (campo esatto, scambio e DM approssimati sui tre legami
+condivisi).
+\item \textbf{Il circuito dei correlatori} (Documento 4), quattro qubit,
+ancilla al qubit 3.
+\item \textbf{Il modello di rumore}, letteralmente lo stesso del dimero
+(wrapper, non una riscrittura): verificato indipendente dal numero di
+qubit.
+\end{itemize}
+
+\section{Una differenza di metodo rispetto alla prima versione di questa
+pipeline}
+
+Il readout, in questa serie, è sempre \textbf{genuinamente campionato} ---
+un `ReadoutError` vero agganciato al simulatore, misura a shot finiti, mai
+una formula analitica di correzione applicata a posteriori. È la stessa
+scelta già fatta, in una revisione successiva, per la serie gemella sul
+dimero: più vicina a cosa succede davvero su un dispositivo reale, dove non
+si accede mai a un $\langle Z\rangle$ ideale da correggere, solo a un bit
+misurato.
+
+\messaggio{Dove la pipeline originaria di questa topologia (Parte 2,
+completata prima di questa serie narrativa) usava una formula analitica per
+il readout, qui è stata rifatta a shot finiti --- non per sospetto di un
+errore, ma per coerenza con lo standard ora in uso, e per verificare
+direttamente che i numeri non cambino. Non cambiano, entro l'errore
+statistico atteso: lo si vedrà nei Documenti 8--11.}
+
+\end{document}

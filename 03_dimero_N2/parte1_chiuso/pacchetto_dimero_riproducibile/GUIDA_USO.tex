@@ -90,10 +90,12 @@ file sia il loro ruolo nell'insieme della pipeline.
 \centering
 \begin{tabular}{@{}lp{9.5cm}@{}}
 \code{codice/} & 9 moduli Python (mattoni + confronto ansatz + Trotter + correlatori)\\
-\code{dati/} & dati intermedi (\code{.npz}) generati da 01\_\\
-\code{figure/} & le 4 figure finali, in PDF e PNG\\
-\code{genera\_figure/} & 4 script, uno per figura\\
-\code{01\_genera\_dati\_vqe\_ideale.py} & unico script di generazione dati\\
+\code{dati/} & dati intermedi (\code{.npz}) generati da 01\_, 02\_ e 03\_\\
+\code{figure/} & 19 figure finali, in PDF e PNG (15 aggiunte in questo aggiornamento, Sez.~\ref{sec:aggiornamento})\\
+\code{genera\_figure/} & 10 script (4 originali + 6 aggiunti)\\
+\code{01\_genera\_dati\_vqe\_ideale.py} & script di generazione dati (VQE ideale)\\
+\code{02\_scan36\_correlatori.py} & script di generazione dati (scan36, aggiunto)\\
+\code{03\_correlatore\_da\_vqe.py} & script di generazione dati per \code{fig\_correlatore\_da\_vqe} (aggiunto)\\
 \code{esegui\_tutto.py} & esegue tutto in un solo comando\\
 \end{tabular}
 \end{keyeq}
@@ -276,6 +278,8 @@ del log, non perché serva.
 \begin{tabular}{@{}l@{}}
 \code{cd pacchetto\_dimero\_riproducibile}\\
 \code{python3 01\_genera\_dati\_vqe\_ideale.py}\\
+\code{python3 02\_scan36\_correlatori.py}\\
+\code{python3 03\_correlatore\_da\_vqe.py}\\
 \code{cp dati/*.npz codice/}\\
 \code{cd codice}\\
 \code{python3 validate\_ansatz\_params\_dimero.py}\\
@@ -285,6 +289,12 @@ del log, non perché serva.
 \code{python3 genera\_figure/genera\_fig\_correlatore\_convergenza.py}\\
 \code{python3 genera\_figure/genera\_fig\_spettro\_esatto.py}\\
 \code{python3 genera\_figure/genera\_fig\_trotter\_convergenza.py}\\
+\code{python3 genera\_figure/genera\_fig\_gap\_magnetizzazione.py}\\
+\code{python3 genera\_figure/genera\_fig\_vqe\_riparazione.py}\\
+\code{python3 genera\_figure/genera\_fig\_trotter\_circuito\_vs\_matrice.py}\\
+\code{python3 genera\_figure/genera\_fig\_scan36.py}\\
+\code{python3 genera\_figure/genera\_fig\_correlatore\_da\_vqe.py}\\
+\code{python3 genera\_figure/genera\_circuiti.py}\\
 \end{tabular}
 \end{keyeq}
 
@@ -301,11 +311,92 @@ raddoppiando $N$ (Trotter al prim'ordine, errore $O(1/N)$).
 Gli script di figura vanno eseguiti dalla \textbf{radice} del pacchetto,
 non da dentro \code{genera\_figure/}.
 
+\section{Aggiornamento: figure aggiunte}
+\label{sec:aggiornamento}
+
+Rispetto alla prima versione (4 figure, nessun diagramma di circuito),
+aggiunte 15 figure per allineare il pacchetto al contenuto reale dei
+quattro documenti narrativi (\texttt{tesi\_dimero\_slides}):
+
+\begin{itemize}[leftmargin=1.4em,itemsep=3pt]
+\item \textbf{Il gap esplicito}
+(\code{genera\_fig\_gap\_magnetizzazione.py}): distanza
+fondamentale-primo eccitato contro $B/J$, non solo lo spettro completo
+--- minimo verificato $0.565$ con $D/J=0.2$, coincidente.
+\item \textbf{La riparazione PMA}
+(\code{genera\_fig\_vqe\_riparazione.py}): PMA-2q.3 (3 parametri)
+raggiunge $\mathcal F>0.9998$ su tutto lo sweep, contro il crollo a
+$\approx0.49$ di PMA a $K=1$ (Sez.~\ref{sec:pma-k1} sotto).
+\item \textbf{Circuito vero contro matrice compatta}
+(\code{genera\_fig\_trotter\_circuito\_vs\_matrice.py}): la prima
+versione usava solo la matrice compatta (\code{U\_trotter\_mat}) come
+unico metodo; qui entrambi i metodi sono calcolati e sovrapposti,
+verificato che coincidono a precisione macchina ($\sim10^{-14}$), al
+punto di lavoro $b/J=-0.18$, $D/J=1$ (stato $\ket{00}$, deliberatamente
+asimmetrico --- vedi il documento per il perché).
+\item \textbf{Scan36} (\code{02\_scan36\_correlatori.py} +
+\code{genera\_fig\_scan36.py}): tutte le 36 combinazioni correlatore,
+verificato 12/36 zeri a $t=0$, 0/36 zeri strutturali (nessuno resta
+nullo per $\max_t$).
+\item \textbf{Tutti i nove diagrammi di circuito}
+(\code{genera\_circuiti.py}): assenti per scelta esplicita
+dell'autore originale (vedi docstring di \code{ansatz\_dimero.py}).
+Cinque riusano le chiamate esatte di un vecchio script del progetto
+(\texttt{fig\_circuiti.py}, non incluso in questo pacchetto, letto come
+riferimento); i restanti quattro (\code{circ\_pma\_base\_ramo2},
+\code{circ\_rbs\_espanso}, \code{circ\_w\_espanso}, \code{circ\_cnotry})
+non avevano uno script sorgente disponibile --- costruiti direttamente
+dalle definizioni dei blocchi e dalle didascalie dei documenti.
+\end{itemize}
+
+\begin{okbox}{Risolto: la convenzione di fedeltà, non un bug --- uniformata al quadrato}
+Il Documento 2 (\S6, tabella di confronto) riportava $\mathcal F=0.922857$
+per l'ansatz PMA base (1 parametro) a $b/J=-0.18$, $D/J=1$, mentre la
+ricostruzione qui arrivava a $0.851664$. Causa trovata: \code{vqe\_dimer.py}
+calcolava $\mathcal F=\lvert\langle\psi_\text{esatto}\rvert\psi_\text{VQE}\rangle\rvert$
+(modulo, senza quadrato) --- verificato $\sqrt{0.851664}=0.922856\ldots$,
+coincide. Non era un errore di ricostruzione: era una convenzione di
+fedeltà diversa da quella usata nel resto del progetto (dove si usa sempre
+$\mathcal F=\lvert\langle\cdot\rvert\cdot\rangle\rvert^2$ --- inclusi
+\code{vqe\_test2.py}, tutto il trimero, e \code{qiskit.quantum\_info.
+state\_fidelity} di default). Uniformata qui al quadrato, la convenzione
+più comune nel calcolo quantistico sperimentale/hardware: \code{vqe\_dimer.py}
+corretto (riga 201), \code{dimero\_02\_vqe.tex} e \code{dimero\_03\_dinamica.tex}
+aggiornati (5 punti: fig03, fig04, 3 tabelle di dettaglio), figure
+rigenerate. La scelta dell'ansatz PMA-2q.3 al posto di PMA base non era in
+discussione: elevare al quadrato una fedeltà $<1$ la rende solo più bassa,
+mai più alta --- il caso per l'ansatz esteso è, se possibile, più netto con
+la nuova convenzione, non più debole. \textbf{La figura
+\code{fig14\_correlatore\_da\_vqe} è stata prodotta} con la convenzione
+corretta (Sez.~\ref{sec:aggiornamento} sopra).
+
+\textit{Correzione aggiuntiva, trovata allineando la griglia a quella di
+\code{fig\_doc2.py} (lo script originale del Documento 2, letto come
+riferimento):} con la griglia originale (20 punti, $[0,5]$)
+\code{genera\_fig\_confronto\_ansatz.py} non campionava mai $B/J=2$
+esattamente, dando un minimo apparente di $0.667$ invece del vero
+$0.491178$. Corretta la griglia (33 punti, $[0,4]$, come l'originale) ---
+ma questo ha esposto un problema reale: a $D=0$, $B/J=2$ il fondamentale è
+\textbf{degenere}, e \code{vqe\_dimer.py} confrontava con un singolo
+autovettore arbitrario da \code{eigh()}, dando fedeltà spurie vicine a
+$0$ proprio dove fisicamente deve restare $1$. Corretto rendendo
+\code{run\_vqe()} consapevole della degenerazione (proiezione sul
+sottospazio fondamentale, stessa tecnica di \code{\_fidelity\_sottospazio}
+in \code{fig\_doc2.py}, tol $10^{-9}$) --- verificato: $D=0$ ora dà
+$\mathcal F=1$ ovunque per entrambi gli ansatz, $D/J=0.2$ dà il vero
+minimo $0.491178$, coincidente con \code{fig\_doc2.py} e col documento.
+\end{okbox}
+
+Non ancora affrontate in questo aggiornamento: fig09 (ricco/piatto),
+fig10/fig13 (ricostruzione spettrale), fig15/fig16 (scan36 con circuito
+VQE reale, costoso computazionalmente).
+
 \section{Un risultato genuino scoperto riproducendo la figura di confronto}
+\label{sec:pma-k1}
 
 \begin{warnbox}{PMA a $K=1$ non è sempre sufficiente}
 Nella figura \code{fig\_confronto\_ansatz\_HA\_PMA}, la riga ``PMA
-$D=0.2$'' mostra un calo netto di fedeltà (minimo $\approx0.82$, non
+$D=0.2$'' mostra un calo netto di fedeltà (minimo $\approx0.49$, non
 $1.0$) proprio nella zona di anticrossing ($B/J\approx2$) --- a
 differenza di HA, che raggiunge sempre precisione macchina. Non è un
 bug: con un solo parametro e uno stato iniziale scelto in modo rigido
@@ -341,9 +432,13 @@ identico in entrambi.
 
 \begin{okbox}{Verificato end-to-end, non solo assemblato}
 L'intera pipeline è stata rieseguita da zero (cartelle \code{dati/} e
-\code{figure/} svuotate, poi \code{esegui\_tutto.py} rilanciato) dopo
+\code{figure/} svuotate, poi ogni script rilanciato in sequenza) dopo
 ogni modifica sostanziale al codice --- ogni numero riportato in questa
-guida è stato ricontrollato.
+guida è stato ricontrollato. Verificato di nuovo dopo l'uniformazione
+della convenzione di fedeltà (Sez.~\ref{sec:aggiornamento}):
+\code{exit code 0} su tutti gli script, \textbf{19 figure prodotte},
+inclusa \code{fig\_correlatore\_da\_vqe} (ex \code{fig14}), non più
+bloccata.
 \end{okbox}
 
 \end{document}

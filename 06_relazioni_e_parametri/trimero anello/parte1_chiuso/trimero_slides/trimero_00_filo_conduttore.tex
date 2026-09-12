@@ -1,0 +1,252 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Trimero ad anello --- il filo conduttore}
+\input{preambolo_dimero}
+
+\title{\bfseries Il trimero ad anello: che cosa abbiamo fatto, e perché\\[2pt]
+\large Documento 0 --- il filo conduttore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Questa serie racconta l'estensione a tre spin, in topologia ad anello, degli
+strumenti già validati sul dimero (serie \emph{Dimero di spin}, Documenti 0--4):
+stesso ordine di lavoro, stessa disciplina di verifica, stessi quattro blocchi.
+Non è una ripetizione: tre spin accoppiati ciclicamente introducono
+\textbf{frustrazione geometrica} (assente nel dimero) e complicazioni tecniche
+concrete --- un ansatz a sei parametri invece di tre, un secondo livello di
+approssimazione di Trotter, un circuito dei correlatori a quattro qubit --- che
+mettono alla prova se il criterio di progetto del dimero regge quando il
+sistema cresce. Ogni numero riportato è stato ricalcolato eseguendo il codice
+di questo pacchetto, non ripreso da sessioni precedenti.
+\end{abstract}
+
+\section{Perché tre spin, e perché ad anello}
+
+Tre spin $1/2$ danno uno spazio di Hilbert di dimensione $8$ --- ancora
+piccolo abbastanza da diagonalizzare esattamente, ma abbastanza grande da
+introdurre una fisica che il dimero non può mostrare per costruzione: un
+numero \emph{dispari} di spin $1/2$ accoppiati antiferromagneticamente in un
+ciclo chiuso non può soddisfare simultaneamente tutti i legami --- è
+\textbf{frustrazione geometrica}, la stessa fisica che rende interessanti i
+triangoli di spin nei materiali molecolari reali.
+
+Fra le due topologie possibili a $N=3$ (anello chiuso, o catena aperta), il
+lavoro qui documentato usa l'\textbf{anello}: genuinamente frustrato, ansatz
+più semplice (un solo giro di blocchi basta, si vedrà nel Documento 2), meno
+correlatori indipendenti da verificare per via degli zeri di simmetria. La
+catena aperta resta un filone possibile, non affrontato in questa serie.
+
+\messaggio{Il trimero ad anello non ripete il dimero su un sistema più
+grande: aggiunge un ingrediente fisico --- la frustrazione --- che il dimero,
+per costruzione (due soli spin, un solo legame), non può contenere.}
+
+\section{I quattro passi, e come si incastrano}
+
+Stessa struttura del dimero, stesso ordine di dipendenze.
+
+\begin{figure}[htbp]
+\centering
+\resizebox{\textwidth}{!}{%
+\begin{tikzpicture}[
+  scatola/.style={draw,rounded corners=3pt,minimum height=1.45cm,
+                  minimum width=3.0cm,align=center,font=\small,thick},
+  freccia/.style={-{Stealth[length=3mm]},thick,gray}]
+\node[scatola,draw=blu,fill=blu!8]      (A) at (0,0)    {\textbf{1. Sistema}\\[1pt]
+   spettro esatto\\ frustrazione, DM};
+\node[scatola,draw=verdes,fill=verdes!8](B) at (5.0,0)  {\textbf{2. VQE}\\[1pt]
+   stato fondamentale\\ RBS contro $W$};
+\node[scatola,draw=arancio,fill=arancio!10](C) at (10.0,0){\textbf{3. Dinamica}\\[1pt]
+   $e^{-iHt}$, due livelli\\ di Trotter annidati};
+\node[scatola,draw=rossos,fill=rossos!8](D) at (15.0,0) {\textbf{4. Correlatori}\\[1pt]
+   ancilla, 81 combinazioni\\ 4 qubit totali};
+\draw[freccia] (A) -- node[above,font=\scriptsize,text=black]{riferimento}
+                        node[below,font=\scriptsize,text=black]{esatto} (B);
+\draw[freccia] (B) -- node[above,font=\scriptsize,text=black]{ansatz}
+                        node[below,font=\scriptsize,text=black]{canonico} (C);
+\draw[freccia] (C) -- node[above,font=\scriptsize,text=black]{$U(t)$}
+                        node[below,font=\scriptsize,text=black]{nel circuito} (D);
+\end{tikzpicture}}
+\caption{La catena di dipendenze, identica nella forma a quella del dimero. Lo
+spettro esatto del passo 1 è il metro di giudizio per il VQE; l'ansatz
+canonico scelto nel passo 2 (non uno stato) è riusato, ri-ottimizzato punto
+per punto, nei passi 3 e 4.}
+\end{figure}
+\FloatBarrier
+
+\section{L'Hamiltoniana}
+
+Trimero isoscele: legame $J$ fra i siti $(1,2)$, legami $J'$ fra $(2,3)$ e
+$(3,1)$ --- l'equilatero frustrato è il caso particolare $J'=J$. Con
+$J'\ne0$ il ciclo si chiude: è questo legame in più, assente nella catena
+aperta, a rendere il sistema genuinamente frustrato.
+\begin{equation}
+H = \underbrace{J\,\vec\sigma_1\!\cdot\!\vec\sigma_2 +
+J'\,(\vec\sigma_2\!\cdot\!\vec\sigma_3+\vec\sigma_3\!\cdot\!\vec\sigma_1)}_{\text{scambio isotropo, frustrato}}
++ \underbrace{b\,(Z_1{+}Z_2{+}Z_3)}_{\text{campo}}
++ \underbrace{D\sum_{\langle i,j\rangle} (X_iZ_j-Z_iX_j)}_{\text{termine DM}}.
+\label{eq:H}
+\end{equation}
+Ogni spin $1/2$ resta un qubit, come sul dimero: nessun costo di
+rappresentazione aggiuntivo nel passare da due a tre siti. Il rapporto
+$J'/J=0.4$ è fissato in tutta la serie (lo stesso usato nel lavoro
+preliminare sulla teoria esatta); $J=1$ fissa l'unità di energia.
+
+\section{Il termine DM: due opzioni, una scelta}
+
+A differenza del dimero (dove il DM ha una forma unica), con tre legami ci
+sono più modi di accendere un termine DM, e non tutti aprono l'incrocio
+allo stesso modo:
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Opzione A}: DM nullo sul legame base, segno opposto sui due
+legami laterali. Rispetta una simmetria residua dell'Hamiltoniana
+($S_{12}^2$, il quadrato dello spin della coppia base) --- e per questo
+\textbf{non apre mai l'incrocio fondamentale}, qualunque sia la sua
+intensità.
+\item \textbf{Opzione B}: DM su tutti e tre i legami, stesso segno,
+proporzionale a $J$ o $J'$. Rompe quella simmetria residua e \textbf{apre
+l'incrocio davvero}.
+\end{itemize}
+
+\paragraph{Verifica sistematica dei segni.} Non una scelta fra due
+candidati equivalenti: costruita esplicitamente la matrice di permutazione
+$P_{12}$ (scambio dei siti $1,2$) e verificato
+$\max|P_{12}H_\text{DM}P_{12}^\dagger-H_\text{DM}|$ per tutte le
+combinazioni di segno di $(D_{12},D_{23},D_{31})\propto(r{\cdot}J,r{\cdot}J',r{\cdot}J')$,
+a $r=0.15$ (dettaglio completo in \texttt{analisi\_dm\_trimero\_anello.tex},
+riprodotto e verificato indipendentemente qui):
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}cccc@{}}
+\toprule
+\rowcolor{grigetto}
+$D_{12}$ & $D_{23}$ & $D_{31}$ & $\max|[P_{12},H_\text{DM}]|$ \\
+\midrule
+$0$ & $+$ & $+$ & $0.2400$ \\
+$0$ & $+$ & $-$ & $\mathbf{0.0000}$ \quad (simmetrica --- Opzione A) \\
+$0$ & $-$ & $+$ & $\mathbf{0.0000}$ \quad (simmetrica) \\
+$0$ & $-$ & $-$ & $0.2400$ \\
+$+$ & $+$ & $+$ & $0.4200$ \quad (Opzione B) \\
+$+$ & $+$ & $-$ & $0.3000$ \\
+$+$ & $-$ & $+$ & $0.3000$ \\
+$+$ & $-$ & $-$ & $0.4200$ \\
+$-$ & $+$ & $+$ & $0.4200$ \\
+$-$ & $+$ & $-$ & $0.3000$ \\
+$-$ & $-$ & $+$ & $0.3000$ \\
+$-$ & $-$ & $-$ & $0.4200$ \\
+\bottomrule
+\end{tabular}
+\caption{Tutte e 12 le combinazioni di segno testate. Solo
+$(0,+,-)$/$(0,-,+)$ rispettano la simmetria; l'Opzione B ($0.42$) è, fra
+tutte, quella che la rompe di più --- non una rottura qualsiasi, la
+massima fra i candidati naturali (proporzionali a $J,J'$).}
+\end{table}
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{2.3cm}p{6.3cm}p{6.3cm}@{}}
+\toprule
+\rowcolor{grigetto}
+& \textbf{Opzione A} (simmetrica) & \textbf{Opzione B} (proposta del relatore) \\
+\midrule
+forma & $D'\big[(X_2Z_3{-}Z_2X_3)-(X_3Z_1{-}Z_3X_1)\big]$ &
+$D(X_1Z_2{-}Z_1X_2)+0.4D(X_2Z_3{-}Z_2X_3)+0.4D(X_3Z_1{-}Z_3X_1)$ \\
+simmetria $P_{12}$ & rispettata esattamente & rotta \\
+$[H,S_{12}^2]$ & $=0$ esatto ($\sim10^{-16}$) & $\neq0$ ($\sim1.4$ a
+$D{=}0.15$) \\
+struttura residua & blocco $2{\times}2$ (C) $+$ blocco $6{\times}6$
+(A+B misti) & nessuna, $8\times8$ pieno \\
+\bottomrule
+\end{tabular}
+\caption{Le due opzioni rimaste dopo la verifica sistematica. Qui $D$ è il
+parametro di intensità complessivo (chiamato $r$ nel Documento 1); i
+coefficienti $0.4$ sull'Opzione B vengono da $J'/J=0.4$, coincidono
+numericamente con $J'$ solo perché $J=1$.}
+\end{table}
+\FloatBarrier
+
+Il Documento 1 verifica entrambe le affermazioni direttamente. La scelta
+operativa per il resto della serie (VQE, dinamica, correlatori) è
+l'\textbf{Opzione B} --- l'unica che riproduce, per il trimero, lo stesso
+ruolo che il DM ha nel dimero.
+
+\messaggio{Con tre spin non basta dire ``il DM rompe la simmetria'': bisogna
+specificare quale forma di DM, perché non tutte le forme possibili lo fanno.
+È una domanda che il dimero, con un solo legame, non poteva nemmeno porre.}
+
+\section{I due punti di lavoro usati}
+
+\begin{table}[htbp]
+\centering
+\footnotesize
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{2.5cm}p{3.6cm}p{2.3cm}p{5.8cm}@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Nome} & \textbf{Parametri} & \textbf{Dove è usato} & \textbf{Perché quello} \\
+\midrule
+Scansione in campo & $D=0$, Opzioni A/B & Documento 1 & serve vedere l'incrocio e il ruolo del DM \\
+Scenario A & $b/J=b_c=2.4$, $D/J=0.15$ (Opzione B) & Documenti 2, 4 & campo critico esatto, DM ben acceso: la condizione giusta per un confronto fra ansatz interessante \\
+Punto $R_0$ & $b/J=0.05$, $D/J=1.93$ & Documento 3 & dinamica non monocromatica; \emph{dichiarato provvisorio}, non ancora derivato in modo principiato \\
+\bottomrule
+\end{tabular}
+\caption{I punti di lavoro. Come sul dimero, il punto della dinamica e quello
+del VQE/correlatori sono diversi apposta: la condizione per una dinamica
+ricca (più frequenze visibili) non coincide con quella per un fondamentale
+non banale. A differenza del dimero, qui l'ansatz canonico (Documento 2) è
+validato in un punto singolo, non su uno sweep in campo --- si vedrà nel
+Documento 2 perché uno sweep con questo ansatz non è, allo stato attuale,
+attendibile su tutto il range.}
+\end{table}
+\FloatBarrier
+
+\section{Come sono state ottenute le cifre di questi documenti}
+
+Stessi tre criteri del dimero, applicati identici.
+
+\begin{enumerate}[leftmargin=1.5em,itemsep=3pt]
+\item \textbf{Nessun numero preso per buono dalla teoria.} Ogni valore
+proviene dall'esecuzione del codice di questo pacchetto.
+\item \textbf{Due metodi indipendenti dove è possibile --- e dichiarato
+quando non lo è.} Il circuito dei correlatori è verificato contro
+l'esponenziale di matrice diretto della piena Hamiltoniana: derivazione
+indipendente, nessun codice condiviso. La ``matrice compatta'' di Trotter,
+invece, è costruita estraendo l'operatore Qiskit dello stesso circuito a
+un passo (\texttt{Operator(qc)}) ed elevandolo a potenza --- non una
+derivazione indipendente, ma un controllo di coerenza interna (conferma
+che l'elevamento a potenza riproduce correttamente $N$ ripetizioni del
+circuito), utile ma di natura diversa: può scoprire un bug di
+implementazione, non un errore nel modello fisico.
+\item \textbf{Le discrepanze si riportano, non si smussano.} Dove emerge un
+comportamento diverso dal dimero --- e succede più di una volta in questa
+serie --- è dichiarato esplicitamente, non nascosto nella scala di un
+grafico.
+\end{enumerate}
+
+\verifica{Come prima applicazione del criterio: lo spettro numerico ottenuto
+diagonalizzando la matrice $8\times8$ coincide con le energie analitiche dei
+tre multipletti di Kambe (blocchi A, B, C) a precisione macchina su tutta la
+griglia in $b$ usata nel Documento 1.}
+
+\section{Che cosa non c'è in questa serie}
+
+\begin{itemize}[leftmargin=1.5em,itemsep=2pt]
+\item \textbf{Il rumore.} Come sul dimero, tutto qui è a simulazione ideale.
+Il sistema come sistema aperto (rumore di gate e di lettura) è trattato in un
+pacchetto separato, che riusa esattamente l'ansatz e i punti di lavoro
+stabiliti qui.
+\item \textbf{La catena aperta.} Topologia alternativa a $N=3$, con teoria
+esatta già disponibile ma non ripresa in questa serie.
+\end{itemize}
+
+\end{document}

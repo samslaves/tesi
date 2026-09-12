@@ -1,0 +1,209 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+\usepackage{xcolor}
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Guida d'uso --- pacchetto riproducibile\\Parte 2 (rumore), trimero ad anello}
+\author{Tesi triennale, Samuele --- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+
+\tableofcontents
+
+\section{Struttura del pacchetto}
+
+\begin{verbatim}
+codice/            moduli .py (libreria, mai eseguiti direttamente)
+dati/              output .npz degli script di generazione dati
+figure/            figure finali, PDF+PNG
+genera_figure/     uno script per figura
+01_..., 07_...     script di dati/validazione, numerati nell'ordine d'uso
+esegui_tutto.py    orchestratore: dati -> validazioni -> figure
+\end{verbatim}
+
+Comando singolo per rigenerare tutto da zero:
+\begin{verbatim}
+python3 esegui_tutto.py
+\end{verbatim}
+Richiede: \texttt{qiskit}, \texttt{qiskit-aer}, \texttt{numpy}, \texttt{scipy}, \texttt{matplotlib}.
+
+\section{Dipendenza incrociata con Parte 1, dichiarata}
+
+Cinque moduli in \texttt{codice/} sono copie bit-per-bit di file del
+Project che appartengono concettualmente a \textbf{Parte 1} (sistema
+chiuso), non a Parte 2: \texttt{vqe\_w2q6\_\allowbreak trimero\_anello.py},
+\texttt{trimer\_ring\_exact.py}, \texttt{trotter\_\allowbreak trimero\_anello.py},
+\texttt{circuito\_\allowbreak correlazioni\_\allowbreak trimero\_anello.py},
+\texttt{noise\_model\_dimero.py} (quest'ultimo dal dimero, non
+dall'anello). Riusati qui invece di duplicarne la logica --- vedi i
+docstring dei moduli di Parte 2 che li importano per il dettaglio di
+cosa viene preso da ciascuno.
+
+\section{Le due onde di dipendenza reale}
+
+\textbf{Onda 1} (nessun ingresso): solo \texttt{01}. \textbf{Onda 2}
+(dipendono tutti da \texttt{01}, indipendenti fra loro):
+\texttt{02}--\texttt{07}. \textbf{Onda 3} (dipendono dai \texttt{.npz}
+prodotti nell'Onda 2): gli script in \texttt{genera\_figure/}.
+
+\section{Script 01--07}
+
+\subsection{01\_genera\_parametri\_vqe.py}
+\textbf{Ingresso}: nessuno (calcola tutto da zero: Hamiltoniana +
+ottimizzazione multistart). \textbf{Uscita}:
+\texttt{dati/w2q6\_params\_optimal.npz} (campi: \texttt{params},
+\texttt{E\_vqe}, \texttt{E\_exact}, \texttt{fidelity}). \textbf{Chi lo
+consuma}: tutti gli script \texttt{02}--\texttt{07}.
+\begin{verbatim}
+python3 01_genera_parametri_vqe.py
+\end{verbatim}
+
+\subsection{02\_valida\_modello\_rumore.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: nessun file, solo resoconto a schermo (tre controlli
+sul modello di rumore, Stadio 1). \textbf{Chi lo consuma}: nessuno.
+\begin{verbatim}
+python3 02_valida_modello_rumore.py
+\end{verbatim}
+
+\subsection{03\_valida\_vqe\_dm\_rumoroso.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: \texttt{dati/scan\_eps2q\_\allowbreak vqe\_dm\_trimero\_anello.npz}
+(Stadio 2). \textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_scan\_eps2q\_\allowbreak trimero\_anello.py}.
+\begin{verbatim}
+python3 03_valida_vqe_dm_rumoroso.py
+\end{verbatim}
+
+\subsection{04\_valida\_trotter\_rumoroso.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}:
+\texttt{dati/scan\_N\_trotter\_\allowbreak rumoroso\_trimero\_anello.npz} (Stadio 3,
+entrambi gli scenari A/B, griglia $N$ fine --- vedi nota sotto).
+\textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_trotter\_\allowbreak rumoroso\_trimero\_anello.py}.
+\begin{verbatim}
+python3 04_valida_trotter_rumoroso.py
+\end{verbatim}
+
+\subsection{05\_valida\_correlatori\_rumorosi.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: \texttt{dati/scan\_N\_\allowbreak correlatore\_trimero\_anello.npz}
+(Stadio 4). \textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_correlatore\_\allowbreak rumoroso\_trimero\_anello.py}.
+\begin{verbatim}
+python3 05_valida_correlatori_rumorosi.py
+\end{verbatim}
+
+\subsection{06\_genera\_scan\_parametri.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}:
+\texttt{dati/scan\_parametri\_\allowbreak rumore\_trimero\_anello.npz} (Stadio 5,
+entrambi gli scenari). \textbf{Chi lo consuma}:
+\texttt{genera\_figure/\allowbreak genera\_Nstar\_vs\_eps\_\allowbreak trimero\_anello.py}.
+\begin{verbatim}
+python3 06_genera_scan_parametri.py
+\end{verbatim}
+
+\subsection{07\_valida\_scan\_parametri.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: nessun file, solo resoconto a schermo (regressione,
+monotonia, invarianza da readout). \textbf{Chi lo consuma}: nessuno.
+\begin{verbatim}
+python3 07_valida_scan_parametri.py
+\end{verbatim}
+
+\section{Script genera\_figure/}
+
+\subsection{genera\_depolarizzazione\_bloch.py}
+\textbf{Ingresso}: nessuno (formula analitica $1-\lambda$).
+\textbf{Uscita}: \texttt{figure/fig\_\allowbreak depolarizzazione\_bloch.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_depolarizzazione_bloch.py
+\end{verbatim}
+
+\subsection{genera\_scan\_eps2q\_trimero\_anello.py}
+\textbf{Ingresso}: \texttt{dati/scan\_eps2q\_\allowbreak vqe\_dm\_trimero\_anello.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_scan\_eps2q\_\allowbreak trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_scan_eps2q_trimero_anello.py
+\end{verbatim}
+
+\subsection{genera\_trotter\_rumoroso\_trimero\_anello.py}
+\textbf{Ingresso}:
+\texttt{dati/scan\_N\_trotter\_\allowbreak rumoroso\_trimero\_anello.npz}.
+\textbf{Uscita}:
+\texttt{figure/fig\_trotter\_\allowbreak rumoroso\_trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_trotter_rumoroso_trimero_anello.py
+\end{verbatim}
+
+\subsection{genera\_correlatore\_rumoroso\_trimero\_anello.py}
+\textbf{Ingresso}: \texttt{dati/scan\_N\_\allowbreak correlatore\_trimero\_anello.npz}.
+\textbf{Uscita}:
+\texttt{figure/fig\_correlatore\_\allowbreak rumoroso\_trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_correlatore_rumoroso_trimero_anello.py
+\end{verbatim}
+
+\subsection{genera\_Nstar\_vs\_eps\_trimero\_anello.py}
+\textbf{Ingresso}: \texttt{dati/scan\_parametri\_\allowbreak rumore\_trimero\_anello.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_Nstar\_vs\_eps\_\allowbreak trimero\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_Nstar_vs_eps_trimero_anello.py
+\end{verbatim}
+
+\section{Nota: correzione della griglia \texorpdfstring{$N$}{N} (Stadio 3)}
+
+Una prima versione dello script 04 usava una griglia $N$ troppo grezza
+($\{1,2,5,10,15,\ldots\}$), che saltava $N=3$ e $N=4$ e riportava
+$N^*_A=2$ invece del vero $3$. Corretto con una griglia continua
+$N=1,\ldots,20$ (poi diradata) --- lo script in questo pacchetto usa già
+la versione corretta. Vedi
+\texttt{risultati\_scan\_parametri\_rumore\_trimero\_anello.tex},
+Sez.\ ``Correzione'', per i dettagli.
+
+\section{Sequenza completa (copia-incolla)}
+
+\begin{verbatim}
+python3 01_genera_parametri_vqe.py
+python3 02_valida_modello_rumore.py
+python3 03_valida_vqe_dm_rumoroso.py
+python3 04_valida_trotter_rumoroso.py
+python3 05_valida_correlatori_rumorosi.py
+python3 06_genera_scan_parametri.py
+python3 07_valida_scan_parametri.py
+python3 genera_figure/genera_depolarizzazione_bloch.py
+python3 genera_figure/genera_scan_eps2q_trimero_anello.py
+python3 genera_figure/genera_trotter_rumoroso_trimero_anello.py
+python3 genera_figure/genera_correlatore_rumoroso_trimero_anello.py
+python3 genera_figure/genera_Nstar_vs_eps_trimero_anello.py
+\end{verbatim}
+Equivalente, in un solo comando: \texttt{python3 esegui\_tutto.py}.
+
+\section{Verifica end-to-end effettuata}
+
+\texttt{dati/} e \texttt{figure/} svuotate, \texttt{esegui\_tutto.py}
+rieseguito da zero: \texttt{exit code 0}, nessun \texttt{FALLITO} n\'e
+\texttt{Traceback} nel log. Numeri rigenerati confrontati con quelli nei
+documenti di risultati: $E_\text{VQE}=-5.534370017393404$,
+$N^*_A=3$ ($F=0.700335$), $N^*_B=9$ ($F=0.381896$), $N^*$
+correlatore$=3$ ($|C|=0.505$) --- tutti coincidenti. Tutte le cinque
+figure verificate vettoriali (\texttt{pdffonts}: zero Type 3;
+\texttt{pdfimages -list}: zero immagini raster incorporate).
+
+\end{document}

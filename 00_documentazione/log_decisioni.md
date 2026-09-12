@@ -4863,3 +4863,154 @@ sorpresa). Prossimo passo non stabilito con urgenza: possibile filone
 futuro, la catena aperta (messa da parte per decisione esplicita
 dell'utente) o la serie narrativa di tesi per queste due estensioni
 sull'anello.
+
+## Sessione 10-11 settembre 2026 (continua) — Serie narrativa completa per l'anello, Parte 1 e Parte 2
+
+### Cosa è stato fatto
+
+Prodotti due pacchetti completi, mirror della serie narrativa già esistente
+sul dimero:
+
+- **`tesi_trimero_slides`** (Parte 1, sistema chiuso): Documenti 0-4 +
+  schema riassuntivo. Sistema, VQE (RBS vs W-2q.6), dinamica (Trotter a tre
+  livelli), correlatori (81 combinazioni).
+- **`tesi_trimero_rumoroso_slides`** (Parte 2, sistema aperto): Documenti
+  0, 5-11 + schema riassuntivo. Modello di rumore, VQE/dinamica/correlatori
+  rumorosi, scan sui parametri, le due estensioni (VQE noise-aware, readout
+  asimmetrico).
+
+**Entrambi i pacchetti sono completi e consegnati.** Revisionati
+estensivamente in una lunga sessione di controlli incrociati col
+committente (decine di verifiche puntuali), con correzioni sostanziali
+rispetto alle prime stesure.
+
+### Correzioni sostanziali emerse durante la revisione (non presenti nelle prime stesure)
+
+1. **Il termine DM, provenienza e verifica sistematica**: l'Opzione A non
+   è "una delle due scelte possibili" — è l'**unica** che sopravvive a una
+   verifica sistematica su tutte le combinazioni di segno
+   $(D_{12},D_{23},D_{31})$ contro la simmetria $P_{12}$ (fonte:
+   `analisi_dm_trimero_anello.tex`, già nel progetto, non generata da
+   zero in questa sessione). L'Opzione B è esplicitamente la **proposta
+   del relatore** — dettaglio di provenienza inizialmente omesso.
+   Meccanismo dello spostamento del punto d'incrocio ($b_c/J{=}2.4\to
+   2.372$ sotto Opzione B) precisato: è mescolamento genuino fra i
+   blocchi A e B (stesso $S_{12}=1$, verificato numericamente, blocco
+   $6\times6$ pieno), non un vago "spostamento diagonale".
+
+2. **Rimossa una spiegazione fisicamente fuori fuoco**: una prima stesura
+   del Documento 1 introduceva il teorema di Kramers per spiegare perché
+   la ricerca del gap minimo è ristretta a un intorno di $b_c$. Rimossa e
+   sostituita con l'argomento corretto e più diretto: la regola di
+   non-incrocio di von Neumann–Wigner applicata a $S_{12}^2$ (suggerita
+   da un'animazione HTML fornita dal committente,
+   `animazione_trimero_isoscele_BM.html`).
+
+3. **L'ansatz $W$-2q.6 non ha bisogno di rami sullo sweep in campo** —
+   verificato empiricamente (13 punti da $b/J=0.3$ a $4.5$, incluso il
+   punto dell'incrocio, $\mathcal F=1.00000000$ ovunque), a differenza di
+   quanto assunto in una prima stesura (basata su un confronto errato con
+   l'ansatz "esteso" del dimero, che usa RBS non $W$).
+
+4. **Chiarita la vera natura del blocco "$W$"**: non è il gate
+   $W_{ij}(\theta)=e^{-i\theta \mathbf s_i\cdot\mathbf s_j}$ di Crippa et
+   al. ($R_{xx}R_{yy}R_{zz}$, genuinamente $M$-conservante) — è
+   CNOT–$R_y$–CNOT, lo stesso blocco che sul dimero si chiama "ansatz
+   base"/PMA base (quello che *ha* bisogno di rami nel dimero, a un solo
+   parametro). L'errore di attribuzione era già presente nel codice
+   preesistente (`vqe_w2q6_trimero_anello.py`, commento "mirror del PMA
+   originale di Crippa et al."), non introdotto in questa sessione, ma
+   propagato inizialmente senza controllo. Verificato che CNOT–$R_y$–CNOT,
+   a differenza del vero $W_{ij}(\theta)$, mischia già $|00\rangle$ e
+   $|11\rangle$ su una singola coppia — è questo, insieme
+   all'applicazione su legami sovrapposti, il meccanismo reale per cui
+   $W$-2q.6 non ha bisogno di rami (verificato: $W$ puro su tre legami
+   diversi, senza $R_y$ finali, dà già $\mathcal F=0.47$; RBS nello stesso
+   caso resta a $0.001$).
+
+5. **RBS ha un solo parametro libero per blocco**, non due, nonostante
+   due gate $R_y$ ($R_y(\varphi), R_y(-\varphi)$ — stesso angolo, segno
+   opposto). "Un giro" di RBS significa tre blocchi (uno per legame), non
+   un blocco solo — $3\times1=3$ parametri per $K{=}1$, non $3\times2=6$.
+
+6. **Il correlatore sull'anello non sovrastima il vero valore fisico**,
+   a differenza del dimero (dove $N^*$ sovrastimava $C_\text{esatto}$ di
+   quasi il doppio): verificato che a rumore nullo $|C(N^*)|/|C_\text{esatto}|
+   \approx1.007$ (praticamente coincidente), e sotto rumore vero
+   $\approx0.748$ (sottostima, non sovrastima). Tabella a tre livelli
+   (esatto/rumore nullo/rumore vero) aggiunta al Documento 8 della Parte 2,
+   con nota che "esatto" vuol dire calcolato numericamente (diagonalizzazione
+   + esponenziale di matrice diretto), non formula chiusa.
+
+7. **Corretta un'affermazione sul dimero stesso**: si era scritto che il
+   dimero usa "un solo punto di lavoro per tutta la Parte 2" — falso,
+   verificato dal Documento 10 del dimero (`dimero_10_vqe_noise_aware.tex`,
+   sezione "Generalità: un secondo punto di lavoro", $b/J=-0.18$). Il
+   dimero ha due punti disponibili fin da Parte 1 (stesso schema
+   dell'anello: un punto VQE, un punto per dinamica non monocromatica) ma
+   il secondo (R1) è riusato nel Documento 10 per un test di generalità,
+   non nel Documento 7 (dinamica rumorosa, che usa solo "test 2"). Per
+   l'anello, chiarito esplicitamente nel Documento 7 perché si tiene
+   comunque $R_0$ lì: isola l'effetto Trotter+rumore di gate dalla
+   preparazione VQE (che a Scenario A è sempre mescolata), l'unico punto
+   in tutta la Parte 2 dove questo è possibile.
+
+8. **Correzione della verifica "due metodi indipendenti" per Trotter**:
+   la "matrice compatta" di Trotter non è un metodo indipendente dal
+   circuito Qiskit — usa l'operatore dello stesso circuito
+   (`Operator(qc)`), elevato a potenza. È un controllo di coerenza
+   interna, non un controllo fisico indipendente come quello dei
+   correlatori (contro l'esponenziale diretto della piena Hamiltoniana).
+   Corretto in tre punti (Documenti 0, 3, schema) più un'eco della stessa
+   semplificazione nel Documento 0 della Parte 2.
+
+9. **Circuiti**: diverse correzioni di leggibilità e correttezza (barriere
+   per raggruppare gate simultanei dove utile; $X$ che appariva come $U$
+   generico dopo `decompose()`, corretto costruendo i circuiti
+   direttamente; circuito del correlatore rigenerato più volte per
+   leggibilità, versione finale con parte reale e immaginaria affiancate
+   e blocco di misura visibile, $N=1$).
+
+### Metodologia adottata per il resto del progetto
+
+**Controllo incrociato sistematico ad ogni modifica**: da questa sessione
+in poi, ogni aggiornamento a un documento viene accompagnato da una
+verifica se lo stesso aggiornamento è necessario altrove (altri documenti
+dello stesso pacchetto, l'altro pacchetto, lo schema riassuntivo) — non
+più solo su richiesta esplicita.
+
+### Stato
+
+**Entrambe le serie narrative sull'anello (Parte 1 e Parte 2) sono
+complete, revisionate a fondo, e consegnate.** Nessun prossimo passo
+stabilito con urgenza al momento della compattazione di questa sessione.
+
+## Nota aggiuntiva — inconsistenza trovata e corretta nei file preesistenti del dimero
+
+Durante la revisione della serie sull'anello, confrontando due file di
+progetto del **dimero**, trovata un'inconsistenza interna mai notata
+prima:
+
+- `dimero_02_vqe.tex` (il documento narrativo) distingue correttamente
+  due gate diversi: l'"ansatz base"/PMA base (CNOT–$R_y$–CNOT, quello che
+  ha bisogno dei due rami) e $W_{ij}(\theta)$ di Crippa et al.
+  ($R_{xx}R_{yy}R_{zz}$, "l'alternativa di letteratura", mai adottato
+  perché più costoso).
+- `vqe_dimer_note.tex` (una nota interna di progetto) chiamava invece
+  CNOT–$R_y$–CNOT direttamente "$W_{ij}(\theta)$" (titolo del blocco:
+  "PMA --- physically motivated (Crippa et al. 2021)") — la stessa
+  attribuzione sbagliata poi propagata nel codice preesistente
+  dell'anello (`vqe_w2q6_trimero_anello.py`, commento "mirror del PMA
+  originale di Crippa et al.").
+
+**Corretto** (`vqe_dimer_note.tex` aggiornato, consegnato per sostituire
+l'originale nel progetto): rinominato il blocco "Ansatz base --- PMA
+semplificato", aggiunta una nota esplicita che distingue questo gate da
+quello di Crippa, e precisata la claim "il PMA conserva $S$ e $M$" ---
+corretta solo per il ramo $B/J<2$ (rotazione genuina dentro
+$\{|01\rangle,|10\rangle\}$), non per il ramo $B/J\geq2$ (dove il blocco
+potrebbe in linea di principio mescolare $|00\rangle,|11\rangle$, anche
+se l'ottimo pratico resta a $\theta\approx0$). Nota: il documento aveva
+già, più avanti (sezione "Perché basta 1 parametro"), la derivazione
+corretta a blocchi $2\times2$ che confermava questo — l'inconsistenza era
+solo nel primo box riassuntivo, non nel corpo del documento.

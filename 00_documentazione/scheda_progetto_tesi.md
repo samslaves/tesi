@@ -596,3 +596,33 @@ File prodotti: `correlatori_readout_asimmetrico_trimero_anello.py`,
 **Prossimo passo**: non stabilito con urgenza. Filoni possibili: la serie
 narrativa di tesi per le due estensioni sull'anello, o la catena aperta
 (messa da parte per decisione esplicita, non ripresa in questa sessione).
+
+## Aggiornamento 10-11 settembre 2026 — Serie narrativa completa, Parte 1 e Parte 2: CHIUSE
+
+Prodotti e consegnati due pacchetti completi (mirror della serie sul
+dimero): `tesi_trimero_slides` (Parte 1, 4 documenti + schema) e
+`tesi_trimero_rumoroso_slides` (Parte 2, 7 documenti + schema). Entrambi
+revisionati a fondo con correzioni sostanziali — dettaglio completo in
+`log_decisioni.md`.
+
+**Correzioni principali**: provenienza e verifica sistematica del termine
+DM (Opzione A unica forma simmetrica, Opzione B proposta del relatore);
+rimossa una spiegazione fuori fuoco (Kramers) sostituita con l'argomento
+corretto (von Neumann–Wigner); verificato che l'ansatz $W$-2q.6 non ha
+bisogno di rami sullo sweep in campo (13/13 punti a $\mathcal F=1$);
+chiarita la vera identità del blocco "$W$" (CNOT–$R_y$–CNOT, non il gate
+di Crippa); corretto un conteggio parametri RBS; verificato che il
+correlatore dell'anello non sovrastima il vero valore fisico (a
+differenza del dimero); corretta un'affermazione imprecisa sul dimero
+stesso (ha anch'esso due punti di lavoro fin da Parte 1).
+
+**Prassi adottata da qui in avanti**: controllo incrociato sistematico
+(altri documenti, altro pacchetto, schema) ad ogni modifica, non solo su
+richiesta.
+
+**Prossimo passo**: non stabilito con urgenza. Filoni possibili: la
+catena aperta (messa da parte per decisione esplicita, non ripresa), o
+ulteriori estensioni a un secondo punto di lavoro per la Parte 2
+dell'anello (come fatto sul dimero nel Documento 10) — valutato e non
+ritenuto necessario per $R_0$ nel Documento 7 (ruolo diverso, già
+chiarito nel testo).

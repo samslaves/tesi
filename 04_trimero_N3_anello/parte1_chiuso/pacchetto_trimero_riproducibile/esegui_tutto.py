@@ -4,10 +4,11 @@ trimero ad anello in un solo comando.
 
 Uso: python3 esegui_tutto.py   (dalla radice del pacchetto)
 
-Onda 1 (nessuna dipendenza, indipendenti fra loro): 01, 02, 03, 04
-Onda 2 (dipende da 02): 05
+Onda 1 (nessuna dipendenza, indipendenti fra loro): 01, 02, 03, 04, 06
+Onda 2 (dipende da 02): 05, 07, 09, 10
 Onda 3 (dipende da 04 per classical_exact, copiata localmente):
     genera_figure/genera_figure_correlatori.py
+Onda 3 (dipende da 02, 06, 09, 10): gli altri script genera_figure/
 """
 import subprocess
 import sys
@@ -21,9 +22,19 @@ SCRIPT_DATI_VALIDAZIONI = [
     "03_self_test_trotter.py",
     "04_valida_correlatori_esatti.py",
     "05_valida_correlatori_vqe.py",
+    "06_verifica_dm_sistematica.py",
+    "07_confronto_rbs_w.py",
+    "08_scan81_correlatori.py",
+    "09_confronto_preparazione_vqe.py",
 ]
 
-SCRIPT_FIGURE = ["genera_figure/genera_figure_correlatori.py"]
+SCRIPT_FIGURE = [
+    "genera_figure/genera_figure_correlatori.py",
+    "genera_figure/genera_spettro_e_dm.py",
+    "genera_figure/genera_dinamica_R0.py",
+    "genera_figure/genera_confronto_vqe_esatto.py",
+    "genera_figure/genera_scan81.py",
+]
 
 FALLITO = False
 for script in SCRIPT_DATI_VALIDAZIONI + SCRIPT_FIGURE:

@@ -1,0 +1,334 @@
+\documentclass[11pt,a4paper]{article}
+
+% ---------- Codifica e lingua ----------
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+
+% ---------- Matematica ----------
+\usepackage{amsmath,amssymb}
+\usepackage{mathtools}
+
+% ---------- Impaginazione ----------
+\usepackage[a4paper,margin=2.7cm]{geometry}
+\usepackage{caption}
+\usepackage{booktabs}
+\usepackage{enumitem}
+\usepackage{placeins}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+\newcommand{\bra}[1]{\langle #1 \rvert}
+
+\title{Il dimero\\
+\large Panoramica della pipeline (vista a 2000 piedi)}
+\author{Samuele \\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+
+\begin{abstract}
+\noindent Questo documento è una mappa, non una derivazione: serve a
+vedere in un colpo d'occhio come è strutturata l'intera pipeline sul
+dimero --- sistema chiuso e poi sistema aperto --- prima di entrare nel
+dettaglio di ciascuno stadio (ciascuno ha un proprio documento
+dedicato). Copre entrambe le parti in un'unica narrazione continua:
+Parte 1 (Sez.~\ref{sec:parte1}), il sistema chiuso, stato puro
+$\ket\psi$ che evolve unitariamente; Parte 2 (Sez.~\ref{sec:parte2}),
+lo stesso sistema reso aperto dal rumore, operatore densità $\rho$.
+Scope, canali di rumore e decisioni operative per la Parte 2 sono
+quelli confermati dal relatore (risposta del 2 settembre 2026,
+\texttt{domande\_relatore.md}, sez.~12) e seguono la terminologia delle
+sue slide (\texttt{7Physical\_implementation.pdf}).
+\end{abstract}
+
+\tableofcontents
+
+\section{Parte 1 --- Il sistema chiuso}
+\label{sec:parte1}
+
+\subsection{Da dove partiamo: due spin, un legame}
+
+Il dimero --- due spin $1/2$ accoppiati da un singolo legame di scambio
+isotropo $J$, in campo $b$ --- è il sistema più semplice su cui costruire
+l'intera pipeline: ogni spin si mappa direttamente su un qubit, nessuna
+scelta di topologia, nessuna frustrazione geometrica (serve almeno un
+ciclo dispari di tre o più siti per quello --- da cui il trimero ad
+anello come passo successivo). È qui che si stabiliscono, nella forma
+più semplice possibile, tutti gli ingredienti concettuali poi riusati
+sui sistemi più grandi: la scelta dell'ansatz motivato dalla fisica
+contro quello generico, la fattorizzazione di Trotter, il circuito
+Hadamard test per i correlatori dinamici.
+
+\subsection{Il termine DM: qui non c'è ambiguità di forma}
+
+Con un solo legame, il termine Dzyaloshinskii--Moriya ha un'unica forma
+possibile --- a differenza del trimero, dove tre legami aprono una
+scelta fra combinazioni di segno inequivalenti (Opzione A/B). Il DM qui
+serve a un solo scopo, ma essenziale: al campo critico $B/J=2$ (dove,
+$D=0$, il fondamentale cambia bruscamente natura da singoletto a
+$\ket{\!\downarrow\downarrow}$), $D\neq0$ apre l'anticrossing --- il gap
+resta finito, la transizione diventa un crossover continuo invece di un
+salto. È la stessa firma fisica già stabilita qui che, sul trimero,
+richiede invece una scelta di forma per essere riprodotta.
+
+\subsection{Gli stadi di Parte 1}
+\label{sec:stadi-parte1}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cll@{}}
+\toprule
+\# & Stadio & Contenuto \\
+\midrule
+1 & Il sistema & spettro esatto, gap, magnetizzazione \\
+2 & Il VQE & HA contro PMA (base a rami, esteso) \\
+3 & La dinamica (Trotter) & due livelli, non tre \\
+4 & I correlatori & 36 combinazioni \\
+\bottomrule
+\end{tabular}
+\caption{I quattro stadi di Parte 1. Ciascuno ha un proprio documento
+dedicato nella serie narrativa (Documenti 0--4).}
+\end{table}
+\FloatBarrier
+
+\subsubsection{Il sistema}
+
+Diagonalizzazione esatta della matrice $4\times4$: singoletto e i tre
+stati di tripletto, energie in forma chiusa. Il risultato che conta per
+il resto del lavoro: a $D=0$ il fondamentale cambia natura bruscamente a
+$B/J=2$ (livelli che si incrociano esattamente); con $D\neq0$ il gap
+resta aperto ovunque (minimo verificato $0.565$ a $D/J=0.2$) --- la
+stessa distinzione, in forma più semplice, del blocco A/C del trimero.
+
+\subsubsection{Il VQE}
+
+Due famiglie di ansatz a confronto: HA (hardware-efficient, $n\_local$,
+6 parametri, nessuna informazione sulla fisica del problema) contro PMA
+(fisicamente motivato). Il PMA ha a sua volta due varianti: \textbf{base}
+(1 parametro, CNOT--$R_y$--CNOT, stato iniziale scelto a rami --
+singoletto sotto l'incrocio, $\ket{11}$ sopra) e \textbf{esteso}
+(PMA-2q.3, RBS più due $R_y$ indipendenti, 3 parametri). Senza DM,
+entrambi raggiungono $\mathcal F=1$. Con DM acceso: PMA base mostra un
+calo di fedeltà reale (minimo $\approx0.82$) proprio all'anticrossing
+--- un solo parametro e uno stato iniziale rigido non bastano a
+interpolare con continuità attraverso il crossover indotto da
+$D\neq0$; PMA esteso ripara il problema ($\mathcal F>0.9998$ su tutto lo
+sweep), con la metà dei parametri di HA. Stessa lezione del trimero
+(dove l'ansatz a rami minimo fallisce e quello esteso ripara), qui nella
+sua forma più semplice, a un solo legame.
+
+\subsubsection{La dinamica (Trotter)}
+
+Struttura a \textbf{due} livelli, non tre come sul trimero: campo e
+scambio fattorizzano esattamente in $H_1$ (nessuna approssimazione, dato
+che $[S_z^\text{tot},H_\text{ex}]=0$ anche con un solo legame), il
+termine DM va in $H_2$. A differenza del trimero, qui non serve un
+Trotter \emph{interno} per lo scambio: un solo legame non ha bond
+condivisi da spezzare ulteriormente. Punto di lavoro dedicato per la
+dimostrazione ($b/J=-0.18$, $D/J=1$, stato iniziale $\ket{00}$,
+deliberatamente asimmetrico --- altrimenti l'errore di Trotter non
+emergerebbe): verificato che circuito vero e matrice compatta
+coincidono a precisione macchina, pendenze $1/N$ (distanza fra
+operatori) e $1/N^2$ (perdita di fidelity) confermate.
+
+\subsubsection{I correlatori}
+
+Circuito Hadamard test (ancilla + 2 qubit di registro). Con due siti e
+tre componenti, le combinazioni sono $36$ (non $81$ come sul trimero).
+Stesso argomento per gli zeri all'istante iniziale (12/36, stato
+fondamentale reale) --- ma qui, a differenza del trimero (dove 4/81
+restano strutturalmente nulli per ogni $t$), nessuna delle 36
+combinazioni resta nulla per $\max_t$: gli zeri a $t=0$ sono tutti zeri
+\emph{iniziali}, non strutturali. Preparazione VQE reale confrontata
+con ampiezze esatte: coincidono entro $10^{-7}$--$10^{-6}$ per l'ansatz
+esteso.
+
+\section{Parte 2 --- Il sistema aperto (rumore)}
+\label{sec:parte2}
+
+\subsection{Da dove partiamo}
+
+La parte a sistema chiuso è completa sul dimero (Sez.~\ref{sec:parte1}):
+Hamiltoniana esatta,
+VQE con termine DM, evoluzione temporale $e^{-iHt}$ via
+Suzuki--Trotter, e correlazioni dinamiche $C_{ij}^{\alpha\beta}(t)$
+tramite un circuito di tipo Hadamard test. Tutto lavora su uno stato
+\emph{puro} $\ket{\psi}$ che evolve unitariamente: non c'è interazione
+con l'ambiente, non c'è rumore.
+
+Questa pipeline ripercorre esattamente la stessa catena di stadi ---
+preparazione dello stato fondamentale, evoluzione temporale, misura dei
+correlatori --- ma la accompagna con due sorgenti di rumore realistiche,
+quelle di un dispositivo quantistico vero. Non si introduce fisica nuova
+nell'Hamiltoniana: si aggiunge un modello di come un computer quantistico
+reale esegue (in modo imperfetto) gli stessi circuiti già scritti.
+
+\subsection{Cosa cambia: da \texorpdfstring{$\ket{\psi}$}{|psi>} a \texorpdfstring{$\rho$}{rho}}
+
+Il rumore accoppia il sistema a un ambiente che non osserviamo. Uno
+stato puro non basta più a descrivere il sistema una volta che
+tracciamo via i gradi di libertà dell'ambiente: serve l'operatore
+densità $\rho$, e l'evoluzione non è più unitaria pura ma un'operazione
+quantistica più generale. Il documento sul modello di rumore
+(\texttt{risultati\_modello\_\allowbreak rumore\_dimero.tex}) richiama questo
+formalismo dal punto dove serve; qui basta sapere che da questo momento
+lavora con $\rho$ al posto di $\ket{\psi}$, e che in Qiskit questo
+corrisponde a usare
+\texttt{AerSimulator(method=\allowbreak"density\_matrix")} invece del
+simulatore statevector.
+
+\subsection{Gli stadi della pipeline}
+\label{sec:stadi}
+
+\begin{table}[htbp]
+\centering
+\begin{tabular}{@{}cll@{}}
+\toprule
+\# & Stadio & Cosa cambia rispetto al sistema chiuso \\
+\midrule
+1 & Modello di rumore & nuovo: nessun analogo nel sistema chiuso \\
+2 & VQE con termine DM, rumoroso & stesso ansatz, simulatore a $\rho$ \\
+3 & Quantum simulation (Trotter), rumorosa & stesso circuito, compilato per passo \\
+4 & Correlazioni dinamiche, rumorose & stesso Hadamard test, readout incluso \\
+5 & Scan sui parametri di rumore & nuovo: nessun analogo nel sistema chiuso \\
+\bottomrule
+\end{tabular}
+\caption{I cinque stadi della pipeline. Gli stadi 2--4 sono mirror dei
+corrispondenti stadi a sistema chiuso; gli stadi 1 e 5 sono propri di
+questa pipeline.}
+\end{table}
+\FloatBarrier
+
+\subsubsection{Modello di rumore}
+
+Il relatore ha confermato due soli canali (slide 17 del corso): errore
+di gate (canale depolarizzante, separato a 1 e 2 qubit) ed errore di
+lettura (readout). $T_1$/$T_2$ sono esclusi esplicitamente. Il compito
+di questo stadio è tradurre dati di calibrazione reali --- pubblicati
+per un chip esistente --- in un oggetto \texttt{NoiseModel} di Qiskit,
+passando dal formalismo a operatori di Kraus richiamato a lezione.
+Documento: \texttt{risultati\_modello\_rumore\_dimero.tex} (con
+derivazione completa in \texttt{teoria\_modello\_rumore.tex}).
+
+\subsubsection{VQE con termine DM, sotto rumore}
+
+Si ripete la stima del ground state con lo stesso ansatz PMA-2q$\cdot$3
+già validato a sistema chiuso (fedeltà 1 nel caso ideale), ma il
+circuito viene ora eseguito su un simulatore a operatore densità con il
+\texttt{NoiseModel} del modello di rumore agganciato. L'osservabile
+d'interesse è quanto l'energia stimata e la fedeltà rispetto al ground
+state esatto si allontanano dal caso ideale. Documento:
+\texttt{risultati\_vqe\_dm\_rumoroso\_dimero.tex}.
+
+\subsubsection{Quantum simulation (Trotter), sotto rumore}
+\label{subsec:trotter}
+
+Stesso circuito di Suzuki--Trotter del sistema chiuso. Qui c'è
+un'insidia tecnica verificata esplicitamente: se si transpila
+\emph{l'intero} circuito a un livello di ottimizzazione alto, Qiskit
+riconosce che gli $N$ passi identici formano nel complesso un unico
+unitario a 2 qubit e li collassa in un circuito a costo
+\emph{costante}, indipendente da $N$. Questo distruggerebbe
+silenziosamente proprio il compromesso che vogliamo studiare (più passi
+$\Rightarrow$ meno errore di Trotter ma più rumore accumulato). La
+soluzione è transpilare una volta il singolo passo al suo costo minimo
+(3 CNOT, già dimostrato in
+\texttt{circuito\_compatto\_teoria\_e\_limiti.tex}) e poi ripetere il
+blocco già compilato $N$ volte, senza ritranspilare il circuito
+completo. Documento: \texttt{risultati\_trotter\_rumoroso\_dimero.tex}
+--- include anche un cross-check indipendente (circuito Qiskit contro
+pura potenza di matrice in \texttt{numpy}) e il confronto diretto fra
+$F(N)$ a rumore nullo e a rumore acceso, per rendere esplicito perché
+esista un compromesso.
+
+\subsubsection{Correlazioni dinamiche, sotto rumore}
+
+Stesso circuito Hadamard test del sistema chiuso (ancilla + 2 qubit di
+registro), ora con rumore su tutti i suoi ingredienti: preparazione
+dello stato, blocco $U(t)$ ripetuto (stadio precedente), e infine la
+misura sull'ancilla, che include anche l'errore di lettura del modello
+di rumore. Documento:
+\texttt{risultati\_correlatori\_rumorosi\_dimero.tex}.
+
+\subsubsection{Scan sui parametri di rumore}
+
+Il relatore chiede esplicitamente di non fermarsi a un solo punto: si
+ripete il conto dello stadio precedente (o già di quello di Trotter) al
+variare di $(\varepsilon_{1q},\varepsilon_{2q},p_\text{readout})$, per
+vedere come si sposta il numero di passi ottimale $N^*$ che minimizza
+l'errore totale --- risultato di un compromesso fra errore di Trotter
+(diminuisce con $N$) e rumore accumulato (cresce con $N$). Documento:
+\texttt{risultati\_scan\_parametri\_rumore\_dimero.tex} --- include anche
+un affinamento sulla legge di scala di $N^*$ verso la saturazione.
+
+\subsection{Le due estensioni facoltative}
+\label{sec:estensioni-dimero}
+
+Oltre ai cinque stadi principali, due estensioni non prioritarie ma
+completate e verificate --- non chiudono la pipeline (che resta chiusa
+sui cinque stadi, Sez.~\ref{sec:stadi}), la arricchiscono.
+
+\paragraph{VQE noise-aware.} Invece di riusare i parametri ideali
+(Stadio 2), si riottimizza l'energia \emph{direttamente sotto rumore}.
+Sul dimero, a differenza del trimero (dove questa estensione trova un
+vantaggio reale, $\Delta E\approx-4.16\times10^{-3}$):
+\textbf{nessun vantaggio significativo} a riottimizzare --- $\Delta
+E\approx-1.16\times10^{-7}$, $\Delta F\approx+1.76\times10^{-8}$,
+entrambi compatibili con zero entro la precisione numerica. $N^*$ del
+correlatore resta $5\to5$, invariato. Documento:
+\texttt{risultati\_vqe\_noise\_aware\_definitivo.tex}.
+
+\paragraph{Readout asimmetrico.} Il caso simmetrico ($p_{01}=p_{10}$)
+usato negli Stadi 1--5 è una semplificazione: su hardware reale il
+rilassamento $T_1$ durante la misura rende tipicamente $p_{10}>p_{01}$.
+Verificato: $N^*=5$ invariante su un rapporto $p_{10}/p_{01}$ da
+$1\times$ a $50\times$, ben oltre il range realistico --- stesso esito
+qualitativo del trimero. Documento:
+\texttt{risultati\_readout\_asimmetrico.tex}.
+
+\subsection{Cosa resta fuori}
+
+Per completezza, dichiarato esplicitamente per non lasciarlo implicito:
+rilassamento e defasamento ($T_1$, $T_2$) sono esclusi per decisione
+del relatore, anche se compaiono nelle sue slide come canali standard;
+le reti neurali (NQS) restano fuori scope come nel sistema chiuso.
+
+\subsection{Il filo conduttore verificato in ogni stadio}
+
+Una proprietà usata, esplicitamente o implicitamente, in ogni stadio a
+valle del modello di rumore: il readout simmetrico è sempre un fattore
+\textbf{moltiplicativo} sull'osservabile misurato, mai additivo --- da
+cui discende, per esempio, che $N^*$ non dipende da $p_\text{readout}$
+(stadio 5). Questa proprietà smette di valere non appena il readout
+diventa asimmetrico (\texttt{teoria\_readout\_\allowbreak asimmetrico.tex}): un
+promemoria che ogni argomento di invarianza in questa pipeline poggia su
+un'ipotesi verificata, non su una coincidenza.
+
+\begin{quote}
+\textit{Ultimo passo (addendum su stile e struttura, aggiornato):}
+prodotti e verificati end-to-end anche i due pacchetti riproducibili ---
+\texttt{pacchetto\_dimero\_\allowbreak riproducibile.zip} (Parte 1) e
+\texttt{pacchetto\_dimero\_\allowbreak rumoroso\_\allowbreak
+riproducibile.zip} (Parte 2, questa pipeline). Il pacchetto di Parte 2
+copriva già, fin dalla prima versione, entrambe le estensioni
+(Sez.~\ref{sec:estensioni-dimero}) --- aggiornato con 6 figure in più
+(due diagrammi di circuito, il confronto su griglia estesa, lo scan
+completo delle 36 combinazioni sotto rumore), nessun problema aperto.
+Il pacchetto di Parte 1 aggiornato con 15 figure in più (il gap
+esplicito, la riparazione a 3 parametri, il confronto circuito/matrice
+per Trotter, lo scan delle 36 combinazioni, tutti i nove diagrammi di
+circuito, il correlatore con preparazione VQE reale). Una discrepanza
+trovata durante il lavoro ($\mathcal F=0.922857$ nel Documento 2 contro
+$0.851664$ ricostruito) risolta: non un errore, ma una convenzione di
+fedeltà diversa ($\lvert\langle\cdot\rvert\cdot\rangle\rvert$ invece di
+$\lvert\langle\cdot\rvert\cdot\rangle\rvert^2$) isolata a un solo modulo
+(\texttt{vqe\_dimer.py}) --- uniformata al quadrato (la convenzione di
+Qiskit, di \texttt{vqe\_test2.py} e di tutto il trimero), con
+\texttt{dimero\_02\_vqe.tex} e \texttt{dimero\_03\_dinamica.tex}
+aggiornati di conseguenza (5 punti). Nessun problema aperto residuo in
+nessuno dei due pacchetti.
+\end{quote}
+
+\end{document}

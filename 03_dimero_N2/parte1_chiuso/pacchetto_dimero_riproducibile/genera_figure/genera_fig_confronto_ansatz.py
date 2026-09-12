@@ -24,10 +24,10 @@ from stile import salva
 J = 1.0
 reps_HA = 2
 K_PMA = 1
-n_b = 20
+n_b = 33
 n_rest = 3
 
-b_values = np.linspace(0.0, 5.0, n_b)
+b_values = np.linspace(0.0, 4.0, n_b)
 configs = [
     ("HA", 0.0, reps_HA, K_PMA),
     ("HA", 0.2, reps_HA, K_PMA),

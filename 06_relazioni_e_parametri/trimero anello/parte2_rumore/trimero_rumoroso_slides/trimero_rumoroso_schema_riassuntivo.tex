@@ -1,0 +1,179 @@
+\documentclass[11pt,a4paper]{article}
+\newcommand{\intestazione}{Trimero ad anello --- Schema dei passi sotto rumore}
+\input{preambolo_dimero}
+\usepackage{pdflscape}
+\usepackage{array}
+
+\title{\bfseries Schema riassuntivo --- Parte 2\\[2pt]
+\large Punti di lavoro, risultati chiave e collegamenti sotto rumore, trimero ad anello}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+Questo documento non introduce fisica nuova: raccoglie in un unico posto,
+per ciascuno dei sette documenti già scritti (cinque stadi più due
+estensioni facoltative), il punto di lavoro usato, il risultato chiave e
+il collegamento con quanto viene dopo. Mirror diretto dello schema
+analogo della Parte 2 sul dimero.
+
+\section*{Un confronto col dimero da tenere presente}
+
+Il chiarimento aperto sul dimero (``$N^*$ massimizza il segnale
+misurabile, non l'accuratezza della stima --- $|C(N^*)|$ può sovrastimare
+il vero $C(t)$ anche di un fattore $2\times$'') \textbf{non si ripete
+identico qui}: per il correlatore e il punto di lavoro di questa serie, a
+rumore nullo $N^*$ dà un valore praticamente coincidente col vero
+$|C_\text{esatto}(t{=}2)|$ (Documento 8). Non è una regola generale che si
+trasporta da un sistema all'altro --- va verificata di nuovo ogni volta,
+come qui.
+
+\section{Tabella d'insieme --- i cinque stadi}
+
+\renewcommand{\arraystretch}{1.3}
+\begin{landscape}
+\thispagestyle{empty}
+\begin{center}
+\small
+\setlength{\tabcolsep}{3.5pt}
+\begin{tabular}{@{}>{\bfseries\raggedright}p{2.3cm} p{4.1cm} p{4.1cm} p{4.1cm} p{4.1cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{5. Il modello} & \textbf{6. Il VQE} & \textbf{7. La dinamica} & \textbf{8. I correlatori} \\
+\midrule
+Obiettivo &
+Due canali (depolarizzante 1q/2q, readout), calibrati su hardware reale,
+riusati dal dimero &
+Degradazione del VQE ideale (Parte 1) eseguito su simulatore rumoroso &
+$N^*$: compromesso Trotter/rumore, due scenari (A e $R_0$) &
+$N^*$ del correlatore, readout genuinamente campionato \\
+\addlinespace
+Punto/i di lavoro &
+$\varepsilon_{1q}{=}2.9{\times}10^{-4}$, $\varepsilon_{2q}{=}3.8{\times}10^{-3}$,
+$p_\text{readout}{=}2.3{\times}10^{-2}$ (\texttt{ibm\_torino}) &
+Scenario A ($b_c{=}2.4$, $D{=}0.15$) &
+Scenario A \emph{e} $R_0$ ($b{=}0.05$, $D{=}1.93$) &
+Scenario A, $C_{21}^{xx}$ \\
+\addlinespace
+Risultato chiave &
+identico al dimero, verificato indipendente dal numero di qubit &
+$1{-}F{=}2.98\%$ ($2\times$ il dimero); costo preparazione $6$ CNOT (il
+più caro della pipeline, non il più economico) &
+$N^*_A=3$; $N^*_B=9$ (correzione di una griglia troppo rada, poi
+propagata) &
+$N^*=3$; a rumore nullo $|C(N^*)|$ quasi coincide col vero valore
+(diverso dal dimero) \\
+\addlinespace
+Collegamento &
+fornisce il \texttt{NoiseModel} riusato in tutta la Parte 2 &
+fissa la scala di degradazione di base &
+introduce $N^*$ per entrambi gli scenari, ripreso nel Documento 9 &
+fornisce baseline e correlatore per i Documenti 9--11 \\
+\bottomrule
+\end{tabular}
+
+\vspace{6pt}
+\begin{tabular}{@{}>{\bfseries\raggedright}p{2.3cm} p{16.9cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{9. Lo scan sui parametri} \\
+\midrule
+Obiettivo & Come si sposta $N^*$ al variare di $\varepsilon_{1q},\varepsilon_{2q},p_\text{readout}$ \\
+\addlinespace
+Punto/i di lavoro & Scenario A ($b/J{=}2.4$, $D/J{=}0.15$); scan indipendente su ciascun parametro, altri fissati al riferimento \\
+\addlinespace
+Risultato chiave & $N^*$ Trotter monotono non-crescente in $\varepsilon_{2q}$ ($4\to2$); $N^*$ correlatore fermo a $3$ su tutto il range --- differenza fra le due metriche non vista in questa forma sul dimero; invarianza da $p_\text{readout}$ confermata a shot finiti \\
+\addlinespace
+Collegamento & chiude i cinque stadi; apre le due estensioni facoltative (Documenti 10, 11) \\
+\bottomrule
+\end{tabular}
+\end{center}
+\end{landscape}
+
+\clearpage
+
+\section{Tabella d'insieme --- le due estensioni}
+
+\begin{center}
+\small
+\renewcommand{\arraystretch}{1.35}
+\begin{tabular}{@{}p{3.4cm}p{6.6cm}p{6.6cm}@{}}
+\toprule
+\rowcolor{grigetto}
+ & \textbf{10. VQE noise-aware} & \textbf{11. Readout asimmetrico} \\
+\midrule
+Domanda &
+Vale la pena riottimizzare vedendo il rumore? &
+Cosa succede se $p_{01}\neq p_{10}$? \\
+\addlinespace
+Esito &
+\textbf{Diverso dal dimero}: energia migliore, fedeltà peggiore
+($\Delta E{=}{-}4.16{\times}10^{-3}$, $\Delta F{=}{-}1.57{\times}10^{-2}$,
+a struttura di circuito fissa); $N^*$ comunque invariato su entrambe le
+metriche &
+\textbf{Come sul dimero}: nessuna sorpresa, $N^*=3$ invariato dal
+simmetrico fino a rapporti $50\times$ \\
+\addlinespace
+Punto notevole &
+Isolato un artefatto del transpilatore (riduzione CNOT a valori speciali
+di $\theta$) mai visto sul dimero, distinto dal risultato fisico &
+Verificato che il registro a 3 qubit (contro i 2 del dimero) non
+complica la correzione: si applica a un solo bit misurato \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\section{Il modello di rumore}
+
+Due canali, calibrazione \texttt{ibm\_torino}, letteralmente lo stesso
+modello del dimero (wrapper, non una riscrittura) --- verificato
+indipendente dal numero di qubit per costruzione dell'API di Qiskit.
+
+\section{Il VQE sotto rumore}
+
+Riuso dei parametri ideali della Parte 1, nessuna riottimizzazione:
+$1-F=2.98\%$, il doppio del dimero a parità di rumore di riferimento,
+coerente col numero di CNOT triplo ($6$ contro $2$).
+
+\messaggio{L'ansatz dell'anello è il più costoso in gate di tutta la
+pipeline, non il più economico come sul dimero --- una differenza
+strutturale che si ripercuote su ogni stadio successivo.}
+
+\section{La dinamica sotto rumore}
+
+Due scenari trattati esplicitamente (a differenza del dimero, un solo
+punto): $N^*_A=3$ (preparazione VQE), $N^*_B=9$ (da $\ket{000}$, punto
+$R_0$). Nessun readout coinvolto --- fedeltà calcolata direttamente
+sull'operatore densità, numeri identici a quelli già stabiliti prima di
+questa serie narrativa.
+
+\section{I correlatori sotto rumore}
+
+Passaggio al readout genuinamente campionato (shot finiti), come già
+fatto sul dimero in una revisione successiva alla prima stesura di questa
+pipeline. $N^*=3$ confermato. La scoperta di questo documento: a
+differenza del dimero, qui $N^*$ non sovrastima il vero correlatore
+fisico --- un fenomeno specifico del sistema e del punto, non universale.
+
+\section{Lo scan sui parametri di rumore}
+
+Monotonia confermata per la fedeltà di Trotter; il correlatore mostra
+invece un $N^*$ sorprendentemente stabile su tutto il range di
+$\varepsilon_{2q}$ esplorato --- osservazione aperta, non ancora spiegata.
+
+\section{Le due estensioni}
+
+L'estensione VQE noise-aware (Documento 10) è quella con l'esito più
+diverso dal dimero di tutta questa Parte 2: un compromesso energia/fedeltà
+reale, isolato da un artefatto genuino del transpilatore specifico
+dell'ansatz a sei parametri. L'estensione readout asimmetrico (Documento
+11) chiude invece senza sorprese, esattamente come sul dimero.
+
+\messaggio{Due estensioni, due esiti opposti: una conferma che ``fare la
+stessa cosa'' su un sistema diverso non garantisce lo stesso risultato,
+anche quando l'argomento teorico di partenza è identico.}
+
+\end{document}

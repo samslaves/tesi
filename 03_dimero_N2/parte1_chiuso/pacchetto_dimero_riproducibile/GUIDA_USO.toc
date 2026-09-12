@@ -1,0 +1,14 @@
+\babel@toc {italian}{}\relax 
+\contentsline {section}{\numberline {1}Struttura del pacchetto}{1}{section.1}%
+\contentsline {subsection}{\numberline {1.1}I 9 moduli di \texttt {codice/}}{2}{subsection.1.1}%
+\contentsline {section}{\numberline {2}Prerequisiti}{2}{section.2}%
+\contentsline {section}{\numberline {3}Il modo più semplice: un solo comando}{2}{section.3}%
+\contentsline {section}{\numberline {4}Passo per passo, con la mappa esatta delle dipendenze}{3}{section.4}%
+\contentsline {subsection}{\numberline {4.1}Onda 1 --- nessuna dipendenza (possono girare in qualunque ordine, anche in parallelo)}{3}{subsection.4.1}%
+\contentsline {subsection}{\numberline {4.2}Onda 2 --- dipende dall'Onda 1}{4}{subsection.4.2}%
+\contentsline {subsection}{\numberline {4.3}In sintesi: un solo ordine realmente obbligato}{4}{subsection.4.3}%
+\contentsline {subsection}{\numberline {4.4}Tutti i comandi, in un unico blocco (nell'ordine di \texttt {esegui\_tutto.py})}{5}{subsection.4.4}%
+\contentsline {section}{\numberline {5}Aggiornamento: figure aggiunte}{5}{section.5}%
+\contentsline {section}{\numberline {6}Un risultato genuino scoperto riproducendo la figura di confronto}{6}{section.6}%
+\contentsline {section}{\numberline {7}Come sapere se un numero è quello giusto}{6}{section.7}%
+\contentsline {section}{\numberline {8}Relazione con il pacchetto rumoroso}{7}{section.8}%

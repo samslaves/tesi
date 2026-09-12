@@ -114,18 +114,33 @@ strati rappresenta qualunque stato. Parametri: $2(\text{reps}+1)$, cioè
 \end{panelbox}
 \smallskip
 
-\begin{panelbox}{PMA --- physically motivated (Crippa et al.\ 2021)}
+\begin{panelbox}{Ansatz base --- PMA semplificato}
 Costruito \textbf{sulle simmetrie} del problema. Blocco fondamentale su
 ogni legame:
 $$W_{ij}(\theta) = \text{CNOT}_{ij}\,\big(R_y(\theta)_i\otimes I_j\big)\,\text{CNOT}_{ij}.$$
+\emph{Attenzione al nome:} questo $W_{ij}(\theta)$ è il blocco base usato
+in questo progetto (due CNOT attorno a un'unica $R_y$) --- \textbf{non}
+coincide col gate $W_{ij}(\theta)=e^{-i\theta\,\mathbf s_i\cdot\mathbf
+s_j}=R_{xx}(\theta/2)R_{yy}(\theta/2)R_{zz}(\theta/2)$ di Crippa et al.\
+2021 (tre porte a due qubit, genuinamente $M$-conservante su tutto lo
+spazio). Il blocco qui sopra è più economico (due CNOT contro tre porte
+a due qubit) ma, verificato esplicitamente, \textbf{non} conserva $M$ su
+tutto lo spazio a due qubit: applicato a $|00\rangle$ o $|11\rangle$ li
+mischia fra loro ($|00\rangle\to\cos\frac\theta2|00\rangle+
+\sin\frac\theta2|11\rangle$); conserva $M$ solo quando il suo ingresso è
+già nel settore $\{|01\rangle,|10\rangle\}$ --- il caso del ramo
+$B/J<2$ qui sotto, non quello di $B/J\geq2$.
 Lo stato iniziale rispetta la simmetria del ground state atteso:
 \begin{itemize}[leftmargin=1.3em,itemsep=0.1em]
 \item $B/J<2$ (GS = singoletto, $S=0,M=0$): si parte dal singoletto
-locale $(|01\rangle-|10\rangle)/\sqrt2$;
-\item $B/J\geq2$ (GS = $|11\rangle$, $M=-1$): si parte da $|11\rangle$.
+locale $(|01\rangle-|10\rangle)/\sqrt2$ --- qui il blocco ruota
+genuinamente dentro il settore $M=0$, nessuna approssimazione;
+\item $B/J\geq2$ (GS = $|11\rangle$, $M=-1$): si parte da $|11\rangle$
+--- qui il blocco potrebbe in linea di principio mescolare verso
+$|00\rangle$, ma l'ottimo resta a $\theta\approx0$ (il target è già lì),
+quindi in pratica non serve muoversi fuori da quel settore.
 \end{itemize}
-Per il dimero ($N=2$, un legame, $K=1$): \textbf{1 solo parametro}. Il
-prezzo dell'efficienza è che il PMA \textbf{conserva $S$ e $M$}.
+Per il dimero ($N=2$, un legame, $K=1$): \textbf{1 solo parametro}.
 \end{panelbox}
 
 \subsection*{Perché si sceglie il riferimento in base a $B/J$}
@@ -246,8 +261,8 @@ metriche). Output salvato in \texttt{.png} (raster) e \texttt{.pdf}
 \midrule
 1 & HA (hardware-efficient, \texttt{n\_local} $R_y$+CZ, reps=2) & 0 & 6\\
 2 & HA & 0.2 & 6\\
-3 & PMA (physically motivated, Crippa et al., $K=1$) & 0 & 1\\
-4 & PMA & 0.2 & 1\\
+3 & Ansatz base (PMA semplificato, $K=1$) & 0 & 1\\
+4 & Ansatz base & 0.2 & 1\\
 \bottomrule
 \end{tabular}
 \end{center}
@@ -408,7 +423,8 @@ quando un termine come il DM le rompe, il PMA fallisce proprio dove la
 rottura è massima. Questo lega tre cose costruite separatamente: la
 derivazione del termine DM, l'analisi delle simmetrie
 ($[H_D,S_z]\neq0$), e la scelta dell'ansatz --- inclusa la struttura
-interna del blocco $W_{ij}(\theta)$, che rivela \emph{come} un solo
+interna del blocco base $W_{ij}(\theta)$ (non il $W_{ij}$ di Crippa,
+vedi nota sopra), che rivela \emph{come} un solo
 parametro riesca a coprire entrambi i rami del level crossing.
 
 È un risultato completo e autocontenuto per il dimero $N=2$: stabilisce

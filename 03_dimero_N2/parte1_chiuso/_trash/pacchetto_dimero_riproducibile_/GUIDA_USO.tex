@@ -1,0 +1,422 @@
+\documentclass[11pt,a4paper]{article}
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage{geometry}
+\geometry{margin=2.3cm,top=2.5cm,bottom=2.7cm}
+\usepackage{booktabs}
+\usepackage[table,dvipsnames]{xcolor}
+\usepackage{tcolorbox}
+\tcbuselibrary{skins,breakable}
+\usepackage{titlesec}
+\usepackage{enumitem}
+\usepackage{needspace}
+\usepackage{fancyhdr}
+\usepackage{graphicx}
+\usepackage{hyperref}
+\usepackage{longtable}
+\hypersetup{colorlinks=true,linkcolor=Sepia,citecolor=Sepia,urlcolor=Sepia}
+\newcommand{\Tr}{\operatorname{Tr}}
+\newcommand{\ket}[1]{\lvert #1 \rangle}
+
+\definecolor{inkblue}{HTML}{1B3A5C}
+\definecolor{lightblue}{HTML}{EAF1F8}
+\definecolor{accent}{HTML}{B0562A}
+\definecolor{softgray}{HTML}{6B6B6B}
+\definecolor{okgreen}{HTML}{2E6B3E}
+\definecolor{okgreenbg}{HTML}{EAF5EC}
+\definecolor{warnamber}{HTML}{9C6B12}
+\definecolor{warnbg}{HTML}{FBF1E0}
+
+\titleformat{\section}
+  {\normalfont\Large\bfseries\color{inkblue}}
+  {\thesection}{0.6em}{}[{\color{inkblue!40}\titlerule}]
+\titlespacing{\section}{0pt}{0.9em}{0.4em}
+\titleformat{\subsection}
+  {\normalfont\large\bfseries\color{accent}}
+  {}{0em}{}
+\titlespacing{\subsection}{0pt}{0.6em}{0.2em}
+
+\pagestyle{fancy}
+\fancyhf{}
+\renewcommand{\headrulewidth}{0.4pt}
+\fancyhead[L]{\small\color{softgray}Guida d'uso --- pacchetto riproducibile, dimero (Parte 1)}
+\fancyhead[R]{\small\color{softgray}\thepage}
+\fancyfoot[C]{\small\color{softgray}Tesi triennale, Samuele Schiavi --- Relatore: Prof.\ Alessandro Chiesa}
+
+\newtcolorbox{keyeq}[1][]{
+  colback=lightblue, colframe=inkblue!70, boxrule=0.6pt,
+  arc=2pt, left=8pt, right=8pt, top=3pt, bottom=3pt, #1
+}
+\newtcolorbox{okbox}[1]{
+  colback=okgreenbg, colframe=okgreen!60, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{okgreen}, title={#1}
+}
+\newtcolorbox{warnbox}[1]{
+  colback=warnbg, colframe=warnamber!70, boxrule=0.6pt,
+  arc=2pt, left=7pt, right=7pt, top=2pt, bottom=2pt,
+  fonttitle=\bfseries\color{warnamber}, title={#1}
+}
+
+\newcommand{\code}[1]{\texttt{\small #1}}
+
+\title{\vspace{-1.5em}\color{inkblue}Guida d'uso\\[0.2em]
+\Large\normalfont\color{softgray}Riprodurre il dimero senza rumore (Parte 1) in locale}
+\author{Pacchetto riproducibile --- Tesi triennale, Samuele Schiavi\\ Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\sloppy
+\maketitle
+\thispagestyle{fancy}
+\vspace{-2.0em}
+
+Questo pacchetto contiene tutto il codice necessario per riprodurre, da
+zero, la Parte 1 (sistema chiuso, nessun rumore) del lavoro sul dimero:
+diagonalizzazione esatta, confronto fra ansatz VQE, evoluzione di
+Trotter e correlatori dinamici. E' il pacchetto \emph{fratello} di
+\code{pacchetto\_dimero\_rumoroso\_riproducibile} (Parte 2) --- questo
+copre solo il sistema chiuso, non il rumore. Ogni modulo e ogni funzione
+sono commentati esplicitando sia il loro ruolo all'interno del proprio
+file sia il loro ruolo nell'insieme della pipeline.
+
+\tableofcontents
+
+\section{Struttura del pacchetto}
+
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}lp{9.5cm}@{}}
+\code{codice/} & 9 moduli Python (mattoni + confronto ansatz + Trotter + correlatori)\\
+\code{dati/} & dati intermedi (\code{.npz}) generati da 01\_ e 02\_\\
+\code{figure/} & 18 figure finali, in PDF e PNG (14 aggiunte in questo aggiornamento, Sez.~\ref{sec:aggiornamento})\\
+\code{genera\_figure/} & 8 script (4 originali + 4 aggiunti)\\
+\code{01\_genera\_dati\_vqe\_ideale.py} & script di generazione dati (VQE ideale)\\
+\code{02\_scan36\_correlatori.py} & script di generazione dati (scan36, aggiunto)\\
+\code{03\_correlatore\_da\_vqe.py} & presente ma NON eseguito da \code{esegui\_tutto.py} --- problema aperto, Sez.~\ref{sec:aggiornamento}\\
+\code{esegui\_tutto.py} & esegue tutto in un solo comando\\
+\end{tabular}
+\end{keyeq}
+
+\subsection{I 9 moduli di \texttt{codice/}}
+
+{\footnotesize
+\begin{longtable}{@{}p{4.9cm}p{9.3cm}@{}}
+\toprule
+\textbf{File} & \textbf{Cosa fa} \\
+\midrule
+\endhead
+\raggedright\code{dimer\_exact.py} & Hamiltoniana e diagonalizzazione esatta --- il ``mattone zero'' \\
+\raggedright\code{vqe\_test2.py} & ansatz PMA-2q.3 e ottimizzazione VQE al punto di lavoro ``test 2'' \\
+\raggedright\code{ansatz\_dimero.py} & libreria di varianti di ansatz (RBS, HA, PMA a diverse parametrizzazioni) \\
+\raggedright\code{vqe\_dimer.py} & confronto sistematico HA vs PMA su tutto lo sweep in $B/J$ \\
+\raggedright\code{trotter\_dimero.py} & evoluzione di Trotter per decomposizione esplicita in gate nativi \\
+\raggedright\code{circuito\_correlazioni\_\allowbreak dimero.py} & circuito di Hadamard test per i correlatori dinamici \\
+\raggedright\code{noise\_model\_dimero.py} & incluso solo per la costante \code{BASIS\_GATES} (vedi nota sotto) \\
+\raggedright\code{stile.py} & stile grafico condiviso da tutti gli script di figura \\
+\raggedright\code{validate\_ansatz\_params\_\allowbreak dimero.py} & controllo obbligatorio: preparazione VQE vs ampiezze esatte nei correlatori \\
+\raggedright\code{validate\_circuito\_\allowbreak correlazioni\_dimero.py} & controllo obbligatorio: correlatori contro riferimento classico, convergenza di Trotter \\
+\bottomrule
+\end{longtable}
+}
+
+\begin{warnbox}{Una dipendenza reale verso il pacchetto rumoroso}
+\code{validate\_ansatz\_params\_dimero.py} importa \code{BASIS\_GATES} da
+\code{noise\_model\_dimero.py} --- un modulo concettualmente di Parte 2.
+E' incluso qui \textbf{solo} per quella costante (la base di gate
+$\{rz,sx,x,cx\}$ usata per transpilare), non per la sua funzionalità di
+modellazione del rumore, mai usata in questo pacchetto.
+\end{warnbox}
+
+\section{Prerequisiti}
+
+Stessi di \code{pacchetto\_dimero\_rumoroso\_riproducibile}:
+
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}ll@{}}
+Python & 3.12.3\\
+qiskit & 2.5.2\\
+qiskit-aer & 0.17.2\\
+numpy & 2.4.4\\
+scipy & 1.17.1\\
+matplotlib & 3.10.8\\
+\end{tabular}
+\end{keyeq}
+
+\begin{okbox}{Nessuna installazione LaTeX richiesta}
+Le figure sono generate direttamente in PDF/PNG da matplotlib.
+\end{okbox}
+
+\section{Il modo più semplice: un solo comando}
+
+\begin{keyeq}
+\centering
+\code{cd pacchetto\_dimero\_riproducibile}\\
+\code{python3 esegui\_tutto.py}
+\end{keyeq}
+
+Esegue in ordine: generazione dati (1 script), validazioni (2 script),
+tutte le 4 figure. Si ferma al primo errore.
+
+\begin{okbox}{Tempo stimato}
+1--2 minuti. La fase più lenta è la figura di confronto ansatz (circa
+30 secondi per 80 ottimizzazioni VQE in tutto).
+\end{okbox}
+
+Se tutto va a buon fine, l'ultima riga stampata è:
+\begin{keyeq}
+\centering
+\code{TUTTO COMPLETATO. 4 figure in figure/, dati in dati/.}
+\end{keyeq}
+
+\section{Passo per passo, con la mappa esatta delle dipendenze}
+
+Questa sezione non è solo un elenco di comandi: per ogni script indica
+cosa prende in ingresso, cosa produce (file e contenuto), e chi
+consuma quel prodotto più avanti nella catena. La buona notizia per
+questo pacchetto: la catena è quasi piatta. Un solo script produce
+dati; tre dei quattro script rimanenti (una validazione, tutte le
+figure) \textbf{non hanno bisogno} di quel file --- calcolano da soli
+tutto ciò che serve, in isolamento.
+
+\subsection{Onda 1 --- nessuna dipendenza (possono girare in qualunque ordine, anche in parallelo)}
+
+\begin{keyeq}[title={01\_genera\_dati\_vqe\_ideale.py}]
+\textbf{Ingresso}: nessuno (parte da zero).\\
+\textbf{Uscita}: \code{dati/ground\_state\_test2.npz} --- contiene
+\code{b, J, D} (il punto di lavoro), \code{E0\_exact, psi0\_exact}
+(benchmark esatto), \code{vqe\_params} (i 3 parametri ottimali
+dell'ansatz PMA-2q.3), \code{fidelity, E\_vqe}.\\
+\textbf{Chi lo consuma}: \code{validate\_ansatz\_params\_dimero.py}
+(Onda 2, unico consumatore in questo pacchetto). Nota: è lo stesso file
+prodotto in \code{pacchetto\_dimero\_rumoroso\_riproducibile} -- se lo hai
+già generato là, puoi copiarlo qui invece di rieseguire lo script.\\
+\textbf{Valore atteso}: energia $\approx-3.57321145$, fedeltà $\approx1.0000000000$.\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 01\_genera\_dati\_vqe\_ideale.py}
+\end{keyeq}
+
+\begin{keyeq}[title={validate\_circuito\_correlazioni\_dimero.py}]
+\textbf{Ingresso}: nessuno --- ricalcola da solo lo stato fondamentale
+via \code{ground\_state()} di \code{circuito\_correlazioni\_dimero.py}.\\
+\textbf{Uscita}: nessun file, solo un resoconto a schermo.\\
+\textbf{Chi lo consuma}: nessuno (è un controllo terminale della catena).\\
+\textbf{Comando} (dalla radice del pacchetto, nota il \code{cd}):\\
+\code{cd codice}\\
+\code{python3 validate\_circuito\_correlazioni\_dimero.py}\\
+\code{cd ..}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_spettro\_esatto.py}]
+\textbf{Ingresso}: nessuno --- diagonalizza da zero (nessun \code{.npz} richiesto).\\
+\textbf{Uscita}: \code{figure/fig\_spettro\_dimero.pdf} (+\code{.png}).\\
+\textbf{Chi la consuma}: nessuno (punto di arrivo).\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 genera\_figure/genera\_fig\_spettro\_esatto.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_confronto\_ansatz.py}]
+\textbf{Ingresso}: nessuno --- esegue da zero 80 ottimizzazioni VQE
+(4 configurazioni $\times$ 20 punti in $b$).\\
+\textbf{Uscita}: \code{figure/fig\_confronto\_ansatz\_HA\_PMA.pdf} (+\code{.png}).\\
+\textbf{Chi la consuma}: nessuno (punto di arrivo).\\
+\textbf{Comando} (dalla radice del pacchetto, $\sim$30 secondi):\\
+\code{python3 genera\_figure/genera\_fig\_confronto\_ansatz.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_trotter\_convergenza.py}]
+\textbf{Ingresso}: nessuno --- costruisce l'evoluzione via
+\code{trotter\_dimero.py} da zero, a $b,J,D$ fissati nello script.\\
+\textbf{Uscita}: \code{figure/fig\_trotter\_convergenza.pdf} (+\code{.png}).\\
+\textbf{Chi la consuma}: nessuno (punto di arrivo).\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 genera\_figure/genera\_fig\_trotter\_convergenza.py}
+\end{keyeq}
+
+\begin{keyeq}[title={genera\_fig\_correlatore\_convergenza.py}]
+\textbf{Ingresso}: nessuno --- ricalcola lo stato fondamentale e il
+riferimento classico da zero.\\
+\textbf{Uscita}: \code{figure/fig\_correlatore\_convergenza.pdf} (+\code{.png}).\\
+\textbf{Chi la consuma}: nessuno (punto di arrivo).\\
+\textbf{Comando} (dalla radice del pacchetto):\\
+\code{python3 genera\_figure/genera\_fig\_correlatore\_convergenza.py}
+\end{keyeq}
+
+\subsection{Onda 2 --- dipende dall'Onda 1}
+
+\begin{keyeq}[title={validate\_ansatz\_params\_dimero.py}]
+\textbf{Ingresso}: \code{ground\_state\_test2.npz} (copiato in
+\code{codice/}) --- legge \code{vqe\_params} e \code{fidelity}.\\
+\textbf{Uscita}: nessun file, solo un resoconto a schermo (include il
+controllo 18 vs 19 CNOT).\\
+\textbf{Chi lo consuma}: nessuno (controllo terminale).\\
+\textbf{Comando} (dalla radice del pacchetto, dopo aver eseguito \code{01\_}):\\
+\code{cp dati/ground\_state\_test2.npz codice/}\\
+\code{cd codice}\\
+\code{python3 validate\_ansatz\_params\_dimero.py}\\
+\code{cd ..}
+\end{keyeq}
+
+\subsection{In sintesi: un solo ordine realmente obbligato}
+
+\begin{okbox}{L'unica dipendenza vera di questo pacchetto}
+\code{01\_genera\_dati\_vqe\_ideale.py} $\to$
+\code{validate\_ansatz\_params\_dimero.py}. Tutto il resto (l'altra
+validazione, tutte e 4 le figure) è indipendente e può girare prima,
+dopo, o senza mai eseguire \code{01\_} --- \code{esegui\_tutto.py} li
+esegue comunque tutti in un ordine fisso solo per chiarezza di lettura
+del log, non perché serva.
+\end{okbox}
+
+\subsection{Tutti i comandi, in un unico blocco (nell'ordine di \texttt{esegui\_tutto.py})}
+
+\begin{keyeq}
+\centering
+\begin{tabular}{@{}l@{}}
+\code{cd pacchetto\_dimero\_riproducibile}\\
+\code{python3 01\_genera\_dati\_vqe\_ideale.py}\\
+\code{python3 02\_scan36\_correlatori.py}\\
+\code{cp dati/*.npz codice/}\\
+\code{cd codice}\\
+\code{python3 validate\_ansatz\_params\_dimero.py}\\
+\code{python3 validate\_circuito\_correlazioni\_dimero.py}\\
+\code{cd ..}\\
+\code{python3 genera\_figure/genera\_fig\_confronto\_ansatz.py}\\
+\code{python3 genera\_figure/genera\_fig\_correlatore\_convergenza.py}\\
+\code{python3 genera\_figure/genera\_fig\_spettro\_esatto.py}\\
+\code{python3 genera\_figure/genera\_fig\_trotter\_convergenza.py}\\
+\code{python3 genera\_figure/genera\_fig\_gap\_magnetizzazione.py}\\
+\code{python3 genera\_figure/genera\_fig\_vqe\_riparazione.py}\\
+\code{python3 genera\_figure/genera\_fig\_trotter\_circuito\_vs\_matrice.py}\\
+\code{python3 genera\_figure/genera\_fig\_scan36.py}\\
+\code{python3 genera\_figure/genera\_circuiti.py}\\
+\end{tabular}
+\end{keyeq}
+
+\begin{okbox}{Risultati chiave dei due controlli}
+\code{validate\_ansatz\_params\_dimero.py}: costo in gate, preparazione
+esatta 18 CNOT contro preparazione VQE 19 CNOT (coincide esattamente
+con quanto atteso).
+
+\code{validate\_circuito\_correlazioni\_dimero.py}: convergenza
+dell'errore di Trotter sul correlatore, rapporto che tende a 2
+raddoppiando $N$ (Trotter al prim'ordine, errore $O(1/N)$).
+\end{okbox}
+
+Gli script di figura vanno eseguiti dalla \textbf{radice} del pacchetto,
+non da dentro \code{genera\_figure/}.
+
+\section{Aggiornamento: figure aggiunte}
+\label{sec:aggiornamento}
+
+Rispetto alla prima versione (4 figure, nessun diagramma di circuito),
+aggiunte 14 figure per allineare il pacchetto al contenuto reale dei
+quattro documenti narrativi (\texttt{tesi\_dimero\_slides}):
+
+\begin{itemize}[leftmargin=1.4em,itemsep=3pt]
+\item \textbf{Il gap esplicito}
+(\code{genera\_fig\_gap\_magnetizzazione.py}): distanza
+fondamentale-primo eccitato contro $B/J$, non solo lo spettro completo
+--- minimo verificato $0.565$ con $D/J=0.2$, coincidente.
+\item \textbf{La riparazione PMA}
+(\code{genera\_fig\_vqe\_riparazione.py}): PMA-2q.3 (3 parametri)
+raggiunge $\mathcal F>0.9998$ su tutto lo sweep, contro il crollo a
+$\approx0.82$ di PMA a $K=1$ (Sez.~\ref{sec:pma-k1} sotto).
+\item \textbf{Circuito vero contro matrice compatta}
+(\code{genera\_fig\_trotter\_circuito\_vs\_matrice.py}): la prima
+versione usava solo la matrice compatta (\code{U\_trotter\_mat}) come
+unico metodo; qui entrambi i metodi sono calcolati e sovrapposti,
+verificato che coincidono a precisione macchina ($\sim10^{-14}$), al
+punto di lavoro $b/J=-0.18$, $D/J=1$ (stato $\ket{00}$, deliberatamente
+asimmetrico --- vedi il documento per il perché).
+\item \textbf{Scan36} (\code{02\_scan36\_correlatori.py} +
+\code{genera\_fig\_scan36.py}): tutte le 36 combinazioni correlatore,
+verificato 12/36 zeri a $t=0$, 0/36 zeri strutturali (nessuno resta
+nullo per $\max_t$).
+\item \textbf{Tutti i nove diagrammi di circuito}
+(\code{genera\_circuiti.py}): assenti per scelta esplicita
+dell'autore originale (vedi docstring di \code{ansatz\_dimero.py}).
+Cinque riusano le chiamate esatte di un vecchio script del progetto
+(\texttt{fig\_circuiti.py}, non incluso in questo pacchetto, letto come
+riferimento); i restanti quattro (\code{circ\_pma\_base\_ramo2},
+\code{circ\_rbs\_espanso}, \code{circ\_w\_espanso}, \code{circ\_cnotry})
+non avevano uno script sorgente disponibile --- costruiti direttamente
+dalle definizioni dei blocchi e dalle didascalie dei documenti.
+\end{itemize}
+
+\begin{warnbox}{Problema aperto, non risolto: fedeltà di PMA base a
+$b/J=-0.18$, $D/J=1$}
+Il Documento 2 (\S6, tabella di confronto) riporta $\mathcal F=0.922857$
+per l'ansatz PMA base (1 parametro) a questo punto di lavoro. La
+ricostruzione più diretta di questo ansatz
+(\code{ansatz\_PMA\_W}/\code{make\_pma\_ansatz}, verificate identiche
+fra loro) raggiunge invece un tetto di $\mathcal F=0.851664$, verificato
+con: scan fine su $\theta$ (non un problema di ottimizzatore); minimizzazione
+dell'energia invece della fedeltà diretta (stesso risultato); scambio
+della convenzione qubit (nessuna differenza); direzione del CNOT e
+qubit di applicazione della $R_y$ scambiati (nessuna variante supera
+$\approx0.85$); $D=0.2$ invece di $D=1$ nello stesso punto ($\mathcal
+F=0.990$, ancora diverso da $0.922857$). Causa non identificata --
+\textbf{la figura \code{fig14\_correlatore\_da\_vqe} non è stata
+prodotta} in attesa di risolvere questa discrepanza. Lo script
+\code{03\_correlatore\_da\_vqe.py} esiste nel pacchetto ma non è
+richiamato da \code{esegui\_tutto.py} per questo motivo.
+\end{warnbox}
+
+Non ancora affrontate in questo aggiornamento: fig09 (ricco/piatto),
+fig10/fig13 (ricostruzione spettrale), fig15/fig16 (scan36 con circuito
+VQE reale, costoso computazionalmente).
+
+\section{Un risultato genuino scoperto riproducendo la figura di confronto}
+\label{sec:pma-k1}
+
+\begin{warnbox}{PMA a $K=1$ non è sempre sufficiente}
+Nella figura \code{fig\_confronto\_ansatz\_HA\_PMA}, la riga ``PMA
+$D=0.2$'' mostra un calo netto di fedeltà (minimo $\approx0.82$, non
+$1.0$) proprio nella zona di anticrossing ($B/J\approx2$) --- a
+differenza di HA, che raggiunge sempre precisione macchina. Non è un
+bug: con un solo parametro e uno stato iniziale scelto in modo rigido
+(singoletto o $\ket{11}$ a seconda di $B/J$), l'ansatz PMA più semplice
+non riesce a interpolare con continuità attraverso il crossover indotto
+da $D\neq0$. E' precisamente il motivo per cui il resto del progetto usa
+un ansatz PMA più espressivo (PMA-2q.3, 3 parametri, che rompe la
+conservazione di $M$) invece di questa versione a un solo parametro.
+\end{warnbox}
+
+\section{Come sapere se un numero è quello giusto}
+
+Ogni script stampa a schermo il valore appena calcolato \textbf{accanto}
+al valore atteso.
+
+\begin{warnbox}{Se un numero non coincide}
+Qualcosa nel tuo ambiente locale sta producendo un risultato diverso:
+fermati e confronta prima di proseguire.
+\end{warnbox}
+
+\section{Relazione con il pacchetto rumoroso}
+
+\begin{okbox}{Stessa disciplina, stesso punto di partenza}
+Questo pacchetto e \code{pacchetto\_dimero\_rumoroso\_riproducibile}
+condividono lo script \code{01\_genera\_dati\_vqe\_ideale.py} e tre
+moduli (\code{dimer\_exact.py}, \code{vqe\_test2.py},
+\code{circuito\_correlazioni\_dimero.py}) --- non per caso: la Parte 2
+(rumore) parte esattamente da dove finisce questa Parte 1, riusando lo
+stesso punto di lavoro e la stessa preparazione VQE. Se hai già
+eseguito il pacchetto rumoroso, \code{dati/ground\_state\_test2.npz} è
+identico in entrambi.
+\end{okbox}
+
+\begin{okbox}{Verificato end-to-end, non solo assemblato}
+L'intera pipeline è stata rieseguita da zero (cartelle \code{dati/} e
+\code{figure/} svuotate, poi \code{esegui\_tutto.py} rilanciato) dopo
+ogni modifica sostanziale al codice --- ogni numero riportato in questa
+guida è stato ricontrollato. Verificato di nuovo dopo l'aggiornamento
+di Sez.~\ref{sec:aggiornamento}: \code{exit code 0}, 18 figure prodotte
+(esclusa \code{fig14\_correlatore\_da\_vqe}, non ancora prodotta per il
+problema aperto documentato sopra).
+\end{okbox}
+
+\end{document}

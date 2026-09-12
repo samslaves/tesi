@@ -17,14 +17,17 @@ from ansatz_dimero import (rbs_block, ansatz_HA, ansatz_PMA_Mcons,
 
 # ------------------------------------------------------------------- VQE
 def _fidelity_sottospazio(psi, b, D, tol=1e-9):
-    """Fidelity rispetto al sottospazio fondamentale: al punto di degenerazione
-    (D=0, B/J=2) il fondamentale non e' un singolo vettore, e confrontare con un
-    autovettore arbitrario restituito dalla diagonalizzazione sarebbe privo di
-    significato."""
+    """Fidelity (convenzione al quadrato, |<v|psi>|^2 -- uniformata al
+    resto del progetto: vqe_test2.py, tutto il trimero, e
+    qiskit.quantum_info.state_fidelity di default) rispetto al
+    sottospazio fondamentale: al punto di degenerazione (D=0, B/J=2)
+    il fondamentale non e' un singolo vettore, e confrontare con un
+    autovettore arbitrario restituito dalla diagonalizzazione sarebbe
+    privo di significato."""
     H = dimer_hamiltonian(b, J, D).to_matrix()
     w, v = np.linalg.eigh(H)
     sel = w - w[0] < tol
-    return float(np.sqrt(sum(abs(psi.conj() @ v[:, k])**2 for k in np.where(sel)[0])))
+    return float(sum(abs(psi.conj() @ v[:, k])**2 for k in np.where(sel)[0]))
 
 def vqe(ansatz, b, D, R=8, seed=7):
     H = dimer_hamiltonian(b, J, D)
@@ -79,7 +82,7 @@ for ax, dati, D in ((a1, fid_D0, 0.0), (a2, fid_D2, 0.2)):
     ax.set_xlabel(r"$B/J$")
     ax.set_ylim(0.35, 1.06)
     ax.set_title(rf"$D/J={D}$" + ("  (simmetria intatta)" if D == 0 else "  (simmetria rotta)"))
-a1.set_ylabel(r"fidelity  $|\langle\psi_{\rm VQE}|\psi_0\rangle|$")
+a1.set_ylabel(r"fidelity  $|\langle\psi_{\rm VQE}|\psi_0\rangle|^2$")
 a1.legend(loc="lower left")
 k = np.argmin(fid_D2["PMA base (1 par.)"])
 a2.annotate(f"crollo\n{fid_D2['PMA base (1 par.)'][k]:.2f}",

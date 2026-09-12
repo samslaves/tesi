@@ -450,3 +450,18 @@ robustezza del segnale — sopra la mediana, condiviso da altre 20
 combinazioni su 81, non un estremo fragile come sul dimero. Il baseline
 dell'anello resta quindi valido così com'è. Nota informativa, non una
 domanda: non richiede risposta del relatore.
+
+## Nota di chiusura (10-11 settembre 2026) — serie narrativa completa, un dettaglio in più sulla domanda 9
+
+Le due serie narrative sull'anello (Parte 1 e Parte 2, mirror di quelle
+sul dimero) sono state scritte e revisionate a fondo — vedi
+`log_decisioni.md` e `scheda_progetto_tesi.md` per il dettaglio completo.
+
+Un dettaglio in più emerso ricontrollando `analisi_dm_trimero_anello.tex`
+per scrivere il Documento 1: l'Opzione B non è solo "l'opzione che rompe
+la simmetria" — è esplicitamente **la proposta del relatore** (scelta
+semplice, non derivata dalla simmetria, suggerita come primo candidato da
+testare), mentre l'Opzione A è quella emersa dalla verifica sistematica
+su tutte le combinazioni di segno. Questo dettaglio di provenienza non
+era ancora nella nota della domanda 9 qui sopra — ora è nel Documento 1
+della serie narrativa. Nessuna azione richiesta, nota informativa.

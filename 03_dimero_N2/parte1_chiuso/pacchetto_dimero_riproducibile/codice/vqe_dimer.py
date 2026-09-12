@@ -182,6 +182,14 @@ def run_vqe(b, J=1.0, D=0.0, ansatz_type="HA", reps=2, K=1,
     mz_exact  = float(res_exact["gs_mz"][0])
     Mz_mat    = magnetization_operator().to_matrix()
 
+    # sottospazio degenere per la fidelity (a D=0, B/J=2 il fondamentale
+    # non e' un singolo vettore: confrontare con un autovettore arbitrario
+    # restituito da eigh() sarebbe privo di significato -- stessa tecnica
+    # di _fidelity_sottospazio in fig_doc2.py, tol=1e-9)
+    H_mat = hamiltonian.to_matrix()
+    w_full, v_full = np.linalg.eigh(H_mat)
+    idx_degeneri = np.where(w_full - w_full[0] < 1e-9)[0]
+
     best_e, best_params, converged = np.inf, None, False
     for _ in range(n_restarts):
         x0 = rng.uniform(-np.pi, np.pi, n_params)
@@ -198,7 +206,7 @@ def run_vqe(b, J=1.0, D=0.0, ansatz_type="HA", reps=2, K=1,
 
     sv     = Statevector(ansatz.assign_parameters(best_params)).data
     mz_vqe = float(np.real(sv.conj() @ Mz_mat @ sv))
-    fid    = float(np.abs(sv.conj() @ gs_exact))
+    fid    = float(sum(abs(sv.conj() @ v_full[:, k]) ** 2 for k in idx_degeneri))  # proiezione sul sottospazio fondamentale, degenere-consapevole
 
     return {
         "b": b, "e_vqe": best_e, "e_exact": e_exact,

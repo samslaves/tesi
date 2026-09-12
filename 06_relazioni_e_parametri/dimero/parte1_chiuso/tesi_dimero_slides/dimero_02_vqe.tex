@@ -281,13 +281,13 @@ quanto più ci si allontana:
 \rowcolor{grigetto}
 $B/J$ & fidelity & $1-\mathcal F$ \\
 \midrule
-0.00 & 0.995133 & $4.9\times10^{-3}$ \\
-1.80 & 0.890358 & $1.1\times10^{-1}$ \\
-1.99 & 0.725176 & $2.7\times10^{-1}$ \\
-\textbf{2.00} & \textbf{0.700841} & $3.0\times10^{-1}$ \\
-2.05 & 0.760745 & $2.4\times10^{-1}$ \\
-2.50 & 0.966592 & $3.3\times10^{-2}$ \\
-4.00 & 0.997527 & $2.5\times10^{-3}$ \\
+0.00 & 0.990290 & $9.7\times10^{-3}$ \\
+1.80 & 0.792738 & $2.1\times10^{-1}$ \\
+1.99 & 0.525880 & $4.7\times10^{-1}$ \\
+\textbf{2.00} & \textbf{0.491178} & $5.1\times10^{-1}$ \\
+2.05 & 0.578733 & $4.2\times10^{-1}$ \\
+2.50 & 0.934300 & $6.6\times10^{-2}$ \\
+4.00 & 0.995060 & $4.9\times10^{-3}$ \\
 \bottomrule
 \end{tabular}
 \caption{La fidelity dell'ansatz base, punto per punto. Lontano
@@ -316,18 +316,18 @@ fidelity migliore? Quasi sempre --- ma non proprio esattamente:
 \rowcolor{grigetto}
 $B/J$ & fid(singoletto) & fid($\ket{\downarrow\downarrow}$) & ramo scelto dal codice \\
 \midrule
-1.90 & 0.8206 & 0.5707 & singoletto (il migliore) \\
-1.99 & 0.7252 & 0.6881 & singoletto (il migliore) \\
-\textbf{2.00} & \textbf{0.7129} & \textbf{0.7008} & $\ket{\downarrow\downarrow}$ --- \textbf{non} il migliore \\
-2.01 & 0.7004 & 0.7134 & $\ket{\downarrow\downarrow}$ (il migliore) \\
-2.10 & 0.5832 & 0.8121 & $\ket{\downarrow\downarrow}$ (il migliore) \\
+1.90 & 0.6734 & 0.3257 & singoletto (il migliore) \\
+1.99 & 0.5259 & 0.4735 & singoletto (il migliore) \\
+\textbf{2.00} & \textbf{0.5082} & \textbf{0.4912} & $\ket{\downarrow\downarrow}$ --- \textbf{non} il migliore \\
+2.01 & 0.4905 & 0.5089 & $\ket{\downarrow\downarrow}$ (il migliore) \\
+2.10 & 0.3401 & 0.6595 & $\ket{\downarrow\downarrow}$ (il migliore) \\
 \bottomrule
 \end{tabular}
 \caption{Cosa darebbe \emph{ciascun} ramo se venisse forzato su tutto il
 range, confrontato con quale ramo la condizione $B/J<2$ sceglie davvero. La
 scelta coincide quasi sempre con la migliore possibile fra le due --- tranne
 esattamente al confine, $B/J=2$, dove per un margine sottile sceglie quella
-peggiore ($0.7008$ invece di $0.7129$): un artefatto dello spigolo del
+peggiore ($0.4912$ invece di $0.5082$): un artefatto dello spigolo del
 confronto ``$<$'', non un errore concettuale. Il minimo mostrato in
 Fig.~\ref{fig:confronto} è dunque quello davvero prodotto dal codice, non il
 minimo teoricamente raggiungibile da un selettore di ramo ottimale.}
@@ -372,10 +372,10 @@ condizione ``$B/J<2$'' è falsa esattamente nel punto di confine).
 \rowcolor{grigetto}
 \textbf{blocchi CNOT--$R_y$--CNOT} & \textbf{parametri} & \textbf{fidelity a $B/J=2$, $D/J=0.2$} \\
 \midrule
-1 & 1 & $0.700841$ \\
-2 & 2 & $0.700841$ \\
-3 & 3 & $0.700841$ \\
-4 & 4 & $0.700841$ \\
+1 & 1 & $0.491178$ \\
+2 & 2 & $0.491178$ \\
+3 & 3 & $0.491178$ \\
+4 & 4 & $0.491178$ \\
 \bottomrule
 \end{tabular}
 \caption{Il tetto strutturale. Quadruplicare i parametri non sposta la fidelity
@@ -663,7 +663,7 @@ sia un minimo locale invece di un limite strutturale. La fidelity è calcolata
 come proiezione sul \emph{sottospazio} fondamentale, non su un singolo
 autovettore:
 \begin{equation*}
-\mathcal F = \sqrt{\textstyle\sum_{k:\,E_k\approx E_0} \lvert\langle v_k|\psi_{\rm ansatz}\rangle\rvert^2},
+\mathcal F = \textstyle\sum_{k:\,E_k\approx E_0} \lvert\langle v_k|\psi_{\rm ansatz}\rangle\rvert^2,
 \end{equation*}
 dove la somma corre su \emph{tutti} gli autovettori $v_k$ degeneri col
 fondamentale, non su uno solo: a $D=0$ e $B/J=2$ lo stato fondamentale è
@@ -705,7 +705,7 @@ scontato:
 \textbf{ansatz (nome nel testo)} & \textbf{etichetta nelle figure} & \textbf{fidelity a $b/J=-0.18$, $D/J=1$} \\
 \midrule
 generico, hardware-efficient (Fig.~\ref{fig:confronto}) & HA (6 par.) & $1.000000$ \\
-fisicamente motivato, minimo (Fig.~\ref{fig:confronto}) & PMA base (1 par.) & $0.922857$ \\
+fisicamente motivato, minimo (Fig.~\ref{fig:confronto}) & PMA base (1 par.) & $0.851664$ \\
 fisicamente motivato, esteso (Fig.~\ref{fig:riparazione}) & PMA esteso (3 par.) & $1.000000$ \\
 \bottomrule
 \end{tabular}

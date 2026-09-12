@@ -27,25 +27,22 @@
 \section{Scope di questo pacchetto: cosa copre, cosa no}
 
 Copre la pipeline computazionale canonica di Parte 1 sull'anello:
-diagonalizzazione esatta, VQE con termine DM (ansatz $W$-2q.6), dinamica
-di Trotter, correlatori dinamici (Hadamard test). \textbf{Non} copre: i
-notebook esplorativi del confronto ansatz ($W$ vs RBS-2q --- conclusione
-già stabilita, non ripetuta qui: $W$-2q.6 raggiunge $\mathcal F=1$ dove
-RBS-2q satura a $\mathcal F\approx0.9999$, vedi
-\texttt{log\_decisioni.md}), lo scan sistematico delle 81 combinazioni
-correlatore (\texttt{scan81\_*}, catalogazione, non riproduzione
-dati/figure), il diagramma schematico del circuito (illustrativo, non
-derivato da dati). Questi restano nel Project come documentazione, non
-duplicati qui.
+diagonalizzazione esatta, verifica sistematica del termine DM, VQE con
+termine DM (ansatz $W$-2q.6 \textbf{e} RBS-2q, a confronto), dinamica di
+Trotter (incluso il punto di lavoro $R_0$), correlatori dinamici
+(Hadamard test, incluso lo scan completo delle 81 combinazioni e il
+confronto preparazione VQE/esatta). \textbf{Non} copre: i notebook
+esplorativi originali del confronto ansatz (il codice vive nei
+notebook, qui isolato in modulo -- vedi Sez.~\ref{sec:aggiornamento}).
 
 \section{Struttura del pacchetto}
 
 \begin{verbatim}
 codice/            moduli .py (libreria, mai eseguiti direttamente)
 dati/              output .npz/.png degli script di generazione dati
-figure/            figure finali (PNG --- vedi nota sotto)
+figure/             figure finali (PDF+PNG per le nuove; PNG per le originali)
 genera_figure/     script di generazione figure
-01_..., 05_...     script di dati/validazione, numerati nell'ordine d'uso
+01_..., 09_...     script di dati/validazione, numerati nell'ordine d'uso
 esegui_tutto.py    orchestratore
 \end{verbatim}
 
@@ -72,11 +69,14 @@ comportamento originale degli script del Project
 \section{Le onde di dipendenza reale}
 
 \textbf{Onda 1} (nessun ingresso, indipendenti fra loro): \texttt{01},
-\texttt{02}, \texttt{03}, \texttt{04}. \textbf{Onda 2} (dipende da
-\texttt{02}): \texttt{05}. \textbf{Onda 3} (dipende da \texttt{04} solo
+\texttt{02}, \texttt{03}, \texttt{04}, \texttt{06}. \textbf{Onda 2}
+(dipende da \texttt{02}): \texttt{05}, \texttt{07}, \texttt{08},
+\texttt{09}. \textbf{Onda 3} (dipende da \texttt{04} solo
 concettualmente --- la funzione \texttt{classical\_exact} è copiata
 localmente, non importata, per evitare un side-effect di \texttt{chdir}):
-\texttt{genera\_figure/genera\_figure\_correlatori.py}.
+\texttt{genera\_figure/genera\_figure\_correlatori.py}. \textbf{Onda 3}
+(dipende dai \texttt{.npz} prodotti nell'Onda 2): gli altri script
+\texttt{genera\_figure/}.
 
 \section{Script 01--05}
 
@@ -128,6 +128,62 @@ ampiezze esatte). \textbf{Chi lo consuma}: nessuno.
 python3 05_valida_correlatori_vqe.py
 \end{verbatim}
 
+\section{Script 06--09 (aggiunti in questo aggiornamento)}
+\label{sec:aggiornamento}
+
+Coprono il confronto RBS-vs-$W$ (prima solo nei notebook esplorativi),
+la verifica sistematica del DM, lo scan delle 81 combinazioni, e il
+confronto preparazione VQE/esatta -- assenti dalla prima versione di
+questo pacchetto.
+
+\subsection{06\_verifica\_dm\_sistematica.py}
+\textbf{Ingresso}: nessuno. \textbf{Uscita}:
+\texttt{dati/verifica\_dm\_\allowbreak sistematica.npz}. \textbf{Chi lo
+consuma}: nessuno. Verifica tutte le 12 combinazioni di segno
+$(D_{12},D_{23},D_{31})$ contro la simmetria $P_{12}$: solo una coppia
+(Opzione A) rispetta la simmetria esattamente; l'Opzione B, proposta
+del relatore, è quella che la rompe di più fra tutte le testate.
+\begin{verbatim}
+python3 06_verifica_dm_sistematica.py
+\end{verbatim}
+
+\subsection{07\_confronto\_rbs\_w.py}
+\textbf{Ingresso}: nessuno (ottimizzazione multistart da zero, più
+volte). \textbf{Uscita}: \texttt{dati/confronto\_rbs\_w.npz}.
+\textbf{Chi lo consuma}: nessuno. Tre verifiche: fedeltà sotto DM
+(RBS-2q.6 $\mathcal F=0.9999110739$, $W$-2q.6 $\mathcal F=1$); tetto
+strutturale di RBS puro (K=1,2,3 giri, nessun R\_y finale --- il tetto
+non si sposta); sweep in $b/J$ su 13 punti (incluso l'incrocio) per
+$W$-2q.6, $\mathcal F=1$ ovunque, nessun ramo di preparazione
+necessario.
+\begin{verbatim}
+python3 07_confronto_rbs_w.py
+\end{verbatim}
+
+\subsection{08\_scan81\_correlatori.py}
+\textbf{Ingresso}: nessuno. \textbf{Uscita}:
+\texttt{dati/scan81\_correlatori.npz}. \textbf{Chi lo consuma}:
+\texttt{genera\_figure/genera\_scan81.py}. Tre verifiche: 32/81 zeri
+all'istante iniziale; 4/81 zeri strutturali (tutti sito 3, verificati a
+precisione macchina via esponenziale di matrice diretto, non il
+circuito Trotter); ricchezza spettrale indipendente dall'ampiezza
+(numero di componenti in frequenza rilevanti, non solo un aggettivo).
+\begin{verbatim}
+python3 08_scan81_correlatori.py
+\end{verbatim}
+
+\subsection{09\_confronto\_preparazione\_vqe.py}
+\textbf{Ingresso}: \texttt{dati/w2q6\_params\_optimal.npz}.
+\textbf{Uscita}: \texttt{dati/confronto\_vqe\_esatto.npz}. \textbf{Chi
+lo consuma}: \texttt{genera\_figure/genera\_confronto\_vqe\_esatto.py}.
+Curva $C_{21}^{xx}(t)$ e scan completo (81 combinazioni, $t{=}2$):
+scarto medio $2.9\times10^{-7}$, nessuna correlazione con l'ampiezza
+(a differenza del dimero, dove un ansatz meno accurato mostra invece
+una struttura riconoscibile).
+\begin{verbatim}
+python3 09_confronto_preparazione_vqe.py
+\end{verbatim}
+
 \section{Script genera\_figure/}
 
 \subsection{genera\_figure\_correlatori.py}
@@ -143,6 +199,42 @@ $C_{11}^{yy}(t{=}1.3)$), \texttt{figure/fig\_validazione\_trimero.png}
 python3 genera_figure/genera_figure_correlatori.py
 \end{verbatim}
 
+\subsection{genera\_spettro\_e\_dm.py}
+\textbf{Ingresso}: nessuno. \textbf{Uscita}:
+\texttt{figure/fig\_spettro\_anello.pdf/.png} (spettro a 8 livelli,
+colorato per blocco di Kambe --- diversa da
+\texttt{dati/trimer\_ring\_exact.png}, che colora solo la curva del
+fondamentale), \texttt{figure/fig\_gap\_magnetizzazione\_anello.pdf/.png}
+($D{=}0$ contro le due opzioni DM, zoomata attorno all'incrocio).
+\begin{verbatim}
+python3 genera_figure/genera_spettro_e_dm.py
+\end{verbatim}
+
+\subsection{genera\_dinamica\_R0.py}
+\textbf{Ingresso}: nessuno. \textbf{Uscita}:
+\texttt{figure/fig\_trotter\_sz\_anello.pdf/.png} ($\langle S_z^{\rm
+tot}\rangle(t)$ al punto $R_0$, esatto contro Trotter $N{=}50,150,500$),
+\texttt{figure/fig\_trotter\_errore\_anello.pdf/.png} (errore a $t{=}6$,
+scala log-log), \texttt{figure/circ\_trotter\_anello.pdf/.png} (diagramma
+del singolo passo di Trotter).
+\begin{verbatim}
+python3 genera_figure/genera_dinamica_R0.py
+\end{verbatim}
+
+\subsection{genera\_confronto\_vqe\_esatto.py}
+\textbf{Ingresso}: \texttt{dati/confronto\_vqe\_esatto.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_vqe\_vs\_esatto\_correlatore.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_confronto_vqe_esatto.py
+\end{verbatim}
+
+\subsection{genera\_scan81.py}
+\textbf{Ingresso}: \texttt{dati/scan81\_correlatori.npz}.
+\textbf{Uscita}: \texttt{figure/fig\_scan81\_anello.pdf/.png}.
+\begin{verbatim}
+python3 genera_figure/genera_scan81.py
+\end{verbatim}
+
 \section{Documentazione del codice aggiunta in questo pacchetto}
 
 Le copie di partenza in \texttt{codice/} sono state verificate
@@ -154,6 +246,13 @@ Verificato funzionalmente dopo ogni modifica (sintassi + riesecuzione
 del self-test corrispondente): nessuna modifica di logica, solo
 documentazione.
 
+\texttt{ansatz\_trimero\_anello.py} è un modulo \textbf{nuovo} aggiunto
+in questo aggiornamento (non esisteva nella prima versione): isola
+\texttt{rbs\_block} e la factory condivisa \texttt{pma\_2q\_trimer\_exact}
+in un modulo separato da \texttt{vqe\_w2q6\_trimero\_anello.py}, con lo
+stesso livello di documentazione (docstring di modulo e di funzione,
+ruolo nel modulo/nell'insieme) degli altri moduli del pacchetto.
+
 \section{Sequenza completa (copia-incolla)}
 
 \begin{verbatim}
@@ -162,18 +261,34 @@ python3 02_genera_vqe_dm.py
 python3 03_self_test_trotter.py
 python3 04_valida_correlatori_esatti.py
 python3 05_valida_correlatori_vqe.py
+python3 06_verifica_dm_sistematica.py
+python3 07_confronto_rbs_w.py
+python3 08_scan81_correlatori.py
+python3 09_confronto_preparazione_vqe.py
 python3 genera_figure/genera_figure_correlatori.py
+python3 genera_figure/genera_spettro_e_dm.py
+python3 genera_figure/genera_dinamica_R0.py
+python3 genera_figure/genera_confronto_vqe_esatto.py
+python3 genera_figure/genera_scan81.py
 \end{verbatim}
 Equivalente, in un solo comando: \texttt{python3 esegui\_tutto.py}.
 
 \section{Verifica end-to-end effettuata}
 
-\texttt{dati/} e \texttt{figure/} svuotate, \texttt{esegui\_tutto.py}
-rieseguito da zero: \texttt{exit code 0}, nessun \texttt{FALLITO} né
-\texttt{Traceback} reale nel log (un falso positivo testuale nel
-self-test di \texttt{01}, verificato: fa parte del messaggio esplicativo
-del test, non un errore). Numeri rigenerati confrontati con quelli già
-noti: $E_\text{VQE}=-5.534370017393404$,
-$\mathcal F=0.9999999999996096$ --- coincidenti.
+\texttt{dati/} e \texttt{figure/} svuotate, tutti gli script rieseguiti
+da zero (in sequenza; l'esecuzione monolitica di
+\texttt{esegui\_tutto.py} richiede diversi minuti per l'ottimizzazione
+VQE multistart, oltre la durata di una singola verifica interattiva --
+verificata comunque l'esecuzione di ciascuno script preso singolarmente,
+in ordine, da uno stato pulito): nessun \texttt{FALLITO} né
+\texttt{Traceback} reale nel log. Numeri rigenerati confrontati con
+quelli già noti: $E_\text{VQE}=-5.534370017393404$,
+$\mathcal F=0.9999999999996096$; verifica sistematica DM (12
+combinazioni, valori $0.24,0.42,0.30$ sulle non-simmetriche); RBS-2q.6
+$\mathcal F=0.9999110739$ contro $W$-2q.6 $\mathcal F=1$; tetto
+strutturale invariante a $K=1,2,3$ giri; sweep in $b/J$ (13 punti)
+$\mathcal F=1$ ovunque; scan81 (32 zeri a $t{=}0$, 4 zeri strutturali
+sul sito 3); confronto VQE/esatto (scarto medio $2.9\times10^{-7}$) ---
+tutti coincidenti.
 
 \end{document}

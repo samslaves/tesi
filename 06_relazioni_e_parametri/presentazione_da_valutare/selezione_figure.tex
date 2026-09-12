@@ -1,0 +1,74 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{enumitem}
+\usepackage{xcolor}
+\usepackage{colortbl}
+
+\definecolor{introcol}{RGB}{230,240,250}
+\definecolor{riscol}{RGB}{234,246,234}
+
+\pagestyle{empty}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Selezione delle figure per slide}\\[4pt]
+{\normalsize Proposta --- da confermare prima di produrre le slide}
+\end{center}
+
+\vspace{10pt}
+
+\rowcolors{2}{white}{white}
+\begin{center}
+\begin{tabular}{c L{2.6cm} L{6.3cm} L{4.5cm}}
+\toprule
+\# & Slide & Figura proposta & Note \\
+\midrule
+\rowcolor{introcol!40}
+1 & Frontespizio & --- & Nessuna figura, solo testo \\
+\rowcolor{introcol!40}
+2 & Contesto & --- & Nessun candidato esistente adatto (sarebbe uno schema concettuale nuovo, non una selezione) \\
+\rowcolor{introcol!40}
+3 & Stato dell'arte & --- & Nessun candidato --- eventuale riferimento testuale a Crippa et al. \\
+\rowcolor{introcol!40}
+4 & Obiettivi & --- & Slide di testo, non serve figura \\
+\rowcolor{introcol!40}
+5 & Modello fisico & \emph{(nessun candidato geometrico esistente)} & Cercato uno schema dimero/trimero (siti e legami): non esiste già fatto. Userei solo la formula dell'Hamiltoniana \\
+\rowcolor{introcol!40}
+6 & Metodo VQE & \texttt{circ\_ha.pdf} + \texttt{circ\_pma\_esteso.pdf} (dimero), affiancati & Verificati entrambi --- puliti, confronto diretto generico/simmetrico \\
+\midrule
+\rowcolor{riscol!40}
+7 & Confronto ansatz & \texttt{fig03\_vqe\_ha\_vs\_pma.pdf} (dimero) & Verificata, messaggio chiarissimo \\
+\rowcolor{riscol!40}
+8 & Dinamica & \texttt{fig07\_correlatore\_validazione.pdf} (dimero) & Verificata, asse $t$ con unità esplicite \\
+\rowcolor{riscol!40}
+9 & Pipeline di rumore & \texttt{fig\_passo3\_F\_vs\_N.pdf} (dimero rumoroso) & Verificata --- compromesso e $N^*$ in un solo grafico \\
+\rowcolor{riscol!40}
+10 & Estensioni & \texttt{fig\_F\_vs\_N\_confronto.pdf} (dimero rumoroso) & Verificata --- ideale vs noise-aware, differenza trascurabile ben visibile \\
+\rowcolor{riscol!40}
+11 & Dimero vs trimero & --- & Nessuna figura esistente --- probabile tabella di confronto (già presente in \texttt{punti\_di\_lavoro\_riepilogo.tex}) \\
+\rowcolor{riscol!40}
+12 & Conclusioni & --- & Nessuna figura, solo testo \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{14pt}
+\noindent\textbf{Punti aperti, da decidere:}
+\begin{itemize}[nosep]
+\item Slide 2--5: restano testuali, oppure si crea uno schema geometrico
+      semplice nuovo (es. due pallini collegati per il dimero, un
+      triangolo per il trimero) per la slide 5?
+\item Slide 11: tabella di confronto testuale, o si costruisce una
+      figura riassuntiva ad hoc?
+\end{itemize}
+
+\end{document}

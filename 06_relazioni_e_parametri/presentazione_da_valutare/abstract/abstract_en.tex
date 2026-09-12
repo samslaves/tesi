@@ -1,0 +1,57 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage{amsmath,amssymb}
+\usepackage[a4paper,margin=3cm]{geometry}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+\usepackage{setspace}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries University of Parma}\\[2pt]
+{\normalsize Department of Mathematical, Physical and Computer Sciences}\\[4pt]
+{\normalsize Bachelor's Degree in Physics}\\[18pt]
+
+{\Large\bfseries Quantum simulation of molecular spin systems\\ on quantum hardware}\\[18pt]
+
+{\normalsize Candidate: \textbf{Samuele Schiavi}}\\[4pt]
+{\normalsize Supervisor: \textbf{Prof. Alessandro Chiesa}}\\[18pt]
+{\normalsize\bfseries Abstract}
+\end{center}
+
+\vspace{6pt}
+\onehalfspacing
+\noindent
+Molecular magnets are privileged platforms for studying collective quantum
+phenomena, yet their classical simulation quickly becomes intractable as the
+number of spins increases. Quantum computers, by mapping each spin-$1/2$
+directly onto a qubit, offer a natural route around this bottleneck. This
+work presents the quantum simulation, on both ideal and realistically noisy
+simulators, of spin-$1/2$ systems coupled through a Heisenberg interaction
+with an anisotropic Dzyaloshinskii--Moriya term, starting from the simplest
+case (the dimer) up to a frustrated three-spin ring. The ground state is
+determined with the Variational Quantum Eigensolver, comparing a generic
+hardware-efficient ansatz with ans\"atze built on the physical symmetries of
+the problem; time evolution is implemented through a Suzuki--Trotter
+decomposition, and dynamical spin-spin correlations are extracted with a
+Hadamard-test circuit. The full pipeline is then repeated under a noise
+model calibrated on real quantum hardware, identifying the number of
+Trotter steps that balances the approximation error against the error
+accumulated from noise, and testing its stability against noise-aware
+reoptimization and asymmetric readout error. The results show that an
+ansatz aligned with the symmetries of the Hamiltonian drastically reduces
+the number of parameters required with respect to a generic ansatz, an
+advantage that persists, at increasing cost, when moving from two to three
+spins --- a design criterion that is a promising candidate for extension to
+larger molecular systems.
+
+\vspace{12pt}
+\noindent\textbf{Keywords:} quantum simulation; spin systems; Variational
+Quantum Eigensolver (VQE); Suzuki--Trotter decomposition; quantum noise;
+IBM Quantum hardware.
+
+\end{document}

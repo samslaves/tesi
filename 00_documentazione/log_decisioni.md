@@ -5014,3 +5014,66 @@ se l'ottimo pratico resta a $\theta\approx0$). Nota: il documento aveva
 già, più avanti (sezione "Perché basta 1 parametro"), la derivazione
 corretta a blocchi $2\times2$ che confermava questo — l'inconsistenza era
 solo nel primo box riassuntivo, non nel corpo del documento.
+
+## Nota aggiuntiva --- discrepanza di convenzione sulla fedeltà, trovata e corretta (dimero, Parte 1)
+
+Durante il tentativo di riprodurre `fig14_correlatore_da_vqe` (correlatore
+con preparazione VQE reale, ansatz base) nel pacchetto riproducibile della
+Parte 1 del dimero, trovata una discrepanza: la ricostruzione dava
+$\mathcal F=0.851664$ per l'ansatz PMA base a $b/J=-0.18$, $D/J=1$, contro
+il $0.922857$ riportato nella tabella di confronto del Documento 2 (§6).
+
+**Causa, trovata dopo nove ipotesi scartate** (scan fine su $\theta$,
+minimizzazione energia vs fedeltà diretta, convenzione qubit, direzione
+CNOT, valore di $D$, segno di $D$, segno di $b$, precisione su $b$):
+non un errore di ricostruzione, ma una **convenzione di fedeltà diversa**.
+`vqe_dimer.py` (il modulo che produce fig03/fig04/tabella §6) calcola
+$\mathcal F=|\langle\psi_\text{esatto}|\psi_\text{VQE}\rangle|$ (modulo,
+senza quadrato) --- verificato $\sqrt{0.851664}=0.922856\ldots$, coincide
+esattamente. Il resto del progetto (`vqe_test2.py`, tutto il trimero,
+`qiskit.quantum_info.state_fidelity` di default) usa sempre il quadrato.
+Verificato con una ricerca sistematica in tutto `/mnt/project` (pattern di
+codice, non solo i due numeri già noti): **solo** `vqe_dimer.py` e il suo
+script gemello `fig_doc2.py` (in `codice_sorgente/`, usa la stessa
+formula con radice esplicita, $\mathcal F=\sqrt{\sum_k|\langle
+v_k|\psi\rangle|^2}$) avevano questa convenzione isolata --- nessun altro
+file del progetto, nessun'altra menzione nei file di tracciamento.
+
+**Nessuna scelta di progetto era in discussione**: elevare al quadrato una
+fedeltà $<1$ la rende solo più bassa, mai più alta --- il caso per
+l'ansatz esteso (PMA-2q$\cdot$3) contro l'ansatz base non poteva che
+rafforzarsi, non indebolirsi, uniformando la convenzione.
+
+**Corretto**: `vqe_dimer.py` (tolto il quadrato mancante), `fig_doc2.py`
+(tolta la radice esterna, aggiornata l'etichetta dell'asse $y$ di fig03),
+`dimero_02_vqe.tex` e `dimero_03_dinamica.tex` aggiornati (5 punti
+numerici: fig03, fig04, 3 tabelle di dettaglio, più la formula esplicita
+nel box "Come lo sappiamo"), fig03/fig04 rigenerate dallo script
+originale (non una ricostruzione approssimata).
+
+**Due correzioni ulteriori, trovate allineando la griglia del pacchetto
+riproducibile a quella di `fig_doc2.py`** (33 punti, $[0,4]$, non 20
+punti $[0,5]$ come nella prima versione del pacchetto):
+1. La griglia originale del pacchetto non campionava mai $B/J=2$
+   esattamente, dando un minimo apparente di $0.667$ invece del vero
+   $0.491178$ --- corretto allineando la griglia.
+2. Questo ha esposto un problema reale in `vqe_dimer.py`: a $D=0$,
+   $B/J=2$ il fondamentale è degenere, e la funzione confrontava con un
+   singolo autovettore arbitrario da `eigh()`, dando fedeltà spurie
+   vicine a $0$ proprio dove deve restare $1$. Corretto rendendo
+   `run_vqe()` consapevole della degenerazione (proiezione sul
+   sottospazio fondamentale, stessa tecnica di `_fidelity_sottospazio`
+   in `fig_doc2.py`, tol $10^{-9}$) --- verificato: $D=0$ ora dà
+   $\mathcal F=1$ ovunque per entrambi gli ansatz, $D/J=0.2$ dà il vero
+   minimo $0.491178$, coincidente con `fig_doc2.py` e col documento.
+
+Verificato esplicitamente che questa correzione **non tocca**: la Parte 2
+del dimero (nessuna menzione di `vqe_dimer.py`/"PMA base" in nessuno dei
+sette documenti, cercato esplicitamente); il trimero (convenzione al
+quadrato ovunque, verificato su tutti i 13 file che calcolano una
+fedeltà, nessuna eccezione); `punti_di_lavoro_riepilogo.tex` (ogni
+menzione di fedeltà lì riguarda l'ansatz esteso, sempre $\approx1$ in
+entrambe le convenzioni, o quantità concettualmente diverse come la
+fedeltà di Trotter); i file di tracciamento (`domande_relatore.md`,
+`scheda_progetto_tesi.md`) menzionano "PMA base" solo qualitativamente,
+mai con un valore numerico di fedeltà.

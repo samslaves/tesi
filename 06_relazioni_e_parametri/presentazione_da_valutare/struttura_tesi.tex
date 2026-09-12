@@ -1,0 +1,83 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage[a4paper,margin=2.2cm]{geometry}
+\usepackage{booktabs}
+\usepackage{array}
+\usepackage{xcolor}
+\usepackage{colortbl}
+
+\definecolor{introcol}{RGB}{230,240,250}
+\definecolor{riscol}{RGB}{234,246,234}
+
+\pagestyle{empty}
+
+\newcolumntype{L}[1]{>{\raggedright\arraybackslash}p{#1}}
+
+\begin{document}
+
+\begin{center}
+{\Large\bfseries Struttura della presentazione di tesi}\\[4pt]
+{\normalsize 12 slide, 10--15 minuti}
+\end{center}
+
+\vspace{10pt}
+
+\rowcolors{2}{white}{white}
+\begin{center}
+\begin{tabular}{c L{2.6cm} L{4.7cm} L{5.5cm} c}
+\toprule
+\rowcolor{introcol}
+\multicolumn{5}{l}{\textbf{INTRODUZIONE} --- contesto, motivazione, metodo}\\
+\midrule
+\# & Slide & Contenuto & Cosa dire & Min \\
+\midrule
+\rowcolor{introcol!40}
+1 & Frontespizio & Titolo, nome, relatore, corso di laurea & Saluto, presentazione, titolo e obiettivo generale & 0:30 \\
+\rowcolor{introcol!40}
+2 & Contesto & Sistemi magnetici molecolari, difficoltà della simulazione classica & Perché questo problema è rilevante e difficile & 1:00 \\
+\rowcolor{introcol!40}
+3 & Stato dell'arte & VQE per sistemi di spin (Crippa et al. 2021), cosa è già stabilito & Cosa si sapeva prima di questo lavoro, cosa resta aperto & 1:00 \\
+\rowcolor{introcol!40}
+4 & Obiettivi & 2--3 punti: dimero $\to$ trimero, sistema chiuso e aperto & Cosa fa specificamente questa tesi & 1:00 \\
+\rowcolor{introcol!40}
+5 & Modello fisico & Hamiltoniana di Heisenberg + termine DM, mappatura spin-qubit & Il sistema fisico e la sua rappresentazione quantistica & 1:00 \\
+\rowcolor{introcol!40}
+6 & Metodo VQE & Ansatz generico (hardware-efficient) contro ansatz simmetria-adattato & L'idea centrale: costruire l'ansatz sulle simmetrie del problema & 1:30 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{14pt}
+
+\rowcolors{2}{white}{white}
+\begin{center}
+\begin{tabular}{c L{2.6cm} L{4.7cm} L{5.5cm} c}
+\toprule
+\rowcolor{riscol}
+\multicolumn{5}{l}{\textbf{RISULTATI} --- cosa è stato fatto e trovato}\\
+\midrule
+\# & Slide & Contenuto & Cosa dire & Min \\
+\midrule
+\rowcolor{riscol!40}
+7 & Confronto ansatz & Fedeltà vs campo magnetico, ansatz generico vs simmetrico & Perché l'ansatz simmetrico vince, con meno parametri & 1:30 \\
+\rowcolor{riscol!40}
+8 & Dinamica & Evoluzione di Trotter, correlatori dinamici via Hadamard test & Come si simula l'evoluzione temporale e si estraggono le correlazioni & 1:30 \\
+\rowcolor{riscol!40}
+9 & Pipeline di rumore & Modello di rumore calibrato su hardware reale, i cinque stadi & Il compromesso Trotter/rumore che definisce il numero ottimale di passi $N^*$ & 1:30 \\
+\rowcolor{riscol!40}
+10 & Estensioni & VQE noise-aware, readout asimmetrico & Robustezza dei risultati sotto varianti più realistiche & 1:00 \\
+\rowcolor{riscol!40}
+11 & Dimero vs trimero & Confronto sistematico: cosa cambia, cosa resta valido & Il criterio di progettazione si estende dal caso più semplice a quello più complesso & 1:00 \\
+\rowcolor{riscol!40}
+12 & Conclusioni & Messaggi chiave, limiti, sviluppi futuri, ringraziamenti & Riepilogo, prospettive, disponibilità per domande & 1:30 \\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\vspace{10pt}
+\noindent\footnotesize Tempo totale indicativo: $\approx$ 13 minuti, con margine per domande della commissione.
+
+\end{document}

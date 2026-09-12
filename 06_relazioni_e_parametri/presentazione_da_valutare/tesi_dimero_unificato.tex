@@ -1,0 +1,1372 @@
+\documentclass[11pt,a4paper]{article}
+\input{preambolo}
+
+\title{\bfseries Simulazione quantistica di un dimero di spin:\\
+dallo stato fondamentale al sistema aperto}
+\author{Samuele Schiavi \\ \small Tesi di laurea triennale in Fisica, Università degli Studi di Parma \\ \small Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Si studia un dimero di spin $1/2$ accoppiati con interazione di Heisenberg
+isotropa, campo Zeeman e un termine antisimmetrico di
+Dzyaloshinskii--Moriya (DM), come primo banco di prova per la simulazione
+quantistica di sistemi di spin molecolari su hardware attuale. Nella prima
+parte il sistema è trattato come chiuso: si determina lo spettro esatto, si
+costruisce e si confronta un insieme di ansatz variazionali (VQE) per lo
+stato fondamentale, si implementa l'evoluzione temporale reale
+$e^{-iHt}$ tramite decomposizione di Suzuki--Trotter e si misura, con un
+circuito ad ancilla, un correlatore dinamico a due tempi. Nella seconda
+parte lo stesso sistema è trattato come aperto: introdotto un modello di
+rumore calibrato su hardware IBM reale (canali depolarizzanti a uno e due
+qubit più errore di lettura), si ripercorre l'intera catena --- stato
+fondamentale, evoluzione temporale, correlatori --- misurando la
+degradazione indotta dal rumore e individuando, per la dinamica, un numero
+ottimale di passi di Trotter $N^*$ che bilancia l'errore di
+discretizzazione con il rumore di gate accumulato. Si esamina infine la
+dipendenza di $N^*$ dai parametri del canale di rumore e due estensioni
+mirate: l'effetto di un'ottimizzazione variazionale che veda il rumore
+durante la ricerca dei parametri, e l'effetto di un errore di lettura
+asimmetrico.
+\end{abstract}
+
+\tableofcontents
+
+\bigskip
+
+\section{Il sistema fisico}
+\label{sec:sistema}
+
+\subsection{Hamiltoniana e corrispondenza spin--qubit}
+
+Il sistema studiato è costituito da due spin $1/2$ accoppiati, descritti
+dall'Hamiltoniana
+\begin{equation}
+H = \underbrace{J\,(X_1X_2+Y_1Y_2+Z_1Z_2)}_{\text{scambio isotropo}}
+  + \underbrace{b\,(Z_1+Z_2)}_{\text{campo Zeeman}}
+  + \underbrace{D\,(X_1Z_2-Z_1X_2)}_{\text{termine DM}},
+\label{eq:H}
+\end{equation}
+dove $X_i,Y_i,Z_i$ sono le matrici di Pauli sul sito $i=1,2$. I primi due
+termini descrivono uno scambio di Heisenberg isotropo e l'accoppiamento
+Zeeman con un campo magnetico uniforme lungo $z$; il terzo, antisimmetrico
+nello scambio dei siti, è un termine di Dzyaloshinskii--Moriya (DM), che
+compare in molecole magnetiche prive di un centro di inversione tra i due
+ioni accoppiati. Fissando $J=1$ come unità di energia, il sistema è
+descritto da due parametri adimensionali, $b/J$ e $D/J$.
+
+Ogni spin $1/2$ si mappa direttamente su un qubit, senza alcuna
+trasformazione fermionica intermedia: è questa corrispondenza diretta,
+propria dei sistemi di spin, a rendere le molecole magnetiche un banco di
+prova naturale per l'hardware quantistico attuale, a differenza di sistemi
+elettronici che richiederebbero un mapping (Jordan--Wigner o simili) e un
+numero di qubit ben maggiore del numero di gradi di libertà fisici.
+Il modello isotropo con termine DM qui adottato segue l'impostazione di
+Crippa \emph{et al.}\ \cite{crippa2021}, dove il caso a due spin è discusso
+come primo esempio di simulazione VQE per sistemi di spin molecolari.
+
+\subsection{Spettro esatto e incrocio di livelli}
+
+Con $D=0$, l'Hamiltoniana \eqref{eq:H} conserva la magnetizzazione totale
+$M=(Z_1+Z_2)/2$ e commuta con lo spin totale al quadrato $S^2$; il problema
+si risolve allora in forma chiusa nella base $\ket{S,M}$, con autovalori
+\begin{equation}
+E(S,M) = 2J\,S(S{+}1) - 3J + 2bM.
+\label{eq:spettro-esatto}
+\end{equation}
+Lo spazio a quattro dimensioni si decompone in un singoletto ($S=0$,
+$M=0$, energia $E=-3J$, indipendente dal campo) e un tripletto ($S=1$), le
+cui tre componenti ($M=+1,0,-1$) si separano linearmente in $b$. In termini
+degli stati di registro dei due qubit,
+\begin{equation}
+\ket{1,1}=\ket{00},\qquad
+\ket{1,0}=\tfrac{1}{\sqrt2}(\ket{01}+\ket{10}),\qquad
+\ket{0,0}=\tfrac{1}{\sqrt2}(\ket{01}-\ket{10}),\qquad
+\ket{1,-1}=\ket{11}.
+\label{eq:base-registro}
+\end{equation}
+I due stati con $M=\pm1$ sono separabili (stati di prodotto); i due con
+$M=0$ --- il singoletto e la componente centrale del tripletto --- sono
+entrambi genuinamente entangled.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.78\textwidth]{figure/fig01_spettro}
+\caption{Spettro dei quattro livelli in funzione del campo, a $D=0$. Il
+singoletto (energia costante) non risente del campo; le tre componenti del
+tripletto si aprono a ventaglio linearmente in $b$. Lo stato fondamentale
+(curva più bassa) è il singoletto per $B/J<2$ e la componente $M=-1$ del
+tripletto per $B/J>2$; a $B/J=2$ le due energie si incrociano esattamente,
+senza deviare.}
+\label{fig:spettro}
+\end{figure}
+\FloatBarrier
+
+A $B/J=2$ le energie del singoletto e della componente $M=-1$ del
+tripletto si incrociano esattamente (Fig.~\ref{fig:spettro}): un incrocio
+vero, non un avvicinamento, perché i due stati hanno magnetizzazione
+diversa e, finché $H$ conserva $M$, l'elemento di matrice che li
+collegherebbe è nullo per ragioni di simmetria,
+\begin{equation}
+\bra{S{=}0,M{=}0}\,H_{J}+H_{b}\,\ket{S{=}1,M{=}{-}1} = 0.
+\end{equation}
+In prossimità dell'incrocio lo stato fondamentale cambia identità di colpo:
+da uno stato completamente entangled (il singoletto) a uno stato di
+prodotto ($\ket{\downarrow\downarrow}$). Verificato numericamente per
+diagonalizzazione diretta della matrice $4\times4$: lo spettro coincide con
+la formula analitica \eqref{eq:spettro-esatto} su tutta la griglia in $b$,
+con scarto massimo $8.9\times10^{-16}$ (precisione di macchina).
+
+\subsection{Il ruolo del termine di Dzyaloshinskii--Moriya}
+
+Il termine DM non conserva la magnetizzazione totale: la sua non
+commutatività con $S_z$ e $S^2$ è quantificabile tramite la norma di
+Frobenius del commutatore,
+\begin{equation}
+\lVert [H_D, S_z] \rVert = 0.566, \qquad
+\lVert [H_D, S^2] \rVert = 1.131 \qquad (D/J=0.2),
+\end{equation}
+entrambe non nulle: il termine può mescolare stati con $M$ diverso e quindi
+aprire l'incrocio di Fig.~\ref{fig:spettro}. L'effetto è visibile su due
+osservabili (Fig.~\ref{fig:gap}): il gap tra stato fondamentale e primo
+eccitato, che con $D=0$ si annulla esattamente a $B/J=2$ ma con $D/J=0.2$
+resta finito (minimo $0.565$, spostato a $B/J\approx2.007$); e la
+magnetizzazione dello stato fondamentale, che passa da un salto netto a un
+crossover continuo.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig02_gap_magnetizzazione}
+\caption{\textbf{Sinistra:} gap tra stato fondamentale e primo eccitato in
+funzione del campo. Con $D=0$ (nero) si annulla a $B/J=2$; con $D/J=0.2$
+(arancio) resta finito, minimo $0.565$. \textbf{Destra:} magnetizzazione
+dello stato fondamentale; il salto discontinuo diventa un crossover
+continuo.}
+\label{fig:gap}
+\end{figure}
+\FloatBarrier
+
+Questo singolo fatto --- la rottura esplicita della conservazione di $M$ ---
+è la causa comune di tre conseguenze sviluppate nel seguito:
+
+\begin{enumerate}
+\item rende ben posto il problema variazionale su tutto il range di campo,
+perché lo stato fondamentale è unico anche dove, senza DM, sarebbe
+degenere;
+\item rompe la simmetria su cui un ansatz variazionale efficiente sarebbe
+naturalmente costruito (Sez.~\ref{sec:vqe});
+\item impedisce la fattorizzazione esatta dell'evoluzione temporale
+$e^{-iHt}$, rendendo necessaria una decomposizione di Suzuki--Trotter
+(Sez.~\ref{sec:trotter}).
+\end{enumerate}
+
+Si tratta di una rottura \emph{esplicita} della simmetria --- un termine
+aggiunto all'Hamiltoniana --- non di una rottura spontanea: l'Hamiltoniana
+stessa, con $D\neq0$, non possiede più quella simmetria.
+
+\section{Stato fondamentale variazionale (VQE)}
+\label{sec:vqe}
+
+\subsection{Il metodo}
+
+Il Variational Quantum Eigensolver (VQE) determina un'approssimazione allo
+stato fondamentale minimizzando l'energia media su un circuito
+parametrico. Si prepara $\ket{\psi(\boldsymbol\theta)}$ con un circuito che
+dipende da parametri $\boldsymbol\theta$, si misura
+$E(\boldsymbol\theta)=\bra{\psi(\boldsymbol\theta)}H\ket{\psi(\boldsymbol\theta)}$,
+e un ottimizzatore classico aggiorna $\boldsymbol\theta$ per abbassare
+$E$. Il principio variazionale garantisce $E(\boldsymbol\theta)\ge E_0$
+per ogni $\boldsymbol\theta$. Poiché sul dimero l'energia esatta è nota
+(Sez.~\ref{sec:sistema}), il VQE qui non serve a scoprirla, ma a misurare
+quanto bene un dato circuito riesca a rappresentare lo stato fondamentale
+vero: la grandezza di riferimento è la fidelity
+$\mathcal F=\lvert\braket{\psi_{\rm VQE}}{\psi_0}\rvert$, o, sui
+sottospazi degeneri, la somma delle proiezioni su tutti gli autovettori
+degeneri con l'energia più bassa.
+
+\subsection{Due filosofie di ansatz}
+
+Si confrontano due strategie di costruzione del circuito.
+
+\paragraph{Ansatz generico (hardware-efficient, HA).} Rotazioni $R_y$ a un
+qubit alternate a porte $CZ$, in uno schema regolare che non incorpora
+alcuna informazione sulla fisica del problema: $6$ parametri
+(Fig.~\ref{fig:circ-ha}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.5\textwidth]{figure/circ_ha}
+\caption{Ansatz generico hardware-efficient: rotazioni $R_y$ alternate a
+porte $CZ$, $6$ parametri.}
+\label{fig:circ-ha}
+\end{figure}
+\FloatBarrier
+
+\paragraph{Ansatz fisicamente motivato (PMA), versione base.} Costruito a
+partire da ciò che si sa dello stato fondamentale a $D=0$: sotto l'incrocio
+si prepara direttamente il singoletto, sopra si prepara
+$\ket{\downarrow\downarrow}$, e si aggiunge un blocco a un solo parametro
+--- due CNOT attorno a una rotazione $R_y(\theta)$ (Fig.~\ref{fig:cnotry})
+--- che ruota \emph{dentro} il sottospazio a due dimensioni di partenza,
+senza mai uscirne: $\{\ket{01},\ket{10}\}$ sotto l'incrocio,
+$\{\ket{00},\ket{11}\}$ sopra.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.3\textwidth]{figure/circ_cnotry}
+\caption{Blocco a un parametro dell'ansatz PMA base: due CNOT attorno a
+un'unica $R_y(\theta)$.}
+\label{fig:cnotry}
+\end{figure}
+\FloatBarrier
+
+Il circuito ha due rami distinti, scelti dalla stessa condizione $b/J\lessgtr2$
+che separa i due tratti dello spettro (Fig.~\ref{fig:pma-base}): sotto
+l'incrocio prepara il singoletto con le porte $X,H,\mathrm{CNOT},X$, sopra
+prepara $\ket{11}$ con due porte $X$; in entrambi i casi segue lo stesso
+blocco parametrico di Fig.~\ref{fig:cnotry}. In totale, un solo parametro
+libero contro i sei dell'ansatz generico.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{figure/circ_pma_base}
+\vspace{2pt}
+\textbf{Ramo $b/J<2$}
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=0.95\textwidth]{figure/circ_pma_base_ramo2}
+\vspace{2pt}
+\textbf{Ramo $b/J\geq2$}
+\end{minipage}
+\caption{Ansatz PMA base nei suoi due rami: preparazione del singoletto
+(sinistra) o di $\ket{11}$ (destra), seguita dallo stesso blocco
+parametrico di Fig.~\ref{fig:cnotry}.}
+\label{fig:pma-base}
+\end{figure}
+\FloatBarrier
+
+\subsection{Confronto: successo senza DM, fallimento strutturale con DM}
+
+Senza termine DM, i due ansatz sono equivalenti su tutto il range di campo:
+fidelity $=1$ per entrambi (Fig.~\ref{fig:confronto}, pannello sinistro).
+Imporre la simmetria giusta (conservazione di $M$) riduce il costo di un
+fattore sei senza perdita di accuratezza --- il risultato metodologico
+centrale di Crippa \emph{et al.}~\cite{crippa2021}.
+
+Con il termine DM acceso, l'ansatz generico resta perfetto su tutto il
+range; l'ansatz PMA base crolla a $\mathcal F\approx0.70$ nell'intorno
+dell'incrocio, con un minimo di $0.491$ esattamente a $B/J=2$
+($D/J=0.2$; Fig.~\ref{fig:confronto}, pannello destro).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig03_vqe_ha_vs_pma}
+\caption{Fidelity rispetto allo stato fondamentale esatto, ansatz generico
+(HA) contro ansatz fisicamente motivato base (PMA base). \textbf{Sinistra:}
+$D=0$, entrambi perfetti. \textbf{Destra:} $D/J=0.2$, l'ansatz generico
+resta perfetto, il PMA base crolla nell'intorno dell'incrocio.}
+\label{fig:confronto}
+\end{figure}
+\FloatBarrier
+
+La causa del fallimento non è il numero di parametri. Vicino all'incrocio,
+con il DM acceso, lo stato fondamentale è una sovrapposizione genuina fra
+settori di magnetizzazione diversa,
+\begin{equation}
+\ket{\psi_0} = \alpha\ket{\text{singoletto}} + \beta\ket{\downarrow\downarrow},
+\end{equation}
+mentre il blocco CNOT--$R_y$--CNOT, per costruzione, non lascia mai il
+sottospazio di partenza. Ripetendo il blocco $K=1,2,3,4$ volte, ciascuna
+copia con angolo indipendente, la fidelity a $B/J=2$ resta identica a ogni
+cifra mostrata ($0.491178$): il circuito è già al meglio possibile dentro
+il settore in cui è confinato, e aggiungere parametri dello stesso tipo
+non aggiunge direzioni raggiungibili. Il limite è strutturale (la
+simmetria imposta), non di capacità espressiva.
+
+\subsection{Riparazione: blocco RBS e ansatz esteso}
+
+Il blocco $M$-conservante usato per la riparazione non è
+CNOT--$R_y$--CNOT ma una rotazione di Givens,
+\begin{equation}
+\mathrm{RBS}(\varphi) =
+\begin{pmatrix}
+1 & 0 & 0 & 0\\
+0 & \cos\varphi & -\sin\varphi & 0\\
+0 & \sin\varphi & \cos\varphi & 0\\
+0 & 0 & 0 & 1
+\end{pmatrix}
+\qquad \text{(base } \{\ket{00},\ket{01},\ket{10},\ket{11}\}\text{)},
+\label{eq:rbs}
+\end{equation}
+identità su $\ket{00}$ e $\ket{11}$, rotazione reale ordinaria sul piano
+$\{\ket{01},\ket{10}\}$: per costruzione un operatore ortogonale che ruota
+un solo piano coordinato, lasciando invariato il resto dello spazio.
+Realizzato in porte elementari con due CZ attorno a una coppia di
+rotazioni $R_y(\varphi),R_y(-\varphi)$ (Fig.~\ref{fig:rbs}): due porte a
+due qubit.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{figure/circ_rbs_espanso}
+\caption{Blocco RBS$(\varphi)$ in porte elementari: due CZ attorno a due
+rotazioni $R_y(\pm\varphi)$, tra Hadamard.}
+\label{fig:rbs}
+\end{figure}
+\FloatBarrier
+
+La scelta di una rotazione reale (RBS), invece dell'alternativa di
+letteratura $W_{ij}(\theta)=e^{-i\theta\,\vs i\cdot\vs j}$ --- equivalente
+in popolazioni ($\cos^2\varphi,\sin^2\varphi$ con $\theta=2\varphi$) ma con
+una fase relativa immaginaria fra le due ampiezze, e una realizzazione a
+tre porte a due qubit ($R_{xx}R_{yy}R_{zz}$) contro le due di RBS --- è
+giustificata dal teorema spettrale: una matrice reale simmetrica come $H$
+ammette sempre una base di autovettori reali, quindi un operatore che deve
+portare uno stato reale in un altro stato reale, dentro un sottospazio a
+due dimensioni, non ha bisogno di fasi complesse. La fase extra di $W$ è un
+grado di libertà sempre sprecato per un'Hamiltoniana reale come questa, a
+un costo maggiore in porte a due qubit --- costo che pesa ulteriormente
+nel sistema aperto, dove ogni porta a due qubit è un canale di rumore in
+più.
+
+L'ansatz esteso aggiunge, dopo il blocco RBS, due rotazioni $R_y$
+indipendenti sui due qubit (Fig.~\ref{fig:pma-esteso}): due parametri in
+più (tre in totale), che rompono deliberatamente la conservazione di $M$
+facendo uscire lo stato dal settore. A differenza dell'ansatz base, qui
+non serve alcuna preparazione già entangled né una scelta di ramo in base
+a $b/J$: la porta fissa iniziale è sempre una singola $X$ (stato di
+prodotto $\ket{10}$), perché RBS esplora da sola l'intero sottospazio
+$\{\ket{01},\ket{10}\}$ --- il singoletto stesso è uno dei punti che
+raggiunge, a $\varphi=\pi/4$. L'entanglement, in questo ansatz, non è un
+dato di partenza costruito da porte fisse: è il risultato della stessa
+porta che l'ottimizzatore addestra.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.42\textwidth]{figure/circ_pma_esteso}
+\caption{Ansatz esteso: blocco RBS seguito da due rotazioni $R_y$
+indipendenti sui due qubit.}
+\label{fig:pma-esteso}
+\end{figure}
+\FloatBarrier
+
+Con l'ansatz esteso la fidelity torna a $1$ su tutto il range di campo, con
+e senza termine DM (Fig.~\ref{fig:riparazione}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\textwidth]{figure/fig04_vqe_riparazione}
+\caption{Fidelity dell'ansatz esteso (RBS $+\,2$ rotazioni) rispetto allo
+stato fondamentale esatto, con termine DM acceso: fidelity massima su
+tutto il range.}
+\label{fig:riparazione}
+\end{figure}
+\FloatBarrier
+
+\subsection{Risultati numerici di riferimento}
+
+Oltre alla scansione in campo, un punto di lavoro singolo --- indicato nel
+seguito come punto \emph{P1}, $b/J=0.35$, $D/J=0.80$ --- è usato come
+riferimento nelle sezioni successive, scelto perché lo stato fondamentale
+vi è una sovrapposizione genuina fra settori e il termine DM è ben acceso:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Ansatz & Parametri & $\mathcal F$ (punto P1) & CNOT (base nativa) \\
+\midrule
+HA (generico) & 6 & $1.000000$ & --- \\
+PMA base & 1 & $0.940200$ & --- \\
+PMA esteso (RBS $+\,2$) & 3 & $1.000000$ (12 cifre) & $2$ \\
+\bottomrule
+\end{tabular}
+\caption{Fidelity al punto di lavoro P1 ($b/J=0.35$, $D/J=0.80$), usato
+come riferimento nelle Sez.~\ref{sec:correlatori} e~\ref{sec:vqe-rumore}
+in avanti. L'ansatz esteso, transpilato nella base nativa
+$\{rz,sx,x,\mathrm{cx}\}$, costa $2$ CNOT.}
+\label{tab:vqe-p1}
+\end{table}
+
+Un secondo punto di lavoro --- indicato come \emph{P2},
+$b/J=-0.18$, $D/J=1$ (termine DM cinque volte più forte) --- è usato nelle
+sezioni sulla dinamica temporale (Sez.~\ref{sec:trotter}), dove serve una
+dinamica non monocromatica anziché uno stato fondamentale non banale. Il
+confronto fra ansatz si conferma identico anche a questo punto: fidelity
+HA $=1$, PMA base $=0.851664$, PMA esteso $=1$ (dodici cifre).
+
+Il criterio di progetto che emerge da questa sezione è generale: un
+ansatz variazionale va costruito sulle simmetrie che l'Hamiltoniana ha
+davvero, non su quelle che sarebbe comodo avesse. Un ansatz che rispetta
+una simmetria assente nell'Hamiltoniana è strutturalmente incapace di
+raggiungere lo stato fondamentale, indipendentemente dal numero di
+parametri; un blocco che rompe volutamente quella simmetria, anche con
+pochi parametri aggiuntivi, la ripara.
+
+\section{Evoluzione temporale: decomposizione di Suzuki--Trotter}
+\label{sec:trotter}
+
+\subsection{Il problema e la scomposizione dell'Hamiltoniana}
+
+L'evoluzione temporale di uno stato è $\ket{\psi(t)}=e^{-iHt}\ket{\psi(0)}$
+($\hbar=1$ in tutto il seguito). Non esiste una porta elementare che
+realizzi direttamente $e^{-iHt}$ per un'Hamiltoniana arbitraria; la via
+d'uscita è scomporre $H$ in pezzi che si sappiano esponenziare
+singolarmente. Per il dimero,
+\begin{equation}
+H = \underbrace{J\,\vs1\!\cdot\!\vs2 + b\,(Z_1{+}Z_2)}_{H_1}
+  \;+\; \underbrace{D\,(X_1Z_2-Z_1X_2)}_{H_2},
+\label{eq:H1H2}
+\end{equation}
+dove $H_1$ raccoglie scambio isotropo e campo (i termini che, con $D=0,$
+conservano la magnetizzazione totale) e $H_2$ è il solo termine DM. Con
+$D=0$, $H_1$ e $H_2$ commutano banalmente ($H_2=0$) e non serve alcuna
+approssimazione. Con $D\neq0$, $H_1$ e $H_2$ non commutano, quindi
+$e^{-iHt}\neq e^{-iH_1t}e^{-iH_2t}$, e serve un metodo approssimato
+controllato: la decomposizione di Suzuki--Trotter.
+
+\subsection{Formula di Trotter ed errore}
+
+Si divide l'intervallo $[0,t]$ in $N$ passi di durata $\tau=t/N$ e si
+alterna
+\begin{equation}
+e^{-iHt} \;\simeq\; \Big(e^{-iH_2\tau}\,e^{-iH_1\tau}\Big)^{N}.
+\label{eq:trotter}
+\end{equation}
+L'errore per singolo passo è $O(\tau^2)$ (dal commutatore
+$[H_1,H_2]\neq0$); sommato su $N$ passi, l'errore sull'operatore di
+evoluzione resta $O(t^2/N)$, cioè $O(1/N)$ a $t$ fissato, mentre la
+perdita di fidelity sullo stato --- quadratica nell'errore
+sull'operatore --- scala come $O(1/N^2)$. All'aumentare di $N$
+l'approssimazione migliora, ma il circuito si allunga proporzionalmente.
+
+Il circuito per un singolo passo (Fig.~\ref{fig:circ-trotter}) realizza
+$e^{-iH_1\tau}$ con due rotazioni $R_z$ (per il campo) seguite dai tre
+blocchi $R_{xx},R_{yy},R_{zz}$ (per lo scambio isotropo, i cui addendi
+commutano a due a due e si fattorizzano quindi esattamente), e
+$e^{-iH_2\tau}$ con due rotazioni $ZZ$ coniugate da porte di Hadamard.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/circ_trotter}
+\caption{Un singolo passo di Trotter: $e^{-iH_1\tau}$ (rotazioni $R_z$ del
+campo, poi $R_{xx},R_{yy},R_{zz}$ dello scambio) seguito da
+$e^{-iH_2\tau}$ (termine DM, due $R_{zz}$ coniugate da Hadamard). Il
+circuito completo è questo blocco ripetuto $N$ volte.}
+\label{fig:circ-trotter}
+\end{figure}
+\FloatBarrier
+
+\subsection{Verifica dello scaling dell'errore}
+
+Al punto di lavoro P2 ($b/J=-0.18$, $D/J=1$), con stato iniziale
+$\ket{\uparrow\uparrow}$ (scelto perché non è autostato di $H_1$ né di
+$H_2$: uno stato che lo fosse evolverebbe banalmente sotto ciascun blocco e
+non mostrerebbe l'errore di Trotter anche quando presente), l'evoluzione
+calcolata algebricamente e quella eseguita dal circuito transpilato
+coincidono a precisione di macchina (scarto massimo $2.4\times10^{-13}$ su
+una griglia da $N=1$ a $N=512$): l'implementazione in porte non introduce
+errori propri oltre a quello di Trotter stesso.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig06_trotter_errore}
+\caption{Errore a tempo fissato ($t=6$) al crescere di $N$, scala
+doppio-logaritmica: distanza fra operatori di evoluzione (blu, scaling
+$1/N$) e perdita di fidelity sullo stato (rosso, scaling $1/N^2$). Le
+rette tratteggiate sono le pendenze teoriche attese.}
+\label{fig:errore-trotter}
+\end{figure}
+\FloatBarrier
+
+Le pendenze misurate con un fit sui punti $N\ge8$ sono $-1.008$ e
+$-2.059$, contro i valori teorici $-1$ e $-2$ (Tab.~\ref{tab:errore-trotter}).
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}rccc@{}}
+\toprule
+$N$ & $\lVert U_{\rm circuito}-U_{\rm esatto}\rVert$ & $1-\mathcal F$ & $\lvert\Delta\media{S_z}\rvert$ \\
+\midrule
+2 & $1.26$ & $3.9\times10^{-1}$ & $1.8\times10^{-1}$ \\
+8 & $2.7\times10^{-1}$ & $8.6\times10^{-3}$ & $3.8\times10^{-2}$ \\
+32 & $6.5\times10^{-2}$ & $4.3\times10^{-4}$ & $2.3\times10^{-3}$ \\
+128 & $1.6\times10^{-2}$ & $2.6\times10^{-5}$ & $1.5\times10^{-4}$ \\
+512 & $4.0\times10^{-3}$ & $1.6\times10^{-6}$ & $9.1\times10^{-6}$ \\
+\bottomrule
+\end{tabular}
+\caption{Errore a $t=6$, punto P2. Raddoppiando $N$, la prima colonna si
+dimezza e la seconda si divide per quattro, come atteso dallo scaling
+teorico.}
+\label{tab:errore-trotter}
+\end{table}
+
+\subsection{Costo in porte}
+
+Il passo di Trotter, scritto come in Fig.~\ref{fig:circ-trotter}, usa $5$
+porte a due qubit. Ricompilando l'intero passo, invece di tradurre le $5$
+porte una per una, nella base nativa (CNOT più rotazioni a un qubit), il
+compilatore riconosce che insieme realizzano un unico operatore unitario a
+due qubit e lo risintetizza con la decomposizione ottima nota per un gate
+a due qubit arbitrario, al più $3$ CNOT:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Compilazione & CNOT per passo & Profondità \\
+\midrule
+Traduzione diretta, non ottimizzata & $10$ & $37$ \\
+Compilazione ottimizzata & $\mathbf{3}$ & $13$ \\
+\bottomrule
+\end{tabular}
+\caption{Costo di un passo di Trotter dopo transpilazione nel set di porte
+nativo. La compilazione ottimizzata riduce le porte a due qubit di un
+fattore superiore a tre.}
+\label{tab:costo-trotter}
+\end{table}
+\FloatBarrier
+
+L'errore di Trotter scende aumentando $N$, ma il costo in porte a due
+qubit --- il fattore dominante il tasso di errore su hardware reale ---
+sale linearmente con $N$: esiste quindi un compromesso, e un $N$ ottimo
+che non è né il più piccolo né il più grande. Determinarlo richiede un
+modello di rumore esplicito (Sez.~\ref{sec:dinamica-rumore}).
+
+\subsection{Combinazione con l'errore di preparazione}
+
+Lo stato di partenza dell'evoluzione temporale, nella pipeline completa,
+non è $\ket{\uparrow\uparrow}$ ma lo stato prodotto dal VQE
+(Sez.~\ref{sec:vqe}). Ripetendo l'evoluzione di Trotter al punto P2 a
+partire dai due ansatz --- la cui fidelity rispetto al fondamentale esatto
+è, a questo punto, $0.8517$ per il PMA base e $1$ (dodici cifre) per il
+PMA esteso --- i due errori del progetto (preparazione ed evoluzione) si
+separano nettamente (Fig.~\ref{fig:trotter-due-ansatz}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig12_trotter_due_ansatz}
+\caption{Evoluzione di $\media{S_z^{\rm tot}}(t)$ al punto P2, con $N=20$
+passi di Trotter, a partire dai due ansatz del VQE. Nera: evoluzione
+esatta dal fondamentale esatto. Tratteggiata: evoluzione esatta a partire
+dallo stato del VQE (isola l'errore di preparazione). Punteggiata:
+evoluzione con il circuito di Trotter a partire dallo stesso stato
+(entrambi gli errori). \textbf{Sinistra}, PMA base: le curve del VQE si
+staccano nettamente dall'esatta. \textbf{Destra}, PMA esteso: le tre
+curve sono indistinguibili.}
+\label{fig:trotter-due-ansatz}
+\end{figure}
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Ansatz & Solo VQE & VQE + circuito ($N=20$) & Solo circuito (da VQE) \\
+\midrule
+PMA base (1 par.) & $0.327$ & $0.322$ & $0.024$ \\
+PMA esteso (3 par.) & $0.000$ & $0.033$ & $0.033$ \\
+\bottomrule
+\end{tabular}
+\caption{Scarto massimo su $\media{S_z^{\rm tot}}(t)$ al punto P2,
+scomposto per contributo. Con l'ansatz base, l'errore di preparazione
+($0.327$) domina di oltre un ordine di grandezza quello di Trotter a
+$N=20$ ($0.024$): aumentare $N$ non lo tocca. Con l'ansatz esteso l'errore
+di preparazione si annulla per costruzione e resta solo Trotter
+($0.033$).}
+\label{tab:doppio-errore}
+\end{table}
+
+I due errori del progetto non sono intercambiabili: conviene sempre
+attaccare per primo l'errore dominante, prima di investire in un $N$ più
+grande.
+
+\section{Correlatori dinamici a due tempi}
+\label{sec:correlatori}
+
+\subsection{Definizione e problema di misura}
+
+La grandezza di interesse è il correlatore a due tempi
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) \;=\;
+\bra{\psi_0}\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,\ket{\psi_0},
+\qquad \alpha,\beta\in\{x,y,z\},\quad i,j\in\{1,2\},
+\label{eq:correlatore}
+\end{equation}
+la cui trasformata di Fourier è la quantità osservata in una misura di
+scattering di neutroni su una molecola magnetica. Il prodotto
+$\sigma_i^\alpha(t)\sigma_j^\beta(0)$ non è hermitiano: il suo valore
+d'aspettazione è in generale complesso, e nessuna misura proiettiva lo
+restituisce direttamente.
+
+\subsection{Circuito: test di Hadamard con qubit ausiliario}
+
+Il correlatore si misura con un qubit ausiliario (ancilla) in
+sovrapposizione, che condiziona le operazioni sul registro fisico
+(Fig.~\ref{fig:circ-correlatore}): si prepara $\ket{\psi_0}$ sul registro,
+si apre l'ancilla con Hadamard, si applica $\sigma_j^\beta$ controllata
+dall'ancilla, si evolve il registro con $U(t)$ --- \emph{non} controllata,
+condizione essenziale per la realizzabilità del circuito --- si applica
+$\sigma_i^\alpha$ anti-controllata, si richiude l'ancilla e la si misura.
+Parte reale e parte immaginaria del correlatore si ottengono da due
+esecuzioni che differiscono solo per l'ultima rotazione sull'ancilla
+prima della misura ($H$ per la parte reale, $R_x(\pi/2)$ per
+l'immaginaria).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.78\textwidth]{figure/circ_correlatore}
+\caption{Circuito ad ancilla per il correlatore dinamico (schema con soli
+$2$ passi di Trotter per leggibilità). L'evoluzione $U(t)$ non è
+controllata; solo gli operatori di Pauli lo sono.}
+\label{fig:circ-correlatore}
+\end{figure}
+\FloatBarrier
+
+Verificato contro un riferimento classico indipendente (esponenziale di
+matrice diretto, che non condivide codice con il circuito): residuo medio
+$4.5\times10^{-3}$, massimo $1.1\times10^{-2}$ con $N=200$ passi di
+Trotter, crescente con $t$ come atteso da un errore di discretizzazione
+(Fig.~\ref{fig:validazione-correlatore}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{figure/fig07_correlatore_validazione}
+\caption{Correlatore rappresentativo su $t\in[0,6]$: curve continue
+(riferimento classico) contro simboli (circuito quantistico), parte reale
+e immaginaria.}
+\label{fig:validazione-correlatore}
+\end{figure}
+\FloatBarrier
+
+\subsection{Scelta del correlatore e contenuto spettrale}
+
+Con due siti e tre componenti esistono $36$ combinazioni
+$(i,\alpha,j,\beta)$, non equivalenti. Dodici sono esattamente nulle
+all'istante iniziale --- le combinazioni a siti diversi con una sola
+componente $y$, e quelle sullo stesso sito con componenti $x,z$ --- perché
+l'Hamiltoniana è reale e simmetrica, il suo stato fondamentale si può
+scegliere reale, e un prodotto di Pauli hermitiano ma puramente
+immaginario ha media nulla su uno stato reale. Nessuna delle $36$ resta
+nulla per ogni tempo, tuttavia: uno zero iniziale non implica un segnale
+trascurabile a tempi successivi (Fig.~\ref{fig:scan36}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig08_scan36}
+\caption{Tutte le $36$ combinazioni al punto P1. \textbf{Sinistra:} valore
+all'istante iniziale, dodici caselle esattamente nulle. \textbf{Destra:}
+ampiezza massima su $t\in[0,8]$, nessuna casella nulla.}
+\label{fig:scan36}
+\end{figure}
+\FloatBarrier
+
+Inserendo la risoluzione dell'identità sugli autostati $\ket n$ di $H$,
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) = \sum_{n} c_n\, e^{-i(E_n-E_0)t}, \qquad
+c_n = \bra0\sigma_i^\alpha\ket n\bra n\sigma_j^\beta\ket0,
+\label{eq:decomposizione-spettrale}
+\end{equation}
+il segnale è esattamente una somma di quattro esponenziali complessi (uno
+per autostato del dimero), verificata numericamente a precisione di
+macchina contro il calcolo diretto. Un correlatore è "ricco" (più
+transizioni di peso comparabile, rapporto $a_2/a_1$ fra le due righe più
+pesanti $\approx1$) o "monocromatico" ($a_2/a_1\approx0$) indipendentemente
+dalla sua ampiezza: le due proprietà non sono correlate. Il correlatore
+$C_{11}^{yz}$, con $a_2/a_1=0.71$ (tre pesi comparabili), è scelto come
+riferimento nel seguito, incluso nella Parte 2, perché genuinamente ricco
+senza essere un caso estremo.
+
+\subsection{Effetto di una preparazione imperfetta}
+
+Sostituendo le ampiezze esatte con lo stato prodotto dal VQE al punto P1
+($\mathcal F=0.9402$ per il PMA base, $\mathcal F\approx1$ per il PMA
+esteso) e usando il circuito completo (ansatz $+$ ancilla $+$ $N=200$
+passi di Trotter) per l'evoluzione, si osserva la stessa gerarchia di
+errori già vista in Sez.~\ref{sec:trotter} (Fig.~\ref{fig:correlatore-vqe}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig14_correlatore_da_vqe}
+\caption{$\lvert C_{11}^{yz}(t)\rvert$ su $t\in[0,8]$, preparato con i due
+ansatz e fatto evolvere con il circuito completo. \textbf{Sinistra}, PMA
+base: scarto visibile dal riferimento esatto. \textbf{Destra}, PMA
+esteso: curve pressoché indistinguibili.}
+\label{fig:correlatore-vqe}
+\end{figure}
+\FloatBarrier
+
+Lo scarto massimo sul correlatore complesso, circuito vero incluso, è
+$0.607$ con l'ansatz base --- dominato quasi per intero dall'errore di
+preparazione, che da solo vale $0.602$ --- e $0.019$ con l'ansatz esteso,
+dove l'errore di preparazione è nullo per costruzione e resta solo
+l'errore di Trotter. Uno scan sistematico sulle $36$ combinazioni, con
+entrambi gli ansatz e il circuito vero, conferma il quadro: per il PMA
+base uno scarto medio $\sim0.35$ con un fattore $\sim11\times$ fra
+combinazione più protetta e più fragile (le direzioni legate a una
+rotazione $y$, la stessa usata dal blocco dell'ansatz base, restano
+relativamente protette); per il PMA esteso uno scarto uniformemente
+piccolo, $0.011$--$0.032$ --- il vero errore di Trotter residuo, non più
+mascherato da un errore di preparazione dominante.
+
+\section{Sistema aperto: il modello di rumore}
+\label{sec:rumore}
+
+\subsection{Dal vettore di stato all'operatore densità}
+
+Tutti i risultati fin qui discussi assumono un'evoluzione unitaria su uno
+stato puro $\ket\psi$: un'idealizzazione utile per mettere a punto un
+metodo, ma non ciò che avviene su un dispositivo quantistico reale, dove
+ogni qubit è accoppiato a un ambiente non osservato e ogni gate ha una
+probabilità non nulla di eseguire un'operazione diversa da quella
+prevista. L'Hamiltoniana \eqref{eq:H} non cambia; cambia il modo in cui il
+circuito viene eseguito. Lo stato del sistema smette di essere un vettore
+puro e diventa un operatore densità $\rho$; l'evoluzione, non più
+un'unitaria pura, è un'operazione quantistica più generale (in Qiskit,
+`AerSimulator(method="density\_matrix")`). Ogni quantità della pipeline si
+riscrive di conseguenza: l'energia diventa $\Tr[\rho H]$ al posto di
+$\bra\psi H\ket\psi$, e la fedeltà rispetto a un riferimento puro
+$\ket{\psi_{\rm rif}}$ diventa $F=\bra{\psi_{\rm rif}}\rho\ket{\psi_{\rm rif}}$.
+
+\subsection{Due canali di rumore, calibrati su hardware reale}
+
+Il modello di rumore adottato è deliberatamente minimale: due soli
+meccanismi, l'errore di gate (canale depolarizzante, separato a uno e due
+qubit) e l'errore di lettura (readout). Rilassamento e defasamento
+($T_1$, $T_2$) sono esclusi in questa modellazione.
+
+Il canale depolarizzante a $n$ qubit ($d=2^n$) sostituisce lo stato con
+una miscela fra lo stato originale e lo stato massimamente misto,
+\begin{equation}
+\mathcal{E}(\rho) = (1-\lambda)\,\rho + \lambda\,\frac{\mathbf 1}{d}.
+\label{eq:depolarizzante}
+\end{equation}
+Le calibrazioni pubblicate riportano l'errore medio di gate $\varepsilon$
+da randomized benchmarking, legato a $\lambda$ da
+$\varepsilon=\lambda(d-1)/d$, da cui $\lambda_{1q}=2\varepsilon_{1q}$ e
+$\lambda_{2q}=\tfrac43\varepsilon_{2q}$. Il readout simmetrico è descritto
+da un solo parametro $p$ (probabilità di lettura errata, uguale in
+entrambe le direzioni), che agisce come fattore puramente moltiplicativo
+sull'osservabile $\media Z$,
+\begin{equation}
+\media{Z}_{\rm readout} = (1-2p)\,\media{Z}_{\rm ideale}.
+\label{eq:readout-simmetrico}
+\end{equation}
+Questa proprietà --- apparentemente un dettaglio --- è decisiva più avanti
+(Sez.~\ref{sec:scan-rumore}): un fattore moltiplicativo positivo non
+sposta mai la posizione di un massimo.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{figure/fig_depolarizzazione_bloch}
+\caption{Contrazione del vettore di Bloch, $1-\lambda$, in funzione di
+$\lambda$. Ai valori di calibrazione di riferimento la contrazione è
+piccola (sotto l'1\%) ma non nulla.}
+\end{figure}
+\FloatBarrier
+
+I quattro numeri del modello sono le mediane di calibrazione pubblicate
+per \texttt{ibm\_torino} (IBM Heron r1, 133 qubit), da Stenger, Bazargan,
+Bronn e Gunlycke~\cite{stenger2025}:
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}llc@{}}
+\toprule
+Canale & Gate di riferimento & Valore mediano\\
+\midrule
+Errore di gate, 1 qubit & \texttt{sx} & $\varepsilon_{1q}=2.9\times10^{-4}$\\
+Errore di gate, 2 qubit & \texttt{CZ} & $\varepsilon_{2q}=3.8\times10^{-3}$\\
+Errore di lettura & --- & $p_{\rm readout}=2.3\times10^{-2}$\\
+\bottomrule
+\end{tabular}
+\caption{Parametri di calibrazione usati nel modello di rumore.}
+\label{tab:calibrazione}
+\end{table}
+
+Il gate nativo a due qubit di \texttt{ibm\_torino} è il CZ, mentre il
+circuito di questa tesi è scritto in una base che include il CNOT.
+L'identità circuitale esatta
+$\text{CNOT}=(\mathbf 1\otimes H)\cdot\text{CZ}\cdot(\mathbf 1\otimes H)$
+(verificata anche numericamente a precisione di macchina) mostra che
+l'interazione fisica a due qubit --- dove si concentra la maggior parte
+dell'errore --- è la stessa in entrambi i casi; ciò che cambia è un cambio
+di base realizzato da due gate a un qubit, il cui costo aggiuntivo
+($\sim2\varepsilon_{1q}$, circa il 15\% di $\varepsilon_{2q}$) resta
+dichiarato. È quindi corretto descrivere $\varepsilon_{2q}$(CZ) come valore
+rappresentativo dell'ordine di grandezza dell'errore a due qubit, non come
+una replica esatta del CNOT sintetizzato.
+
+Con questi quattro numeri, il \texttt{NoiseModel} risultante coinvolge
+esattamente le istruzioni $\{rz,sx,x,\mathrm{cx},\mathrm{measure}\}$: i
+gate della base $\{rz,sx,x\}$ portano il canale a un qubit, il
+\texttt{cx} quello a due qubit, la \texttt{measure} l'errore di lettura.
+Ogni canale è applicato indipendentemente qubit per qubit (nessun
+crosstalk); il readout è simmetrico in questo modello di base (l'ipotesi
+è rilassata in Sez.~\ref{sec:readout-asimmetrico}); la calibrazione è un
+solo punto nel tempo.
+
+\section{Stato fondamentale sotto rumore}
+\label{sec:vqe-rumore}
+
+Con il modello di rumore fissato, la prima domanda è la più semplice
+della catena: l'ansatz esteso del VQE (Sez.~\ref{sec:vqe}), con gli stessi
+parametri $\theta^*$ ottimizzati nel caso ideale e riusati senza
+rioptimizzare, trova ancora uno stato accettabile se il circuito gira su
+un simulatore rumoroso? (La domanda complementare --- rioptimizzare
+vedendo il rumore --- è trattata in Sez.~\ref{sec:noise-aware}.) Il
+circuito, transpilato nella base nativa $\{rz,sx,x,\mathrm{cx}\}$, costa
+$2$ CNOT, al punto di lavoro P1.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+Condizione & $E$ & $F$ & CNOT\\
+\midrule
+Rumore nullo (coerenza) & $-3.57321145$ & $1.0000000000$ & $2$\\
+Rumore di riferimento (\texttt{ibm\_torino}) & $-3.50164605$ & $0.9850060074$ & $2$\\
+\bottomrule
+\end{tabular}
+\caption{Energia e fedeltà del VQE al punto P1, senza e con rumore di
+riferimento. Il caso a rumore nullo riproduce l'energia esatta a
+precisione numerica.}
+\label{tab:vqe-rumore}
+\end{table}
+
+Al rumore di riferimento la perdita di fedeltà è $1-F=0.014994$, poco
+sotto l'1.5\%: la scala di degradazione più piccola di tutta la pipeline,
+perché il circuito di preparazione, a soli $2$ CNOT, lascia poco spazio
+al rumore di accumularsi. Al variare di $\varepsilon_{2q}$ la degradazione
+è monotona e liscia, senza soglie (Fig.~\ref{fig:vqe-scan-eps2q}).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figure/fig_passo2_scan_eps2q}
+\caption{Energia e fedeltà rumorose in funzione di $\varepsilon_{2q}$, a
+$\varepsilon_{1q}$ e $p_{\rm readout}$ fissati al valore di riferimento
+(linea tratteggiata). Degradazione monotona, nessuna soglia.}
+\label{fig:vqe-scan-eps2q}
+\end{figure}
+\FloatBarrier
+
+\section{Dinamica sotto rumore: il numero ottimale di passi}
+\label{sec:dinamica-rumore}
+
+\subsection{Il compromesso}
+
+Nel sistema chiuso, aumentare $N$ migliora sempre l'approssimazione
+dell'evoluzione. Sotto rumore questo non è più vero: ogni passo aggiuntivo
+introduce gate rumorosi, e deve quindi esistere un numero ottimale di
+passi $N^*$. La quantità di riferimento è la fedeltà dello stato rumoroso
+rispetto allo stato bersaglio fisico,
+\begin{equation}
+\ket{\psi_{\rm target}(t)} = e^{-iHt}\ket{\psi_0^{\rm esatto}}, \qquad
+F(N) = \bra{\psi_{\rm target}(t)}\rho_N\ket{\psi_{\rm target}(t)},
+\label{eq:F-N}
+\end{equation}
+dove $\rho_N$ è ottenuto da: preparazione VQE rumorosa (Sez.~\ref{sec:vqe-rumore})
+seguita da $N$ passi di Trotter rumorosi. Il bersaglio
+$\ket{\psi_{\rm target}(t)}$ è calcolato dall'esponenziale diretto
+dell'Hamiltoniana intera (DM incluso), non dalla scomposizione di Trotter:
+un confronto altrimenti circolare. Una singola quantità impacchetta tre
+contributi: la preparazione (costante in $N$), l'errore di Trotter
+(decrescente in $N$) e il rumore di gate accumulato (crescente in $N$).
+
+Il singolo passo di Trotter è transpilato \emph{una sola volta} al suo
+costo minimo (matrice $4\times4$ risintetizzata nella base nativa, al più
+$3$ CNOT, lo stesso limite già stabilito in Sez.~\ref{sec:trotter}), e il
+blocco già compilato è composto $N$ volte; transpilare invece l'intero
+circuito assemblato produrrebbe una fusione spuria degli $N$ passi
+identici in un unico unitario a costo costante, cancellando la dipendenza
+da $N$ che è l'oggetto dello studio.
+
+\subsection{Risultato}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$N$ & $F$ (rumore nullo) & $F$ (\texttt{ibm\_torino}) & \\
+\midrule
+$1$ & $0.7799372$ & $0.7567291$ & \\
+$2$ & $0.4776280$ & $0.4624084$ & \\
+$3$ & $0.4018000$ & $0.3892000$ & minimo non perturbativo\\
+$8$ & $0.9454850$ & $0.8177249$ & $\approx N^*$\\
+$20$ & $0.9921835$ & $0.7097565$ & \\
+$80$ & $0.9995212$ & $0.3567462$ & \\
+$160$ & $0.9998804$ & $0.2686760$ & \\
+\bottomrule
+\end{tabular}
+\caption{Fedeltà rispetto allo stato bersaglio fisico al punto P1, senza
+e con rumore di riferimento. Senza rumore $F(N)\to1$ monotonamente per
+$N\gtrsim5$; con rumore la curva cresce fino a $N=8$ e poi decresce.}
+\label{tab:F-N}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{figure/fig_passo3_F_vs_N}
+\caption{Fedeltà $F(N)$ rispetto allo stato bersaglio fisico, a rumore di
+riferimento. Crescita rapida per $N$ piccolo (l'errore di Trotter
+domina), massimo a $N^*=8$, decrescita lenta per $N$ grande (il rumore di
+gate accumulato domina).}
+\label{fig:F-N}
+\end{figure}
+\FloatBarrier
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lc@{}}
+\toprule
+Quantità & Valore\\
+\midrule
+$N^*$ & $8$\\
+$F(N^*)$ & $0.817725$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+Solo il rumore di gate accumulato crea il massimo: senza rumore l'ottimo
+sarebbe $N\to\infty$. Un minimo non perturbativo a $N=3$ ($F\approx0.40$),
+identico a rumore nullo e a rumore acceso, conferma che si tratta di un
+effetto di Trotter puro nel regime non ancora perturbativo ($\tau=t/N$
+non piccolo per $N=1,2,3$), non di un artefatto del rumore o della
+simulazione. Il readout non compare in questa metrica --- è una fedeltà
+fra stati, non una misura via ancilla --- ed entra per la prima volta nel
+correlatore dinamico.
+
+\section{Correlatori sotto rumore}
+\label{sec:correlatori-rumore}
+
+\subsection{Il circuito, con il rumore su ogni ingrediente}
+
+Lo schema è lo stesso della Sez.~\ref{sec:correlatori}: preparazione di
+$\ket{\psi_0}$, Hadamard sull'ancilla, controlled-$W$, evoluzione $U(t)$
+via Trotter (non controllata), anti-controlled-$V$, rotazione di base e
+misura sull'ancilla. Sotto rumore, ciascun ingrediente è imperfetto: la
+preparazione (Sez.~\ref{sec:vqe-rumore}), il blocco $U(t)$ ripetuto
+(Sez.~\ref{sec:dinamica-rumore}), e la misura finale, che include anche
+l'errore di lettura --- qui il readout entra per la prima volta come una
+vera istruzione di misura, con un \texttt{ReadoutError} genuino agganciato
+al simulatore e $\media Z$ stimato dai conteggi su $2\times10^5$ shot
+(incertezza statistica attesa $\sigma\approx0.0022$), mai da una formula
+applicata a posteriori.
+
+Il conteggio di gate cresce linearmente in $N$: $4+3N$ CNOT (preparazione
+$2$, controlled-$W$ $1$, anti-controlled-$V$/rotazione $1$, più $3$ per
+ogni passo di Trotter), verificato blocco per blocco.
+
+Il correlatore di riferimento resta $C_{11}^{yz}$, scelto in
+Sez.~\ref{sec:correlatori} per il suo contenuto spettrale ricco.
+
+\subsection{Risultato: $N^*$ del correlatore}
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+$N$ & $|C|$ (rumore nullo) & $|C|$ (\texttt{ibm\_torino}, shot finiti) & \\
+\midrule
+$1$ & $0.4844$ & $0.4339$ & \\
+$2$ & $0.6574$ & $0.5894$ & $N^*$\\
+$3$ & $0.4998$ & $0.4298$ & \\
+$6$ & $0.2181$ & $0.1733$ & minimo locale\\
+$20$ & $0.2753$ & $0.1630$ & \\
+\bottomrule
+\end{tabular}
+\caption{Modulo del correlatore $C_{11}^{yz}(t{=}2)$ in funzione di $N$,
+punto P1.}
+\label{tab:C-N}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{figure/fig_passo4_correlatore_vs_N}
+\caption{$\lvert C_{11}^{yz}(t{=}2,N)\rvert$ in funzione di $N$, readout
+genuinamente campionato. Massimo a $N^*=2$, minimo locale attorno a
+$N\approx6$, lenta risalita successiva.}
+\label{fig:C-N}
+\end{figure}
+\FloatBarrier
+
+A differenza della fedeltà di Trotter (Sez.~\ref{sec:dinamica-rumore}),
+qui il massimo non nasce da un compromesso graduale Trotter/rumore: già a
+rumore nullo $|C(N)|$ ha un massimo locale non perturbativo a $N=2$
+($0.657$, quasi il doppio del valore fisico esatto
+$|C_{\rm esatto}(t{=}2)|=0.318$, ottenuto dalla somma spettrale
+\eqref{eq:decomposizione-spettrale}), seguito da un minimo attorno a
+$N\approx6$ e da una lenta risalita verso il valore vero
+(Fig.~\ref{fig:C-N-confronto}). Il rumore di gate accentua un massimo già
+presente nella dinamica di Trotter pura; non lo crea.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{figure/fig_passo4_confronto_rumore}
+\caption{$|C_{11}^{yz}(t{=}2,N)|$ senza e con rumore, $N=1$--$40$: il
+picco a $N=2$, il minimo a $N\approx6$ e la lenta risalita successiva sono
+presenti in entrambe le curve.}
+\label{fig:C-N-confronto}
+\end{figure}
+\FloatBarrier
+
+Va sottolineato che $N^*=\arg\max_N|C(N)|$ individua il punto di segnale
+più misurabile sotto rumore, non la stima più accurata del correlatore
+fisico $C(t)$: qui i due criteri divergono di un fattore $\sim2$. Per gli
+scopi di questa sezione e della successiva (fissare un compromesso
+Trotter/rumore, verificarne la sensibilità ai parametri del canale) è il
+criterio corretto; una stima fisicamente accurata di $C(t)$ andrebbe
+corretta per questo effetto.
+
+\subsection{Rappresentatività: scan sulle 36 combinazioni}
+
+Ripetendo lo scan sistematico di Sez.~\ref{sec:correlatori} sotto rumore,
+con il circuito vero e readout campionato ($5\times10^4$ shot per punto,
+incertezza attesa $\approx0.0045$), la distribuzione di $N^*$ sulle $36$
+combinazioni è concentrata su valori piccoli:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}cc@{}}
+\toprule
+$N^*$ & combinazioni (su 36)\\
+\midrule
+$1$ & $14$\\
+$2$ & $12$\\
+$3$ & $6$\\
+$4$ & $2$\\
+$5$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+$C_{11}^{yz}$ cade nel secondo gruppo più popoloso ($N^*=2$): un caso
+rappresentativo della distribuzione, non un estremo. Il fattore che
+decide $N^*$ non è la ricchezza spettrale $a_2/a_1$ ma quanto guadagno non
+perturbativo la dinamica di Trotter offre appena oltre $N=1$: le
+combinazioni che partono già vicine al proprio valore asintotico
+collassano a $N^*=1$ (nessun compromesso da negoziare); quelle con un
+guadagno sostanziale fra $N=1$ e il primo picco locale (dall'$11\%$ al
+$1229\%$, verificato su tutte le $36$ curve a rumore nullo) giustificano
+$N^*$ più alti.
+
+\section{Dipendenza di $N^*$ dai parametri di rumore}
+\label{sec:scan-rumore}
+
+Il compromesso Trotter/rumore misurato al punto di calibrazione di
+riferimento non è universale: dipende dal livello di rumore. Esplorando
+$\varepsilon_{1q}$ e $\varepsilon_{2q}$ un parametro alla volta (l'altro
+fissato al valore di riferimento):
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\varepsilon_{2q}$ & $N^*$\\
+\midrule
+$1.0\times10^{-3}$ & $10$\\
+$3.8\times10^{-3}$ (riferimento) & $8$\\
+$6.0\times10^{-3}$ & $7$\\
+$1.0\times10^{-2}$ & $1$\\
+$2.5\times10^{-2}$ & $1$\\
+\bottomrule
+\end{tabular}
+\qquad
+\begin{tabular}{@{}cc@{}}
+\toprule
+$\varepsilon_{1q}$ & $N^*$\\
+\midrule
+$1.0\times10^{-4}$ & $9$\\
+$2.9\times10^{-4}$ (riferimento) & $8$\\
+$1.0\times10^{-3}$ & $7$\\
+$3.0\times10^{-3}$ & $1$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.9\textwidth]{figure/fig_passo5_Nstar_vs_eps}
+\caption{$N^*$ (fedeltà di Trotter) in funzione di $\varepsilon_{2q}$
+(sinistra) e $\varepsilon_{1q}$ (destra), scala log. Monotonia
+non-crescente, con transizione a $N^*=1$ per rumore sufficientemente
+forte.}
+\label{fig:Nstar-vs-eps}
+\end{figure}
+\FloatBarrier
+
+$N^*$ è monotono non-crescente in entrambi i parametri di gate: oltre una
+soglia di rumore, nessun numero di passi maggiore di uno vale il costo
+aggiuntivo in gate rumorosi. Un modello ingenuo per l'errore totale,
+$\varepsilon_{\rm tot}(N)\sim a/N+g\varepsilon_{2q}N$ (Trotter più rumore,
+entrambi additivi), predice una pendenza log-log $-0.5$ per
+$N^*(\varepsilon_{2q})$; quella osservata sui punti non saturati è
+$-0.195$ --- compatibile con un decadimento moltiplicativo tipico di una
+fedeltà accumulata su rumore depolarizzante, $F(N)\sim(1-\varepsilon_{2q})^{cN}$,
+piuttosto che con un errore additivo su una singola quantità.
+
+Il readout, per contro, non sposta la posizione di $N^*$: verificato su
+misure genuinamente campionate, $N^*=2$ per il correlatore $C_{11}^{yz}$
+per ogni $p_{\rm readout}$ testato dallo $0\%$ al $20\%$ (ben oltre il
+valore di calibrazione, $2.3\%$), come atteso dal fatto che il readout
+simmetrico agisce come fattore puramente moltiplicativo
+\eqref{eq:readout-simmetrico}: un riscalamento per una costante positiva
+non sposta mai la posizione di un argmax.
+
+\section{Estensioni: ottimizzazione noise-aware e readout asimmetrico}
+\label{sec:estensioni}
+
+\subsection{VQE noise-aware}
+\label{sec:noise-aware}
+
+I risultati delle Sez.~\ref{sec:vqe-rumore}--\ref{sec:scan-rumore}
+misurano la degradazione di parametri VQE ottimizzati \emph{senza} vedere
+il rumore. Resta da chiedersi se rioptimizzare vedendo il rumore già
+durante l'ottimizzazione porti a parametri sostanzialmente diversi, e se
+questo cambi le conclusioni a valle.
+
+Il canale depolarizzante è isotropo: per lo stato puro
+$\ket{\psi(\theta)}$ preparato dall'ansatz,
+\begin{equation}
+\rho(\theta) = (1-\lambda)\,\ket{\psi(\theta)}\bra{\psi(\theta)} + \lambda\,\frac{\mathbf 1}{d},
+\end{equation}
+sicché l'energia rumorosa è una trasformazione \emph{affine}
+dell'energia ideale,
+\begin{equation}
+E_{\rm rumoroso}(\theta) = (1-\lambda)\,E_{\rm ideale}(\theta) + \lambda\,\frac{\Tr[H]}{d}.
+\label{eq:affine-energia}
+\end{equation}
+Una trasformazione affine a coefficiente positivo non sposta la posizione
+del minimo: lo stesso $\theta^*$ che minimizza $E_{\rm ideale}$ minimizza
+anche $E_{\rm rumoroso}$. A ciò si aggiunge che il conteggio CNOT del
+circuito transpilato non dipende dai valori numerici di $\theta$
+(verificato su assegnazioni casuali indipendenti), quindi non c'è nemmeno
+una via indiretta, tramite il costo in gate, per cui convenga uno
+spostamento.
+
+La previsione --- $\theta^*_{\rm rumore}\approx\theta^*_{\rm ideale}$,
+nessun vantaggio misurabile a rioptimizzare --- è confermata numericamente
+su due metriche strutturalmente diverse (una fedeltà additiva, il modulo
+di un correlatore), due punti di lavoro fisici (P1 e P2) e l'intera
+griglia di parametri di rumore della Sez.~\ref{sec:scan-rumore}
+($25/25$ punti):
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.25}
+\small
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Quantità & Riuso $\theta^*_{\rm ideale}$ & VQE noise-aware\\
+\midrule
+$E$ (rumoroso, P1) & $-3.50164605$ & $-3.50164616$\\
+$F$ (rumorosa, P1) & $0.98500601$ & $0.98500602$\\
+$N^*$ fedeltà di Trotter (P1) & $8$ & $8$\\
+$N^*$ correlatore $C_{11}^{yz}$ (P1) & $2$ & $2$\\
+\bottomrule
+\end{tabular}
+\caption{Confronto fra il riuso dei parametri ideali e la rioptimizzazione
+noise-aware. Lo scostamento in energia è $\Delta E\sim10^{-7}$, sei ordini
+di grandezza sotto la scala fisica del problema ($1-F\sim1.5\times10^{-2}$);
+$N^*$ resta identico su entrambe le metriche.}
+\label{tab:noise-aware}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figure/fig_F_vs_N_confronto}
+\caption{Fedeltà di Trotter $F(N)$, riuso ideale contro noise-aware:
+massimo a $N^*=8$ in entrambi i casi; lo scostamento (pannello destro,
+scala ingrandita) resta $\sim10^{-4}$.}
+\end{figure}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.85\textwidth]{figure/fig_correlatore_noise_aware_confronto}
+\caption{Modulo del correlatore rumoroso, riuso ideale contro
+noise-aware: massimo a $N^*=2$ in entrambi i casi.}
+\end{figure}
+\FloatBarrier
+
+Ripetuto a un secondo punto di lavoro (P2, termine DM cinque volte più
+forte), $N^*$ resta invariato fra le due preparazioni anche lì
+($8\to8$ per la fedeltà di Trotter, $2\to2$ per il correlatore). La
+ragione generale non è specifica della struttura di $N^*$: per qualunque
+osservabile ragionevolmente liscio dello stato preparato, uno scostamento
+$\Delta\theta$ piccolo garantisce, per continuità, uno scostamento a
+valle altrettanto piccolo, additivo o no.
+
+\subsection{Readout asimmetrico}
+\label{sec:readout-asimmetrico}
+
+Il modello di readout usato fin qui è simmetrico, $p_{01}=p_{10}=p$. Un
+readout asimmetrico ha due parametri distinti,
+$p_{01}=P(\text{misuro }1\mid\text{stato }\ket0)$ e
+$p_{10}=P(\text{misuro }0\mid\text{stato }\ket1)$; ripetendo la
+derivazione della correzione su $\media Z$ con una matrice di confusione
+generica,
+\begin{equation}
+\media{Z}_{\rm readout} = \alpha\,\media{Z}_{\rm ideale} + \beta,
+\qquad \alpha \equiv 1-p_{01}-p_{10}, \qquad \beta \equiv p_{10}-p_{01}.
+\label{eq:readout-asimmetrico}
+\end{equation}
+Il caso noto \eqref{eq:readout-simmetrico} è il sottocaso $\beta=0$ di
+questa formula più generale. Fisicamente, il meccanismo dominante
+dell'asimmetria è il rilassamento $T_1$ durante la finestra di misura: un
+qubit in $\ket1$ può decadere a $\ket0$ prima che la misura sia completata,
+mentre il processo inverso violerebbe la conservazione dell'energia in
+assenza di eccitazione esterna --- da cui un'asimmetria strutturale
+$p_{10}\gtrsim p_{01}$, osservata sistematicamente su hardware
+superconduttore IBM, tipicamente con un fattore $2$--$4\times$.
+
+Per il correlatore, la cui grandezza rilevante è un modulo nel piano
+complesso, un offset costante $\beta\neq0$ trasla l'intera curva $C(N)$
+nel piano complesso invece di riscalarla soltanto: la distanza
+dall'origine di ciascun punto cambia in modo diverso a seconda della sua
+posizione, e il massimo dopo la traslazione può non essere più quello di
+prima. L'invarianza di $N^*$ dimostrata nel caso simmetrico non si estende
+automaticamente: qui la risposta è empirica, non un teorema.
+
+Nessuno split $(p_{01},p_{10})$ realmente registrato per
+\texttt{ibm\_torino} è disponibile in forma citabile; si è quindi usato un
+rapporto rappresentativo $p_{10}:p_{01}=3$, tratto da calibrazioni IBM
+pubblicate su chip comparabili (range osservato $2$--$3.5\times$), a
+parità di media con il valore di riferimento simmetrico
+($p_{\rm readout}=2.3\times10^{-2}$): $p_{01}=0.0115$, $p_{10}=0.0345$.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.2}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+Configurazione di readout & $N^*$ & $|C(N^*)|$\\
+\midrule
+Simmetrico ($p_{01}=p_{10}=0.023$) & $2$ & $0.5869$\\
+Asimmetrico illustrativo ($p_{01}=0.0115$, $p_{10}=0.0345$) & $2$ & $0.6195$\\
+\bottomrule
+\end{tabular}
+\caption{Modulo del correlatore rumoroso al suo massimo, readout
+simmetrico contro asimmetrico (stessa media), verificato su dati
+genuinamente campionati.}
+\label{tab:readout-asimmetrico}
+\end{table}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{figure/fig_correlatore_N_asimmetrico}
+\caption{$\lvert C_{11}^{yz}(t{=}2,N)\rvert$, readout simmetrico contro
+asimmetrico a parità di media: il massimo resta a $N^*=2$ in entrambi i
+casi.}
+\end{figure}
+\FloatBarrier
+
+Uno stress test a media fissa, con rapporti $p_{10}{:}p_{01}$ ben oltre il
+range realistico, mostra $N^*=2$ invariato fino a un rapporto $50\times$:
+
+\begin{center}
+\renewcommand{\arraystretch}{1.15}
+\small
+\begin{tabular}{@{}cccc@{}}
+\toprule
+Rapporto $p_{10}{:}p_{01}$ & $p_{01}$ & $p_{10}$ & $N^*$\\
+\midrule
+$1$ (simmetrico) & $0.0230$ & $0.0230$ & $2$\\
+$3$ (illustrativo) & $0.0115$ & $0.0345$ & $2$\\
+$10$ & $0.0042$ & $0.0418$ & $2$\\
+$50$ & $0.0009$ & $0.0451$ & $2$\\
+\bottomrule
+\end{tabular}
+\end{center}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.58\textwidth]{figure/fig_Nstar_vs_rapporto}
+\caption{$N^*$ in funzione del rapporto $p_{10}{:}p_{01}$ (scala log), a
+media fissa: $N^*=2$ per quattro ordini di grandezza di rapporto.}
+\end{figure}
+\FloatBarrier
+
+Questa invarianza empirica non è garantita dalla teoria --- che ammette in
+linea di principio anche il caso opposto, un offset che appiattisce o
+sposta il massimo --- ma è coerente con essa: per questo correlatore, a
+questo punto di lavoro, l'offset $\beta(1+i)$ introdotto dall'asimmetria
+si allontana dall'origine più agli $N$ già vicini al picco che agli $N$
+lontani da esso, accentuando il massimo esistente invece di spostarlo. È
+un fatto numerico specifico di questo correlatore e di questo punto di
+lavoro, non una conseguenza necessaria della struttura del problema.
+
+\section{Sintesi dei risultati}
+
+Il dimero di Heisenberg isotropo con termine di Dzyaloshinskii--Moriya si
+è dimostrato un banco di prova completo per la simulazione quantistica di
+sistemi di spin molecolari, sufficientemente semplice da ammettere un
+riferimento esatto a ogni stadio e sufficientemente ricco da contenere
+tutti gli ingredienti fisici rilevanti: un incrocio di livelli protetto da
+simmetria e la sua rottura esplicita, un ansatz variazionale che fallisce
+per ragioni strutturali di simmetria e la sua riparazione minimale, la
+necessità di un'approssimazione controllata (Trotter) per l'evoluzione
+temporale non banale, un osservabile a due tempi che richiede un circuito
+ausiliario, e infine il comportamento non monotono di un algoritmo di
+simulazione temporale in presenza di rumore realistico.
+
+I risultati quantitativi principali sono riassunti in Tab.~\ref{tab:sintesi}.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.35}
+\small
+\begin{tabular}{@{}p{4.6cm}p{10.5cm}@{}}
+\toprule
+Stadio & Risultato principale \\
+\midrule
+Sistema chiuso, spettro & Incrocio esatto a $B/J=2$ ($D=0$); gap minimo $0.565$ con $D/J=0.2$ \\
+VQE, ansatz $M$-conservante & Fallisce vicino all'incrocio con DM ($\mathcal F\to0.70$); riparato da RBS $+\,2$ rotazioni ($\mathcal F=1$ sempre) \\
+Dinamica (Trotter), sistema chiuso & Errore $\sim1/N$ (operatore), $\sim1/N^2$ (fidelity); costo minimo $3$ CNOT/passo \\
+Correlatori, sistema chiuso & Errore di preparazione domina l'errore di Trotter quando l'ansatz non è esteso \\
+VQE sotto rumore & $1-F\approx1.5\%$ al punto di calibrazione di riferimento \\
+Dinamica sotto rumore & $N^*=8$ (fedeltà); solo il rumore di gate crea il massimo \\
+Correlatori sotto rumore & $N^*=2$ (correlatore $C_{11}^{yz}$); rappresentativo su 36 combinazioni \\
+Dipendenza dai parametri di rumore & $N^*$ monotono non-crescente in $\varepsilon_{1q},\varepsilon_{2q}$; invariante nel readout simmetrico \\
+VQE noise-aware & Nessun vantaggio misurabile a rioptimizzare ($\Delta E\sim10^{-7}$) \\
+Readout asimmetrico & $N^*=2$ invariato fino a rapporti $50\times$ oltre il range realistico \\
+\bottomrule
+\end{tabular}
+\caption{Sintesi dei risultati principali, sistema chiuso e sistema
+aperto, dimero di Heisenberg con termine DM.}
+\label{tab:sintesi}
+\end{table}
+
+\begin{thebibliography}{9}
+
+\bibitem{crippa2021}
+D.~Crippa, R.~Pisoni, F.~Tacchino, A.~Chiesa, S.~Carretta, \emph{Simulation
+of quantum many-body dynamics for a molecular spin system on a
+superconducting quantum processor}, Magnetochemistry \textbf{7}, 117 (2021).
+
+\bibitem{stenger2025}
+J.~D.~Stenger, M.~Bazargan, B.~S.~Bronn, D.~Gunlycke, \emph{Method for
+simulating open-system dynamics using mid-circuit measurements on a
+quantum computer}, arXiv:2504.15187 (2025).
+
+\end{thebibliography}
+
+\end{document}
+

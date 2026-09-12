@@ -1,0 +1,1083 @@
+\documentclass[11pt,a4paper]{article}
+\input{preambolo}
+
+\title{\bfseries Simulazione quantistica di un trimero di spin ad anello:\\
+stato fondamentale, dinamica e correlatori,\\
+in assenza e in presenza di rumore}
+\author{Samuele Schiavi \\ \small Tesi triennale in Fisica, Università di Parma
+--- Relatore: Prof.\ Alessandro Chiesa}
+\date{}
+
+\begin{document}
+\maketitle
+\thispagestyle{fancy}
+
+\begin{abstract}
+\noindent
+Si studia un sistema di tre spin $1/2$ accoppiati ciclicamente (trimero ad
+anello), estensione del caso più semplice del dimero già trattato in
+precedenza, con l'obiettivo di simulare quantisticamente le sue proprietà
+statiche e dinamiche tramite il Variational Quantum Eigensolver (VQE) e la
+decomposizione di Suzuki--Trotter. Il lavoro è organizzato in due parti.
+Nella prima si tratta il sistema come chiuso: si determina lo spettro
+esatto, si costruisce un ansatz variazionale per lo stato fondamentale, si
+implementa l'evoluzione temporale reale e si calcolano correlatori
+dinamici a due tempi, tutto su simulatore a vettore di stato ideale. Nella
+seconda si introduce un modello di rumore realistico, calibrato su
+hardware IBM, e si ripetono le stesse misure nel formalismo dell'operatore
+densità, per quantificare quanto ciascuno strumento sopravvive
+all'imperfezione dell'hardware. Rispetto al dimero, il trimero introduce
+un ingrediente fisico assente nel caso a due spin --- la frustrazione
+geometrica --- insieme a complicazioni tecniche concrete che ne derivano:
+più forme possibili per il termine di interazione antisimmetrica, un
+ansatz variazionale a più parametri il cui confronto capovolge la
+conclusione già stabilita sul dimero, e una struttura di Trotter a più
+livelli annidati.
+\end{abstract}
+
+\tableofcontents
+
+% =====================================================================
+\part*{Parte I --- Il sistema chiuso}
+\addcontentsline{toc}{part}{Parte I --- Il sistema chiuso}
+% =====================================================================
+
+\section{Il modello fisico}
+\label{sec:modello}
+
+\subsection{Hamiltoniana e topologia}
+
+Il sistema è costituito da tre spin $1/2$ disposti ai vertici di un
+triangolo isoscele: un legame di scambio $J$ chiude la base, fra i siti
+$1$ e $2$, e due legami $J'$ ne formano i lati, fra le coppie $(2,3)$ e
+$(3,1)$. Il caso equilatero frustrato corrisponde a $J'=J$; nel presente
+lavoro si mantiene fisso il rapporto $J'/J=0.4$, con $J=1$ come unità di
+energia. In presenza di un campo assiale $b$ lungo $z$ e di un termine di
+interazione antisimmetrica di Dzyaloshinskii--Moriya (DM) di intensità
+$D$, l'Hamiltoniana completa è
+\begin{equation}
+H = \underbrace{J\,\vec\sigma_1\!\cdot\!\vec\sigma_2 +
+J'\,(\vec\sigma_2\!\cdot\!\vec\sigma_3+\vec\sigma_3\!\cdot\!\vec\sigma_1)}_{\text{scambio isotropo}}
++ \underbrace{b\,(Z_1+Z_2+Z_3)}_{\text{campo}}
++ \underbrace{D\sum_{\langle i,j\rangle} (X_iZ_j-Z_iX_j)}_{\text{termine DM}},
+\label{eq:H}
+\end{equation}
+con $\vec\sigma_i\cdot\vec\sigma_j=X_iX_j+Y_iY_j+Z_iZ_j$. Come nel caso del
+dimero, ogni spin $1/2$ si mappa direttamente su un qubit fisico, senza
+alcun mapping fermionico intermedio: il costo di rappresentazione non
+cambia passando da due a tre siti. Il legame $J'$ fra $(3,1)$, assente in
+una catena aperta a tre siti, è ciò che chiude il ciclo e genera la
+frustrazione discussa di seguito.
+
+\subsection{Frustrazione geometrica}
+
+Con scambio antiferromagnetico ($J,J'>0$), ogni legame favorisce
+energeticamente una configurazione con i due spin antiparalleli. Su un
+ciclo di lunghezza pari questa condizione può essere soddisfatta su tutti
+i legami simultaneamente (configurazione alternata). Su un ciclo di
+lunghezza \emph{dispari}, come il triangolo qui considerato, questo non è
+mai possibile: comunque si orientino i tre spin, almeno un legame resta
+con i suoi due spin paralleli, energeticamente sfavorito. Questa è la
+frustrazione geometrica: un fatto strutturale, che dipende dalla parità
+del ciclo e non dai valori specifici di $J,J'$. Un sistema a due spin (il
+dimero) non può mostrare questo fenomeno per costruzione, avendo un solo
+legame.
+
+\subsection{Spettro esatto: decomposizione di Kambe}
+
+La simmetria di scambio fra i due siti della base, $1\leftrightarrow2$,
+permette di risolvere lo spettro in forma chiusa componendo prima i
+momenti angolari della coppia $(1,2)$ in uno spin totale $S_{12}\in\{0,1\}$
+e poi accoppiando il terzo spin al risultato (decomposizione di Kambe).
+Per $D=0$ si ottengono tre multipletti:
+\begin{align}
+\text{A}\ (S_{12}{=}1,\,S{=}3/2):&\quad E_A = J+2J', \\
+\text{B}\ (S_{12}{=}1,\,S{=}1/2):&\quad E_B = J-4J', \\
+\text{C}\ (S_{12}{=}0,\,S{=}1/2):&\quad E_C = -3J,
+\end{align}
+ciascuno separato in campo secondo $E(S,M)=E_\text{blocco}+2bM$. Il campo
+critico, al quale il fondamentale cambia identità, dipende da quale
+multipletto sia il fondamentale a $b=0$:
+\begin{equation}
+b_c = \begin{cases} 2J+J' & \text{se il fondamentale a } b{=}0 \text{ è C}, \\
+3J' & \text{se è B.}\end{cases}
+\end{equation}
+Al punto di lavoro adottato in questo capitolo ($J'/J=0.4$), il
+fondamentale a $b=0$ è il blocco C, e quindi $b_c=2J+J'=2.4\,J$. Lo
+spettro numerico, ottenuto per diagonalizzazione diretta della matrice
+$8\times8$, coincide con queste formule analitiche a precisione macchina
+su tutta la griglia di campo esplorata.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.78\textwidth]{figure/fig01_spettro_anello}
+\caption{Spettro del trimero isoscele ($J'/J=0.4$), $D=0$, in funzione del
+campo $b/J$. Otto livelli in tre famiglie secondo la decomposizione di
+Kambe (blocchi A, B, C). La curva che segue lo stato fondamentale parte
+dal blocco C e incrocia il blocco A al campo critico $b_c/J=2.4$.}
+\label{fig:spettro}
+\end{figure}
+\FloatBarrier
+
+Senza termine DM, l'Hamiltoniana conserva sia la magnetizzazione totale
+$M$ sia il quadrato del momento angolare della coppia base, $S_{12}^2$:
+due numeri quantici buoni, non uno solo. L'incrocio a $b_c$ avviene fra
+il blocco C ($S_{12}=0$) e il blocco A ($S_{12}=1$): stati con $S_{12}^2$
+diverso non si mescolano finché questa simmetria resta intatta, e
+l'incrocio resta quindi un incrocio vero, non evitato.
+
+\subsection{Il termine di Dzyaloshinskii--Moriya: scelta della forma}
+\label{sec:dm}
+
+A differenza del dimero, dove il termine DM ha un'unica forma possibile
+(un solo legame), con tre legami esistono più modi di accendere
+un'interazione antisimmetrica, e non tutti rompono l'incrocio protetto
+discusso sopra. L'intera costruzione teorica del trimero isoscele
+presuppone l'invarianza per scambio dei siti $1,2$, rappresentata
+dall'operatore di permutazione $P_{12}$: un termine DM aggiunto senza
+vincoli rischierebbe di rompere questa simmetria in un modo non
+giustificato dalla geometria del problema.
+
+Sono state verificate sistematicamente tutte le $12$ combinazioni di
+segno di $(D_{12},D_{23},D_{31})\propto(J,J',J')$ (fattore di intensità
+comune $r$), calcolando $\max\lVert P_{12}H_\text{DM}P_{12}^\dagger -
+H_\text{DM}\rVert$ per ciascuna. Il risultato è netto: una sola
+disposizione di segno (a meno dello scambio $23\leftrightarrow31$)
+rispetta esattamente la simmetria.
+
+\begin{table}[htbp]
+\centering
+\renewcommand{\arraystretch}{1.4}
+\begin{tabular}{@{}p{2.3cm}p{6.3cm}p{6.3cm}@{}}
+\toprule
+\rowcolor{grigetto}
+& \textbf{Opzione A} (simmetrica) & \textbf{Opzione B} (adottata) \\
+\midrule
+forma & $D'\big[(X_2Z_3{-}Z_2X_3)-(X_3Z_1{-}Z_3X_1)\big]$, $D_{12}=0$ &
+$D(X_1Z_2{-}Z_1X_2)+0.4D(X_2Z_3{-}Z_2X_3)+0.4D(X_3Z_1{-}Z_3X_1)$ \\
+simmetria $P_{12}$ & rispettata esattamente & rotta \\
+$\lVert[H,S_{12}^2]\rVert$ & $\sim10^{-16}$ (esatto) & $\sim1.4$ a
+$D/J{=}0.15$ \\
+struttura residua & blocco $2{\times}2$ (C) $+$ blocco $6{\times}6$
+(A$+$B) & nessuna, $8\times8$ pieno \\
+apre l'incrocio? & no & sì \\
+\bottomrule
+\end{tabular}
+\caption{Le due forme del termine DM sopravvissute al vincolo di
+simmetria (o alla sua assenza). $D$ è il parametro di intensità
+complessivo; i coefficienti $0.4$ nell'Opzione B derivano dal rapporto
+$J'/J=0.4$ fissato in questo lavoro.}
+\label{tab:dm-opzioni}
+\end{table}
+\FloatBarrier
+
+La ragione per cui l'incrocio resta protetto sotto l'Opzione A, anche a
+intensità $D$ arbitraria, è la regola di non-incrocio di
+von~Neumann--Wigner: poiché l'Opzione A commuta con $S_{12}^2$,
+l'Hamiltoniana resta a blocchi nei due settori $S_{12}=0$ e $S_{12}=1$, e
+l'elemento di matrice fra uno stato del blocco C e uno stato del blocco A
+è esattamente nullo per ogni valore di $b$. Due livelli senza
+accoppiamento diretto possono incrociarsi liberamente al variare di un
+solo parametro, senza necessità di alcun aggiustamento fine. Sotto
+l'Opzione B, che non commuta con $S_{12}^2$, quell'elemento di matrice è
+generalmente non nullo: la regola non si applica più, e l'incrocio
+diventa evitato, con un gap minimo genuino.
+
+Numericamente: il gap minimo cercato in un intorno di $b_c$ (non a $b_c$
+fisso) vale $2.3\times10^{-8}$ a $b/J=2.372$ per l'Opzione A --- zero a
+precisione numerica, l'incrocio resta chiuso qualunque sia l'intensità
+del DM in questa forma --- e $0.2543$ a $b/J=2.407$ per l'Opzione B. Che
+l'incrocio resti vero sotto l'Opzione A non significa che resti fermo:
+sotto questa opzione l'Hamiltoniana si scompone esattamente in un blocco
+$2\times2$ isolato (settore C, accoppiamento con il resto nullo a
+precisione macchina) e un blocco $6\times6$ pieno (settore $S_{12}=1$,
+dove i sotto-blocchi A e B si mescolano fra loro, con elementi fuori
+diagonale fino a $1.13$). È questo mescolamento interno al settore
+$S_{12}=1$, non un mescolamento con il settore C, a spostare il ramo più
+basso di quel settore e con esso il punto di incrocio, da $b/J=2.4$ a
+$b/J\approx2.372$; il blocco C, isolato, resta esattamente sulla formula
+$D=0$ per costruzione.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig02_gap_magnetizzazione_anello}
+\caption{\textbf{Sinistra:} distanza fondamentale--primo eccitato, $D=0$
+contro le due opzioni di DM ($D/J=0.15$). L'Opzione A resta
+indistinguibile da $D=0$ esattamente al punto critico; l'Opzione B apre
+un gap minimo vero, $0.254$, spostato a $b/J=2.407$.
+\textbf{Destra:} magnetizzazione dello stato fondamentale, $D=0$ contro
+Opzione B: il salto netto diventa un crossover continuo.}
+\label{fig:gap}
+\end{figure}
+\FloatBarrier
+
+Nel seguito di questo lavoro si adotta sempre l'\textbf{Opzione B}: è
+l'unica scelta di DM per cui il problema variazionale al punto critico è
+ben posto (l'incrocio protetto dall'Opzione A lascerebbe il fondamentale
+degenere, senza un bersaglio unico per il VQE) e per cui il trimero
+riproduce, punto per punto, lo stesso ruolo che il termine DM ha nel
+dimero.
+
+\section{Ricerca dello stato fondamentale: VQE}
+\label{sec:vqe}
+
+\subsection{Ansatz a confronto}
+
+Il VQE cerca $\boldsymbol\theta^*=\arg\min_{\boldsymbol\theta}
+\bra{\psi(\boldsymbol\theta)}H\ket{\psi(\boldsymbol\theta)}$. Poiché
+l'energia esatta è nota dalla decomposizione di Kambe (\S\ref{sec:modello}),
+il VQE viene qui usato come strumento diagnostico per misurare quanto
+bene un dato circuito rappresenti lo stato fondamentale vero, tramite la
+fidelity $\mathcal F=\lvert\langle\psi_\text{VQE}|\psi_0\rangle\rvert^2$.
+
+Sono state confrontate due famiglie di ansatz, con la stessa struttura
+esterna: una rotazione $X$ sul primo qubit, seguita da un blocco a due
+qubit per ciascuno dei tre legami (tre parametri), seguita da tre
+rotazioni $R_y$ indipendenti, una per qubit (altri tre parametri) --- sei
+parametri in totale per entrambe le famiglie. Le due famiglie differiscono
+solo nel blocco a due qubit usato sui legami:
+\begin{itemize}[leftmargin=1.6em,itemsep=2pt]
+\item \textbf{RBS}$(\varphi)$: una rotazione di Givens reale, realizzata
+con due CZ attorno a una coppia di rotazioni $R_y(\varphi),R_y(-\varphi)$,
+racchiuse fra porte di Hadamard --- un solo parametro libero $\varphi$
+nonostante i due gate $R_y$;
+\item \textbf{$W(\theta)$}: due CNOT attorno a un'unica $R_y(\theta)$, la
+famiglia di ansatz canonico di riferimento (Crippa et al., 2021).
+\end{itemize}
+
+Senza termine DM, al punto critico $b_c/J=2.4$, entrambe le famiglie
+raggiungono $\mathcal F=1$ a precisione numerica: nessuna differenza
+osservabile, un caso non discriminante fra le due scelte.
+
+\subsection{Confronto sotto il termine DM}
+\label{sec:rbs-vs-w}
+
+Il confronto diventa discriminante al punto di lavoro denominato
+\emph{Scenario A} ($b/J=b_c=2.4$, $D/J=0.15$, Opzione DM B), dove entrambe
+le famiglie sono state ottimizzate con multistart a venti punti di
+partenza casuali.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Ansatz} & \textbf{fidelity} $\mathcal F$ & \textbf{CNOT} & \textbf{gate a 1 qubit} \\
+\midrule
+RBS-2q.6 (6 par.) & $0.9999110739$ & $6$ & $46$ \\
+$W$-2q.6 (6 par.) & $0.9999999999999996$ & $6$ & $25$ \\
+\bottomrule
+\end{tabular}
+\caption{Fidelity sotto DM (Scenario A) delle due famiglie di ansatz a
+sei parametri, dopo transpilazione in base $\{rz,\mathrm{sx},x,cx\}$ a
+livello di ottimizzazione 3. Il numero di CNOT è identico (due per
+blocco, tre blocchi); il numero di gate a un qubit di RBS è quasi il
+doppio di quello di $W$, per via delle porte di Hadamard e delle due
+rotazioni $R_y$ per blocco (contro l'unica di $W$).}
+\label{tab:rbs-vs-w}
+\end{table}
+\FloatBarrier
+
+Questo risultato è l'opposto di quanto accade nel dimero, dove RBS ---
+più economico in gate --- è la scelta raccomandata e $W$ è più costoso
+senza vantaggi. Nel trimero, RBS presenta un tetto strutturale reale,
+seppur piccolo, mentre $W$ raggiunge l'esatto a precisione di macchina,
+con un costo in gate inferiore: nessun compromesso da giustificare fra
+le due metriche.
+
+L'origine del tetto di RBS è geometrica, non un limite
+dell'ottimizzatore. Il blocco RBS puro (senza le tre rotazioni $R_y$
+finali che rompono la conservazione di $M$) resta confinato nel settore
+di magnetizzazione a cui appartiene lo stato di partenza $X\ket{000}$,
+cioè $M=+1/2$, Hamming weight $1$. Il peso della vera GS in quel settore,
+a Scenario A, è $0.00098$; la fidelity massima raggiungibile da un
+ansatz confinato in quel settore --- indipendentemente dal numero di
+ripetizioni del blocco --- coincide con quel peso a sette cifre
+($0.0009814687$, invariato ripetendo il blocco fino a tre giri). A
+differenza del dimero, dove aggiungere due rotazioni locali indipendenti
+dopo un solo blocco RBS ripara completamente il problema
+($\mathcal F=1$), nel trimero le tre rotazioni $R_y$ finali riducono
+drasticamente il tetto (da $\mathcal F\approx0.001$ a $\mathcal
+F\approx0.9999$) ma non lo chiudono del tutto; aggiungere un secondo giro
+completo di blocchi (nove parametri anziché sei) non sposta il risultato.
+La differenza fra le due famiglie non è quindi solo una questione di
+efficienza in gate, come nel dimero, ma anche di potere espressivo a
+parità di parametri.
+
+\subsection{Ansatz canonico}
+
+Per il resto di questo lavoro si adotta l'ansatz \textbf{$W$-2q.6}: sei
+parametri, fidelity esatta a precisione di macchina al punto Scenario A.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Quantità} & \textbf{valore} \\
+\midrule
+$E_\text{VQE}$ & $-5.53437001739340$ \\
+$E_\text{esatto}$ & $-5.53437001739350$ \\
+$\Delta E$ & $9.8\times10^{-14}$ \\
+$\mathcal F$ & $0.99999999999961$ \\
+\bottomrule
+\end{tabular}
+\caption{Risultato dell'ansatz canonico $W$-2q.6 a Scenario A; multistart
+a 12 punti di partenza casuali, tutti convergenti allo stesso ottimo.}
+\end{table}
+\FloatBarrier
+
+Questo risultato è stato verificato non solo al singolo punto Scenario A,
+ma su uno sweep di tredici valori di $b/J$ fra $0.3$ e $4.5$ (DM Opzione B
+sempre acceso, $D/J=0.15$), inclusi punti ben sotto e ben sopra l'incrocio
+e il punto dell'incrocio stesso ($b/J=2.372$): la fidelity resta
+$\mathcal F=1.00000000$ su tutti i punti testati, con lo stesso stato
+iniziale $X\ket{000}$ ovunque --- nessuna logica a rami di preparazione è
+necessaria per questo ansatz, a differenza di quanto accade con ansatz
+più minimali sul dimero.
+
+\begin{figure}[htbp]
+\centering
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figure/circ_rbs2q_anello}
+\\ RBS-2q.6
+\end{minipage}
+\hfill
+\begin{minipage}{0.48\textwidth}
+\centering
+\includegraphics[width=\textwidth]{figure/circ_w2q_anello}
+\\ $W$-2q.6 (ansatz canonico)
+\end{minipage}
+\caption{Le due famiglie di ansatz in forma compatta: rotazione $X$ sul
+primo qubit, un blocco a due qubit per ciascuno dei tre legami, tre
+rotazioni $R_y$ finali indipendenti. Cambia solo il blocco a due qubit
+usato sui legami.}
+\label{fig:ansatz-completo}
+\end{figure}
+\FloatBarrier
+
+\section{Evoluzione temporale: decomposizione di Suzuki--Trotter}
+\label{sec:trotter}
+
+\subsection{Una struttura a tre livelli}
+
+Si scrive $H=H_0+H_\text{DM}$, con $H_0=bS_z^\text{tot}+H_\text{ex}$
+(campo più scambio isotropo) e $H_\text{DM}$ il solo termine di
+Dzyaloshinskii--Moriya. Un fatto esatto, non approssimato, semplifica il
+quadro esterno: poiché $[S_z^\text{tot},H_\text{ex}]=0$,
+\begin{equation}
+e^{-iH_0\tau} = e^{-ib\tau S_z^\text{tot}}\, e^{-i\tau H_\text{ex}},
+\qquad \text{esatto.}
+\end{equation}
+Fin qui, meglio del dimero: nessuna approssimazione a questo livello. Ma
+con tre legami che condividono qubit --- il legame $(1,2)$ e il legame
+$(2,3)$ condividono il qubit del sito $2$ --- lo scambio isotropo stesso
+non si esponenzia in un solo passo:
+\begin{equation}
+[\vec\sigma_1\!\cdot\!\vec\sigma_2,\ \vec\sigma_2\!\cdot\!\vec\sigma_3] \neq 0.
+\end{equation}
+Serve dunque un Trotter \emph{interno} anche per $e^{-i\tau H_\text{ex}}$,
+spezzato sui tre legami; lo stesso vale per $H_\text{DM}$ (Opzione B), che
+condivide la stessa struttura a tre legami. Il risultato è una struttura a
+tre livelli, uno in più rispetto al dimero:
+\begin{itemize}[leftmargin=1.8em,itemsep=2pt]
+\item \emph{livello 0} (esatto): $H_0=bS_z^\text{tot}+H_\text{ex}$
+fattorizza in campo $\times$ scambio senza errore;
+\item \emph{livello 1}: $e^{-i\tau H_\text{ex}}$, approssimato con un
+singolo passaggio di Trotter sui tre legami;
+\item \emph{livello 2}: $e^{-i\tau H_\text{DM}}$, stessa approssimazione,
+stesso motivo.
+\end{itemize}
+Un Trotter esterno di primo ordine alterna poi $H_0$ e $H_\text{DM}$ su
+$N$ passi, con errore $O((t/N)^2)$ per passo dovuto al solo fatto che
+$[S_z^\text{tot},H_\text{DM}]\neq0$ (lo scambio non contribuisce
+all'errore esterno, essendo esatto al livello 0).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/circ_trotter_anello}
+\caption{Un singolo passo esterno di Trotter. Nell'ordine: $e^{-i\tau
+H_\text{ex}}$ (blocchi $R_{XX},R_{YY},R_{ZZ}$ per ciascuno dei tre
+legami, livello 1), $e^{-i\tau bS_z^\text{tot}}$ (tre $R_z$, esatto),
+$e^{-i\tau H_\text{DM}}$ (blocchi Hadamard--$R_{ZZ}$--Hadamard per
+ciascun legame, livello 2). Il circuito completo è questo blocco ripetuto
+$N$ volte.}
+\label{fig:circ-trotter}
+\end{figure}
+\FloatBarrier
+
+L'implementazione Qiskit del circuito a un passo è stata verificata
+confrontando l'azione ripetuta $N$ volte del circuito con la potenza
+$N$-esima dell'operatore corrispondente (\texttt{Operator(qc)}$^N$):
+scarto massimo sulle ampiezze complesse $4.25\times10^{-15}$ a $t=6$,
+$N=60$, coerente con la precisione di macchina attesa per un confronto
+fra due modi di calcolare lo stesso operatore (non una verifica fisica
+indipendente).
+
+\subsection{Errore di Trotter e convergenza}
+
+La dinamica è stata studiata al punto di lavoro $R_0$ ($b/J=0.05$,
+$D/J=1.93$), scelto per dare un'evoluzione temporale non monocromatica
+(più frequenze visibili simultaneamente), a partire dallo stato iniziale
+$\ket{000}$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.8\textwidth]{figure/fig05_trotter_sz_anello}
+\caption{$\langle S_z^\text{tot}\rangle(t)$ al punto $R_0$: evoluzione
+esatta (nera) contro Trotter a $N=50,150,500$ passi.}
+\label{fig:sz}
+\end{figure}
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.25}
+\begin{tabular}{@{}rccc@{}}
+\toprule
+\rowcolor{grigetto}
+$N$ & $\lVert U_\text{Trotter}-U_\text{esatto}\rVert$ & $1-\mathcal F$ & soglia raggiunta \\
+\midrule
+100  & $3.49\times10^{-1}$ & $5.03\times10^{-2}$ & --- \\
+300  & $1.08\times10^{-1}$ & $4.90\times10^{-3}$ & $1-\mathcal F<10^{-2}$ \\
+1000 & $3.15\times10^{-2}$ & $4.25\times10^{-4}$ & $1-\mathcal F<10^{-3}$ \\
+3000 & $1.04\times10^{-2}$ & $4.68\times10^{-5}$ & $1-\mathcal F<10^{-4}$ \\
+\bottomrule
+\end{tabular}
+\caption{Errore di Trotter a $t=6$, punto $R_0$. Le pendenze misurate in
+scala doppio-logaritmica sono $-0.97$ (norma dell'operatore) e $-1.85$
+($1-\mathcal F$), vicine ai valori teorici attesi $-1,-2$ ma non ancora
+pienamente asintotiche a questi $N$.}
+\label{tab:errore}
+\end{table}
+\FloatBarrier
+
+Il regime pienamente asintotico richiede $N$ sensibilmente più grande che
+nel dimero, dove $N=80$ era sufficiente per $1-\mathcal F\sim10^{-5}$: qui
+servono centinaia--migliaia di passi per soglie comparabili. Questo non è
+un peggioramento generico dovuto alla dimensione del sistema, ma è
+imputabile specificamente al Trotter interno sui legami condivisi
+(livelli 1 e 2), assente nel dimero, e a un rapporto $D/J\approx1.9$ non
+piccolo al punto $R_0$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.68\textwidth]{figure/fig06_trotter_errore_anello}
+\caption{Errore a $t=6$ (punto $R_0$), scala doppio-logaritmica. Le rette
+punteggiate sono le pendenze asintotiche attese ($-1$ per la norma
+dell'operatore, $-2$ per $1-\mathcal F$).}
+\label{fig:errore}
+\end{figure}
+\FloatBarrier
+
+\subsection{Costo in gate}
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Compilazione} & \textbf{CNOT per passo} & \textbf{profondità} \\
+\midrule
+traduzione diretta, nessuna ottimizzazione & $30$ & $109$ \\
+compilazione ottimizzata & $\mathbf{15}$ & $52$ \\
+\bottomrule
+\end{tabular}
+\caption{Costo di un passo esterno di Trotter (tre legami, scambio più
+DM), dopo transpilazione in base $\{rz,\mathrm{sx},x,cx\}$. La
+compilazione ottimizzata dimezza il conteggio di CNOT rispetto alla
+traduzione diretta.}
+\end{table}
+\FloatBarrier
+
+Questo conteggio (15 CNOT per passo) è il dato che, nella seconda parte
+di questo lavoro, determina il compromesso fra errore di Trotter ed
+errore hardware sotto rumore.
+
+\section{Correlatori dinamici}
+\label{sec:correlatori}
+
+\subsection{Definizione e circuito}
+
+Si considera la stessa grandezza già definita nel caso del dimero,
+estesa a tre siti:
+\begin{equation}
+C_{ij}^{\alpha\beta}(t) = \bra{\psi_0}\,\sigma_i^\alpha(t)\,\sigma_j^\beta(0)\,\ket{\psi_0},
+\qquad \alpha,\beta\in\{x,y,z\},\quad i,j\in\{1,2,3\},
+\end{equation}
+per un totale di $81$ combinazioni. Poiché il prodotto
+$\sigma_i^\alpha(t)\sigma_j^\beta(0)$ non è in generale hermitiano, la sua
+misura richiede uno schema di tipo Hadamard test con un qubit ausiliario:
+il circuito impiega quindi quattro qubit --- i tre del registro fisico
+più l'ancilla, qui posta sul qubit $3$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/circ_correlatore_anello_re}
+\caption{Circuito per la parte reale di $C_{21}^{xx}(t{=}1)$ (mostrato con
+$N=1$ passo di Trotter per leggibilità; nell'uso effettivo, $N=60$).
+Nell'ordine: preparazione dello stato fondamentale sul registro a tre
+qubit; Hadamard sull'ancilla; $\sigma_1^x$ controllata; evoluzione $U(t)$
+non controllata sul solo registro (il blocco di Trotter descritto in
+\S\ref{sec:trotter}); $\sigma_2^x$ anti-controllata; rotazione di base
+finale e misura dell'ancilla. La variante per la parte immaginaria
+differisce solo nella rotazione finale ($R_x(\pi/2)$ anziché $H$).}
+\label{fig:circ-correlatore}
+\end{figure}
+\FloatBarrier
+
+Il circuito è stato verificato contro un riferimento classico calcolato
+con implementazione indipendente (esponenziale di matrice diretto della
+piena Hamiltoniana, nessun codice condiviso con il circuito): la
+coincidenza è confermata su tredici istanti temporali, coerentemente con
+l'errore di Trotter atteso a $N=60$.
+
+\subsection{Zeri strutturali}
+
+Al punto di lavoro Scenario A, delle $81$ combinazioni, $32$ risultano
+nulle all'istante iniziale $t=0$: l'Hamiltoniana è reale e simmetrica,
+quindi il fondamentale può scegliersi reale, e un prodotto
+$\sigma_i^\alpha\sigma_j^\beta$ puramente immaginario ha media nulla su
+uno stato reale. Di queste, solo \textbf{quattro} restano esattamente
+nulle per ogni $t$: $C_{33}^{xz}$, $C_{33}^{yz}$, $C_{33}^{zx}$,
+$C_{33}^{zy}$, tutte relative allo stesso sito (il sito $3$). Questo
+sottoinsieme è stato verificato numericamente su una griglia di $81$
+punti in $t\in[0,8]$; una spiegazione in forma chiusa di questi zeri
+strutturali, specifici del sito 3 in questa parametrizzazione isoscele,
+non è ancora stata derivata.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig08_scan81_anello}
+\caption{Tutte le 81 combinazioni al punto Scenario A. \textbf{Sinistra}:
+valore all'istante iniziale. \textbf{Destra}: ampiezza massima su
+$t\in[0,8]$. Delle $32$ caselle nulle a $t=0$, solo quattro restano nulle
+su tutto l'intervallo.}
+\label{fig:scan}
+\end{figure}
+\FloatBarrier
+
+\subsection{Ricchezza spettrale}
+
+Inserendo una risoluzione dell'identità sugli autostati di $H$, ciascun
+correlatore si scompone in una somma di esponenziali,
+$C_{ij}^{\alpha\beta}(t)=\sum_{n=0}^{7} c_n\,e^{-i(E_n-E_0)t}$. Il
+criterio di ``ricchezza'' spettrale è quanto il peso $c_n$ sia distribuito
+su più righe invece che concentrato su una sola. Due autocorrelazioni
+sullo stesso sito possono avere contenuto spettrale molto diverso:
+$C_{11}^{zz}$ distribuisce il peso su quattro righe comparabili (riga
+dominante al $32\%$), mentre $C_{33}^{yy}$ lo concentra su due righe
+vicine (riga dominante al $52\%$). Ampiezza e ricchezza spettrale sono
+dunque proprietà indipendenti, non correlate al sito o alla coppia di siti
+in sé, ma alle componenti di spin specifiche coinvolte.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig09_ricco_piatto_anello}
+\caption{Due correlatori a confronto, stessi assi. \textbf{Sinistra}
+($C_{11}^{zz}$): segnale con battimento irregolare, più frequenze
+visibili. \textbf{Destra} ($C_{33}^{yy}$): oscillazione più regolare,
+quasi periodica.}
+\end{figure}
+\FloatBarrier
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.7\textwidth]{figure/fig10_spettro_righe_anello}
+\caption{Peso delle transizioni disponibili (esclusa $n=0$, non
+oscillante) per i due correlatori della figura precedente.}
+\label{fig:spettro-righe}
+\end{figure}
+\FloatBarrier
+
+\subsection{Effetto della preparazione VQE reale}
+
+Tutti i risultati precedenti usano lo stato fondamentale esatto (ampiezze
+dirette) come punto di partenza. Sostituendo questa preparazione con il
+circuito $W$-2q.6 realmente eseguito (fidelity $\mathcal
+F=0.9999999999996$ a Scenario A, praticamente esatta), l'effetto atteso è
+piccolo. Sulla curva $C_{21}^{xx}(t)$ (13 istanti, $t\in[0,6]$), lo scarto
+medio fra le due preparazioni è $2.50\times10^{-7}$, con massimo
+$6.09\times10^{-7}$; ripetendo il confronto sull'intero scan delle 81
+combinazioni a $t=2$, lo scarto medio è $2.90\times10^{-7}$, con massimo
+$1.02\times10^{-6}$ (combinazione $C_{11}^{zz}$) e minimo
+$6.04\times10^{-10}$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig_vqe_vs_esatto_correlatore}
+\caption{$C_{21}^{xx}(t)$, preparazione esatta contro preparazione via
+circuito $W$-2q.6, entrambe con $N=60$ passi di Trotter.
+\textbf{Sinistra}: le due curve sono indistinguibili a questa scala.
+\textbf{Destra}: lo stesso scostamento in scala logaritmica, ordine
+$10^{-7}$.}
+\label{fig:vqe-vs-esatto}
+\end{figure}
+\FloatBarrier
+
+Poiché l'errore di preparazione è qui quasi sedici ordini di grandezza
+più piccolo che nel caso del dimero con il suo ansatz meno accurato
+($1-\mathcal F\sim4\times10^{-13}$ contro $1-\mathcal F\sim0.06$), lo
+scarto propagato resta uniformemente minuscolo su tutte le combinazioni,
+senza alcuna correlazione misurabile con l'ampiezza del correlatore
+(coefficiente di correlazione $-0.02$ sulle 81 combinazioni): a questa
+scala l'imperfezione di preparazione si comporta come rumore numerico
+distribuito casualmente, non come un effetto strutturato.
+
+Tutti i risultati di questa Parte sono ottenuti a simulazione ideale:
+nessun rumore di gate, nessun errore di lettura. La seconda parte di
+questo lavoro introduce questi effetti.
+
+% =====================================================================
+\part*{Parte II --- Il sistema aperto}
+\addcontentsline{toc}{part}{Parte II --- Il sistema aperto}
+% =====================================================================
+
+\section{Il modello di rumore}
+\label{sec:rumore}
+
+Su hardware reale, ogni gate è affetto da un errore e la misura stessa
+non è affidabile al cento per cento: il vettore di stato puro $\ket\psi$
+va sostituito con l'operatore densità $\rho=\ket\psi\bra\psi$, e la sua
+evoluzione sotto un canale di rumore $\mathcal N$ con
+$\rho\to\mathcal N(\rho)$, in generale non più uno stato puro. Le
+osservabili non cambiano forma, $\langle O\rangle=\Tr[\rho O]$, ma $\rho$
+porta meno informazione di un vettore di stato: questo è il prezzo del
+rumore.
+
+Il modello adottato include due soli canali di rumore, non uno stack
+generico di rumore hardware: un canale \textbf{depolarizzante di gate}, a
+uno e due qubit, e un canale di \textbf{readout}. I processi $T_1,T_2$
+sono esclusi dal modello. La calibrazione è basata su valori mediani
+reali del dispositivo \texttt{ibm\_torino}:
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Parametro} & \textbf{valore (mediane \texttt{ibm\_torino})} \\
+\midrule
+$\varepsilon_{1q}$ (gate a 1 qubit) & $2.9\times10^{-4}$ \\
+$\varepsilon_{2q}$ (gate a 2 qubit) & $3.8\times10^{-3}$ \\
+$p_\text{readout}$ & $2.3\times10^{-2}$ \\
+\bottomrule
+\end{tabular}
+\caption{Calibrazione del modello di rumore.}
+\end{table}
+\FloatBarrier
+
+I parametri di contrazione della sfera di Bloch corrispondenti, per il
+canale depolarizzante, sono $\lambda_{1q}=2\varepsilon_{1q}=5.80\times10^{-4}$
+e $\lambda_{2q}=\tfrac43\varepsilon_{2q}=5.07\times10^{-3}$.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.55\textwidth]{figure/fig_depolarizzazione_bloch_anello}
+\caption{Contrazione della sfera di Bloch sotto il canale depolarizzante,
+$1-\lambda$ in funzione di $\lambda$. Le linee verticali segnano i
+valori di calibrazione $\lambda_{1q}$ e $\lambda_{2q}$.}
+\end{figure}
+\FloatBarrier
+
+Il modello di rumore non dipende dal numero di qubit del circuito a cui
+viene applicato: la costruzione dell'oggetto \texttt{NoiseModel} in
+Qiskit tramite \texttt{add\_all\_qubit\_quantum\_error} è per costruzione
+indipendente dalla topologia del registro. Il rumore di lettura è
+trattato come simmetrico in questa e nelle successive sezioni, salvo
+laddove esplicitamente generalizzato (\S\ref{sec:readout-asimmetrico}).
+Non sono inclusi modelli di crosstalk fra qubit vicini, né dipendenza
+spaziale del rumore: si assume lo stesso $\varepsilon$ su ogni qubit e
+coppia di qubit.
+
+\section{Il VQE sotto rumore}
+\label{sec:vqe-rumore}
+
+I parametri ottimali $\theta^*$ dell'ansatz $W$-2q.6, determinati senza
+rumore al punto Scenario A ($b/J=2.4$, $D/J=0.15$, Opzione DM B), vengono
+qui eseguiti su un simulatore rumoroso, senza alcuna riottimizzazione: si
+misura così la sola degradazione di un risultato già ideale. Le
+grandezze rilevanti sono $E_\text{rumoroso}=\Tr[\rho H]$ e
+$F_\text{rumorosa}=\bra{\psi_0}\rho\ket{\psi_0}$.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Quantità} & \textbf{valore} \\
+\midrule
+$E$ (rumoroso, calibrazione \texttt{ibm\_torino}) & $-5.37687489$ \\
+$E_\text{esatto}$ & $-5.53437002$ \\
+$F$ (rumorosa) & $0.97021471$ \\
+$1-F$ & $2.98\%$ \\
+CNOT nel circuito & $6$ \\
+\bottomrule
+\end{tabular}
+\caption{VQE sotto rumore, Scenario A, parametri ideali riusati senza
+riottimizzazione.}
+\end{table}
+\FloatBarrier
+
+La perdita di fedeltà, $1-F=2.98\%$, è circa il doppio di quella
+corrispondente nel dimero a parità di calibrazione di rumore relativa.
+La ragione è strutturale: l'ansatz del dimero impiega $2$ CNOT, contro i
+$6$ di questo ansatz --- tre volte tanti canali di rumore attraversati,
+per un ansatz che è anche il più costoso in gate dell'intera pipeline del
+trimero, non il più economico come nel caso a due spin. La dipendenza
+dell'energia e della fedeltà rumorose da $\varepsilon_{2q}$ è monotona,
+come nel dimero, ma su una scala verticale più ampia a parità di
+$\varepsilon_{2q}$.
+
+\section{La dinamica sotto rumore}
+\label{sec:dinamica-rumore}
+
+Nel sistema chiuso (\S\ref{sec:trotter}), l'errore di Trotter scende
+monotonamente con $N$: più passi, meglio è, l'unico costo essendo la
+profondità del circuito. Sotto rumore questo non è più vero, perché ogni
+passo aggiunge $15$ CNOT rumorosi (il costo determinato in
+\S\ref{sec:trotter}): esiste un valore ottimale $N^*$ che massimizza la
+fedeltà rumorosa, né il più piccolo né il più grande possibile.
+
+Sono stati trattati due scenari, che isolano contributi diversi
+all'errore complessivo:
+\begin{itemize}[leftmargin=1.8em,itemsep=3pt]
+\item \textbf{Scenario A} ($b/J=2.4$, $D/J=0.15$): preparazione VQE
+($W$-2q.6) seguita da $N$ passi di Trotter --- la curva $F(N)$ riflette
+qui due sorgenti di errore sovrapposte, l'imperfezione della preparazione
+rumorosa (\S\ref{sec:vqe-rumore}, $F\approx0.970$) e l'errore di Trotter
+più rumore di gate sul circuito che segue.
+\item \textbf{Scenario B} (punto $R_0$: $b/J=0.05$, $D/J=1.93$): nessuna
+preparazione, si parte direttamente da $\ket{000}$ --- zero rumore di
+preparazione. La curva $F(N)$ mostra qui solo l'effetto di Trotter più
+rumore di gate, isolato dal contributo della preparazione.
+\end{itemize}
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig_passo3_F_vs_N_anello}
+\caption{Fedeltà rumorosa $F(N)$ rispetto allo stato bersaglio fisico, i
+due scenari a confronto. \textbf{Sinistra}: Scenario A, $N^*=3$.
+\textbf{Destra}: Scenario B, $N^*=9$, con un minimo locale marcato
+attorno a $N=2$--$3$ prima di risalire al massimo vero.}
+\label{fig:FvsN}
+\end{figure}
+\FloatBarrier
+
+I valori ottenuti sono $N^*_A=3$, $F(N^*)=0.700335$, e $N^*_B=9$,
+$F(N^*)=0.381896$. Il minimo locale della curva B, attorno a $N=2$, è la
+stessa fisica del ``minimo non perturbativo'' già osservata nel dimero:
+a pochi passi, l'errore di Trotter può temporaneamente aumentare prima
+che il guadagno di accuratezza prenda il sopravvento --- una proprietà
+della dinamica stessa, non un artefatto del rumore. Nessuna misura è
+coinvolta in questa fedeltà, calcolata direttamente sull'operatore
+densità.
+
+\section{I correlatori sotto rumore}
+\label{sec:correlatori-rumore}
+
+A differenza del VQE e della dinamica, il correlatore dinamico richiede
+una misura reale dell'ancilla, e quindi introduce anche il rumore di
+lettura, non solo quello di gate. Il readout è implementato come misura
+genuinamente campionata: un \texttt{ReadoutError} vero agganciato al
+simulatore, con $10^5$ shot per punto, senza alcuna formula di
+correzione analitica applicata a posteriori.
+
+Il correlatore di riferimento è $C_{21}^{xx}(t{=}2)$, al punto Scenario
+A --- una combinazione rappresentativa (non l'estremo più debole del
+segnale fra le 81 disponibili).
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.65\textwidth]{figure/fig_passo4_correlatore_vs_N_anello}
+\caption{$|C_{21}^{xx}(t{=}2,N)|$, rumore di riferimento, readout a shot
+finiti ($10^5$ shot per punto). $N^*=3$, $|C(N^*)|=0.5026$.}
+\end{figure}
+\FloatBarrier
+
+Un confronto a tre livelli --- valore esatto, Trotter senza rumore,
+Trotter con rumore completo --- permette di quantificare separatamente
+l'effetto della discretizzazione e quello del rumore:
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lccc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Livello} & $N^*$ & $|C|$ & \textbf{rapporto a $C_\text{esatto}$} \\
+\midrule
+$C_\text{esatto}(t{=}2)$ --- nessun Trotter, nessun rumore & --- & $0.6723$ & $1.00\times$ \\
+$C(N;t{=}2)$, rumore nullo (solo Trotter) & $3$ & $0.6773$ & $1.007\times$ \\
+$C(N;t{=}2)$, rumore vero (Trotter $+$ gate $+$ lettura) & $3$ & $0.5026$ & $0.748\times$ \\
+\bottomrule
+\end{tabular}
+\caption{I tre livelli per il correlatore $C_{21}^{xx}$, Scenario A.
+``Esatto'' indica il calcolo numerico senza approssimazioni fisiche
+(diagonalizzazione diretta più esponenziale di matrice diretto), non una
+formula chiusa.}
+\end{table}
+\FloatBarrier
+
+Un punto rilevante per la generalità del criterio $N^*=\arg\max_N|C(N)|$:
+a rumore nullo, il valore $|C(N^*)|$ è qui praticamente coincidente con
+il valore esatto ($1.007\times$). Questo risultato non va assunto per
+analogia con altri sistemi: il criterio $N^*=\arg\max_N|C(N)|$ massimizza
+il segnale misurabile, non necessariamente l'accuratezza della stima
+rispetto al valore fisico vero, e il grado di sovra- o sotto-stima
+introdotto dipende dalla combinazione specifica di errore di Trotter e
+forma della curva $|C(N)|$ per il sistema e il punto di lavoro
+considerati; non è quindi una proprietà universale del criterio, e va
+verificato caso per caso.
+
+\section{Scan sui parametri di rumore}
+\label{sec:scan-rumore}
+
+Per valutare quanto i risultati precedenti dipendano dalla calibrazione
+specifica di \texttt{ibm\_torino}, $N^*$ è stato studiato al variare dei
+parametri di rumore, uno alla volta, con gli altri fissati al valore di
+riferimento.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=\textwidth]{figure/fig_passo5_Nstar_vs_eps_anello}
+\caption{$N^*$ in funzione di $\varepsilon_{2q}$ (scala logaritmica).
+\textbf{Sinistra}: fedeltà di Trotter, Scenario A. \textbf{Destra}:
+correlatore, readout a shot finiti.}
+\end{figure}
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\rowcolor{grigetto}
+$\varepsilon_{2q}$ & $N^*$ Trotter & $N^*$ correlatore \\
+\midrule
+$1\times10^{-3}$ & 4 & 3 \\
+$2\times10^{-3}$ & 4 & 3 \\
+$3.8\times10^{-3}$ (riferimento) & 3 & 3 \\
+$6\times10^{-3}$ & 2 & 3 \\
+$1\times10^{-2}$ & 2 & 3 \\
+\bottomrule
+\end{tabular}
+\caption{$N^*$ Trotter è monotono non-crescente in $\varepsilon_{2q}$,
+come atteso (più rumore, meno conviene allungare il circuito); $N^*$
+correlatore resta invece fermo a $3$ su tutto il range esplorato, una
+differenza fra le due metriche non ancora indagata in dettaglio.}
+\end{table}
+\FloatBarrier
+
+L'invarianza di $N^*$ del correlatore rispetto a $p_\text{readout}$ è
+stata verificata esplicitamente a shot finiti su tre valori
+($p=0.00,\,0.05,\,0.20$), sempre con $N^*=3$: risultato atteso
+analiticamente (la correzione di readout simmetrico è un fattore
+moltiplicativo costante in $N$, che non può spostare la posizione di un
+massimo) e qui confermato anche con una misura genuinamente campionata,
+non solo assunto dall'argomento analitico.
+
+Con la conclusione di questo scan si chiudono i cinque stadi principali
+della pipeline sotto rumore. Le due sezioni seguenti trattano due
+estensioni, motivate da domande lasciate aperte: se convenga
+riottimizzare il VQE vedendo direttamente il rumore, e cosa cambi quando
+il readout smette di essere simmetrico.
+
+\section{Estensione: VQE noise-aware}
+\label{sec:noise-aware}
+
+Per un canale depolarizzante isotropo, l'energia rumorosa si scrive come
+trasformazione affine dell'energia ideale:
+\begin{equation}
+E_\text{rumoroso}(\boldsymbol\theta) = (1-\lambda)\,E_\text{ideale}(\boldsymbol\theta)
++ \lambda\,\frac{\Tr[H]}{d},
+\end{equation}
+dove $d$ è la dimensione dello spazio di Hilbert. Poiché la
+trasformazione è affine con coefficiente positivo, lo stesso
+$\boldsymbol\theta^*$ che minimizza $E_\text{ideale}$ minimizza anche
+$E_\text{rumoroso}$: un argomento generale, indipendente dal sistema, che
+predice nessun vantaggio a riottimizzare vedendo il rumore durante
+l'ottimizzazione stessa (VQE noise-aware) rispetto al riuso dei parametri
+ideali.
+
+Questo argomento presuppone però una struttura di circuito fissa --- lo
+stesso numero di gate rumorosi per qualunque $\boldsymbol\theta$. Con un
+ansatz a sei parametri, il transpilatore può semplificare il blocco
+CNOT--$R_y(\theta)$--CNOT a valori speciali di $\theta$ (vicini a $0$ o
+$\pi$), riducendo il conteggio di CNOT rispetto al caso generico; questo
+non accade con un ansatz a struttura fissa (livello di ottimizzazione 0
+della transpilazione), dove il conteggio resta costante qualunque sia
+$\theta$, incluso ai valori speciali. Per isolare l'effetto fisico da
+questo comportamento del compilatore, i risultati principali di questa
+sezione sono ottenuti a struttura di circuito fissa.
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\rowcolor{grigetto}
+\textbf{Quantità} & \textbf{riuso $\theta^*_\text{ideale}$} & \textbf{VQE noise-aware} \\
+\midrule
+$E$ (rumoroso) & $-5.36232432$ & $-5.36648903$ \\
+$F$ (rumorosa) & $0.96728547$ & $0.95153755$ \\
+CNOT & 6 & 6 \\
+\bottomrule
+\end{tabular}
+\caption{Confronto fra riuso dei parametri ideali e riottimizzazione
+sotto rumore (VQE noise-aware), Scenario A, struttura di circuito
+fissa, multistart a 12 punti casuali più il seme ideale.}
+\end{table}
+\FloatBarrier
+
+Il risultato, $\Delta E=-4.16\times10^{-3}$ (energia migliore) e $\Delta
+F=-1.57\times10^{-2}$ (fedeltà peggiore), mostra che la riottimizzazione
+trova genuinamente un punto diverso da $\theta^*_\text{ideale}$: qui
+l'argomento affine garantisce solo che $\theta^*_\text{ideale}$ resti un
+minimo di $E_\text{ideale}$, non che sia l'unico minimo rilevante di
+$E_\text{rumoroso}$ quando la dimensionalità dei parametri cresce.
+
+A struttura fissa, tre semi di partenza convergono a un ottimo identico
+entro $2\times10^{-11}$: il risultato è stabile.
+
+A valle, la fedeltà di Trotter (Scenario A) e il correlatore dinamico
+mostrano entrambi $N^*=3$, invariato rispetto al riuso dei parametri
+ideali, verificato in entrambi i casi a shot finiti per il correlatore.
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.72\textwidth]{figure/fig_F_vs_N_confronto_trimero_anello}
+\caption{Fedeltà di Trotter, struttura fissa. $N^*=3$ in entrambi i
+casi; scostamento piccolo, su scala $\sim10^{-2}$.}
+\end{figure}
+\FloatBarrier
+
+L'invarianza di $N^*$ qui non si spiega, come nel dimero, con un
+argomento di continuità (lì $\theta^*_\text{noise-aware}$ era quasi
+indistinguibile da $\theta^*_\text{ideale}$): in questo caso lo
+spostamento dei parametri non è piccolo, essendo $\Delta E$ e $\Delta F$
+tre ordini di grandezza più grandi che nel dimero. L'invarianza osservata
+riflette piuttosto un'insensibilità dell'osservabile a valle a questo
+particolare spostamento di parametri, non una proprietà generale che si
+estenda automaticamente ad altri punti di lavoro.
+
+\section{Estensione: readout asimmetrico}
+\label{sec:readout-asimmetrico}
+
+Il readout simmetrico ($p_{01}=p_{10}=p$) adottato nelle sezioni
+precedenti è una semplificazione: su hardware reale il rilassamento
+$T_1$ durante la misura rende tipicamente $p_{10}>p_{01}$. Con una
+matrice di confusione generale,
+\begin{equation}
+\langle Z\rangle_\text{readout} = \alpha\langle Z\rangle_\text{ideale}+\beta,
+\qquad \alpha=1-p_{01}-p_{10},\quad \beta=p_{10}-p_{01},
+\end{equation}
+per il correlatore complesso questo corrisponde a una traslazione
+costante nel piano complesso, che non è garantita a priori preservare
+l'invarianza di $N^*=\arg\max_N|C(N)|$ (somma e modulo non commutano).
+
+Il circuito dei correlatori misura un solo bit classico, sempre e solo
+l'ancilla: la correzione di readout asimmetrico si applica a quella
+singola misura, indipendentemente dalla dimensione del registro fisico
+--- il registro a tre qubit del trimero, più grande di quello a due qubit
+del dimero, non introduce quindi alcuna complicazione aggiuntiva per
+questa correzione.
+
+Con uno split illustrativo $p_{10}/p_{01}=3\times$ (stessa media
+$p_\text{readout}=2.3\times10^{-2}$: $p_{01}=0.0115$, $p_{10}=0.0345$),
+tutto a shot finiti:
+
+\begin{figure}[htbp]
+\centering
+\includegraphics[width=0.62\textwidth]{figure/fig_correlatore_N_asimmetrico_anello}
+\caption{$|C_{21}^{xx}(t{=}2,N)|$, readout simmetrico contro asimmetrico
+($8\times10^4$ shot per punto). $N^*=3$ in entrambi i casi.}
+\end{figure}
+\FloatBarrier
+
+\begin{table}[htbp]
+\centering
+\small
+\renewcommand{\arraystretch}{1.3}
+\begin{tabular}{@{}lcc@{}}
+\toprule
+\rowcolor{grigetto}
+& $N^*$ & $|C(N^*)|$ \\
+\midrule
+simmetrico ($p_{01}=p_{10}=0.023$) & 3 & $0.5059$ \\
+asimmetrico ($3\times$) & 3 & $0.4934$ \\
+\bottomrule
+\end{tabular}
+\end{table}
+\FloatBarrier
+
+Uno stress test oltre il range realistico, con rapporti
+$p_{10}/p_{01}\in\{1,3,5,10,20,50\}$ (ben oltre il range tipicamente
+osservato su hardware IBM, $2$--$3.5\times$), dà $N^*=3$ su tutti i
+rapporti testati, verificato a shot finiti su ciascun punto. La
+spiegazione è che $N^*$ è definito dal massimo di una curva $|C(N)|$ già
+ripida attorno al suo picco: una traslazione costante sposta la curva
+intera, ma raramente abbastanza da spostare la posizione del suo
+massimo, finché $\alpha>0$ (cioè finché $p_{01}+p_{10}<1$, sempre vero
+nel range fisico qui esplorato).
+
+\section{Conclusioni}
+
+Il passaggio dal dimero al trimero ad anello introduce, oltre alla
+frustrazione geometrica prevista, una serie di conseguenze tecniche
+concrete che modificano in modo non banale le conclusioni già stabilite
+sul sistema più semplice:
+
+\begin{itemize}[leftmargin=1.6em,itemsep=3pt]
+\item il termine di Dzyaloshinskii--Moriya ammette più forme possibili,
+e solo una di esse (Opzione B) apre l'incrocio protetto dalla
+conservazione di $S_{12}^2$;
+\item nel confronto fra ansatz variazionali, l'ordine di preferenza
+osservato nel dimero si inverte: $W$-2q.6 domina RBS-2q sia in costo sia
+in potere espressivo, mentre nel dimero era vero il contrario;
+\item l'evoluzione temporale richiede un livello aggiuntivo di
+approssimazione di Trotter, dovuto alla condivisione di qubit fra legami,
+con una convergenza sensibilmente più lenta;
+\item sotto rumore, la maggiore profondità dell'ansatz canonico si
+traduce in una degradazione di fedeltà doppia rispetto al dimero a parità
+di calibrazione; il criterio $N^*$ per il correlatore dinamico, a
+differenza del dimero, non sovrastima qui il valore fisico vero; e la
+riottimizzazione noise-aware del VQE produce, a differenza del dimero, un
+compromesso energia/fedeltà misurabile, sebbene senza conseguenze
+sull'$N^*$ osservato a valle.
+\end{itemize}
+
+Questi risultati indicano che le conclusioni metodologiche stabilite su
+un sistema a due spin non si trasferiscono automaticamente a un sistema
+di dimensione anche di poco superiore, e che ciascun confronto --- forma
+del termine di interazione, scelta dell'ansatz, comportamento del
+criterio $N^*$ --- richiede una verifica specifica per il sistema e il
+punto di lavoro considerati.
+
+\bigskip
+\noindent\footnotesize\textit{Riferimenti.}\\
+K.~Kambe, \emph{On the Paramagnetic Susceptibilities of Some Polynuclear
+Complex Salts}, J.\ Phys.\ Soc.\ Jpn.\ \textbf{5}, 48 (1950).\\
+A.~Crippa et al., \emph{Simulating Static and Dynamic Properties of
+Magnetic Molecules with Prototype Quantum Computers}, Magnetochemistry
+\textbf{7}, 117 (2021).\\
+N.~Hatano, M.~Suzuki, \emph{Finding Exponential Product Formulas of
+Higher Orders}, in \emph{Quantum Annealing and Other Optimization
+Methods}, Lecture Notes in Physics \textbf{679}, Springer (2005).
+
+\end{document}

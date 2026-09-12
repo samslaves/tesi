@@ -626,3 +626,21 @@ ulteriori estensioni a un secondo punto di lavoro per la Parte 2
 dell'anello (come fatto sul dimero nel Documento 10) — valutato e non
 ritenuto necessario per $R_0$ nel Documento 7 (ruolo diverso, già
 chiarito nel testo).
+
+## Aggiornamento 12 settembre 2026 --- correzione convenzione di fedeltà (dimero, Parte 1)
+
+Trovata e corretta una discrepanza fra il Documento 2 del dimero
+($\mathcal F=0.922857$ per l'ansatz PMA base) e la ricostruzione nel
+pacchetto riproducibile ($0.851664$): non un errore, una convenzione di
+fedeltà diversa isolata a `vqe_dimer.py`/`fig_doc2.py` (modulo invece di
+modulo al quadrato) --- uniformata al quadrato, la convenzione usata nel
+resto del progetto (`vqe_test2.py`, tutto il trimero, Qiskit di default).
+Corretti: `vqe_dimer.py`, `fig_doc2.py`, `dimero_02_vqe.tex`,
+`dimero_03_dinamica.tex`, figure fig03/fig04 rigenerate. Trovate e
+corrette anche una griglia troppo rada nel pacchetto riproducibile (non
+campionava il vero minimo) e una mancata gestione della degenerazione a
+$D=0$, $B/J=2$ in `vqe_dimer.py`. Verificato che la correzione non tocca
+la Parte 2, il trimero, né `punti_di_lavoro_riepilogo.tex` --- dettaglio
+completo in `log_decisioni.md`.
+
+**Prossimo passo**: non stabilito con urgenza.

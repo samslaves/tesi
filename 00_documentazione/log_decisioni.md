@@ -5077,3 +5077,44 @@ entrambe le convenzioni, o quantità concettualmente diverse come la
 fedeltà di Trotter); i file di tracciamento (`domande_relatore.md`,
 `scheda_progetto_tesi.md`) menzionano "PMA base" solo qualitativamente,
 mai con un valore numerico di fedeltà.
+
+## Verifica completa dei documenti unificati (dimero e trimero) e preparazione della presentazione
+
+Dopo la correzione della convenzione di fedeltà, le due chat di unificazione hanno prodotto le versioni finali dei documenti narrativi (`tesi_dimero_unificato.tex`, `trimero_anello_unificato.tex`) — un unico documento per sistema, senza riferimenti a cronologia di lavorazione, per la verifica del relatore prima della presentazione. Qui è stata fatta una verifica sistematica, punto per punto, di entrambi.
+
+**Correzioni trovate e applicate nel documento del dimero:**
+1. La definizione della fidelity in Sez. 2.1 era rimasta senza il quadrato ($\mathcal F=|\langle\cdot|\cdot\rangle|$ invece di $|\cdot|^2$) — unico punto rimasto disallineato dal resto del documento dopo la correzione precedente.
+2. "Termine DM cinque volte più forte" (in due punti) confrontava implicitamente P2 con P1 ($D/J=1$ contro $D/J=0.80$, rapporto reale $1.25\times$) invece che con il $D/J=0.2$ dello sweep di Sez. 2.3 (dove il rapporto $5\times$ è corretto) — corretto esplicitando il riferimento al $D/J=0.2$.
+
+**Correzioni trovate e applicate nel documento del trimero (molte più estese):**
+- Citazioni bibliografiche già note (Crippa, Stenger, Suzuki) confermate corrette.
+- **Confusione $W$/$W_{ij}$**: il blocco $W(\theta)$ del trimero (CNOT-$R_y$-CNOT, 2 CNOT) era attribuito a Crippa et al. nel testo, ma il vero $W_{ij}(\theta)=e^{-i\theta s_i\cdot s_j}$ di Crippa (verificato dal paper originale via fetch diretto, equazioni 5-6) richiede 3 CNOT ed è un gate diverso (verificato numericamente: le due matrici non coincidono, né coincide con un $R_{YY}$ mascherato). Corretto: tolta l'attribuzione, aggiunta disambiguazione esplicita fra i due oggetti con lo stesso nome nei due documenti gemelli.
+- Una frase di confronto col dimero ("dove RBS... e $W$ è più costoso") usava "$W$" senza pedice riferendosi al gate del dimero, che invece si chiama $W_{ij}$ — corretto il pedice mancante.
+- **Tabella delle 12 combinazioni di segno** del termine DM (verificata numericamente da zero, costruendo $P_{12}$ e $H_\text{DM}$ espliciti: tutti e 12 i valori di $\max\|[P_{12},H_\text{DM}]\|$ coincidono con la fonte originale `trimero_00_filo_conduttore.tex`, non ancora usata dalla chat di sintesi) aggiunta al documento — la motivazione della scelta "+++" corretta: non è la combinazione simmetrica (quella è $(0,+,-)$), è quella con la **rottura massima** di simmetria fra i candidati naturali.
+- Nota aggiunta su $R_0$ (punto dinamico del trimero): a differenza del punto analogo nel dimero ($R_1$), non è stato validato come punto VQE genuino — un lavoro esplicitamente "pianificato ma non ancora fatto" nella fonte originale (`quantum_simulation_trimero_anello_trotter_spiegato.tex`). Non un'omissione, un limite dichiarato.
+- "Sedici ordini di grandezza" (confronto errore di preparazione trimero/dimero) era aritmeticamente sbagliato — verificato $\log_{10}(0.06/4\times10^{-13})\approx11.2$, non 16. Corretto in "undici".
+- Aggiunta una spiegazione (verificata via formula di Baker-Campbell-Hausdorff, poi semplificata su richiesta a un livello adatto alla triennale) del perché un rapporto $|C_\text{Trotter}|/|C_\text{esatto}|>1$ è fisicamente possibile (errore di fase, non di ampiezza) — con confronto al caso analogo, più marcato, già nel documento del dimero ($0.657$ contro $0.318$, quasi il doppio).
+- Aggiunta una spiegazione (Sez. 8, già esistente nel documento) del perché $N^*$ del correlatore resta stabile al variare di $\varepsilon_{2q}$ mentre $N^*$ della fedeltà di Trotter no — origine fisica diversa (effetto non perturbativo vs compromesso graduale), non "non ancora indagato" come diceva il testo prima.
+- Aggiunta una derivazione perturbativa al secondo ordine per lo spostamento del punto di incrocio sotto l'Opzione A ($b/J=2.4\to2.372$): $\Delta b=V^2/[2(E_A-E_B)]\approx-0.0281$, verificata contro il valore esatto (root-finding, $2.371820$) — scarto $5.5\times10^{-5}$.
+- $\mathcal N\to\mathcal E$ per il canale di rumore generico, uniformato al simbolo già usato nel dimero (evita anche la confusione con $N$, il numero di passi di Trotter).
+
+**Tre nuove figure create per il trimero** (Sez. 1.4), verificate numericamente prima di chiederle e poi ricontrollate nella versione consegnata:
+1. Struttura a blocchi di $H$ nella base di Kambe, Opzione A vs B (blocco $2\times2$ isolato per A, pieno per B).
+2. Spostamento del punto di incrocio, con le tre curve (ramo C, ramo A+B con mescolamento, formula $D=0$ pura per confronto).
+3. Matrice di Kambe con valori numerici e riferimenti colorati alle due figure precedenti (elemento di accoppiamento $A(M{=}{-}3/2)$-$B(M{=}{-}1/2)=-0.367$, che spiega lo spostamento).
+
+Più due diagrammi di circuito a livello di gate (non scatole opache) per RBS e $W$, usati per la Slide 11 della presentazione.
+
+**Verifica incrociata finale**: caricati `tesi_dimero_sorgenti.zip` e `tesi_trimero_sorgenti.zip` (pacchetti più recenti). Confermato: tutte le correzioni sopra applicate correttamente; le tre nuove figure del trimero verificate visivamente e numericamente (coincidono coi calcoli indipendenti); scoperta e poi risolta una figura mancante per il dimero (guadagno vs $N^*$ sulle 36 combinazioni, Sez. 8.3) — assente nella prima verifica, presente e numericamente corretta (`fig_gain_vs_Nstar_scan36.pdf`, $C_{11}^{yz}$: guadagno $35.7\%$, $N^*=2$) nel pacchetto più recente.
+
+## Preparazione della presentazione (15 slide PowerPoint)
+
+Prodotti due documenti di pianificazione: `struttura_tesi.tex` (12 slide, 10-15 minuti, divise in Introduzione/Risultati 6-6) e `selezione_figure.tex` (proposta di figura per slide, con note di verifica).
+
+**Correzione trovata nella selezione figure**: la Slide 7 (Confronto ansatz) proponeva `fig03_vqe_ha_vs_pma.pdf`, che mostra solo 2 curve (HA, PMA base) contro le 3 richieste dal contenuto della slide (generico/simmetrico puro/rottura mirata). Corretto con `fig04_vqe_riparazione.pdf` (tutte e 3 le curve, annotazione "3 parametri bastano dove 1 non basta") — verificato che nel pacchetto più recente questa figura ha già la convenzione di fedeltà corretta (minimo $0.49$ esplicitamente annotato, non il vecchio $0.70$).
+
+**Slide 11 aggiornata**: da "nessuna figura esistente" a `fig_circuito_rbs_espanso` + `fig_circuito_w_espanso` (trimero), affiancati — mostrano concretamente l'inversione RBS/$W$ fra dimero e trimero. Le figure sui blocchi di Kambe e sullo spostamento dell'incrocio tenute come slide di riserva per eventuali domande sulla scelta del termine DM.
+
+**Prodotti anche**: abstract di tesi (italiano e inglese, `.tex`/`.pdf`, 150-250 parole, titolo corretto "Quantum simulation of molecular spin systems on quantum hardware"); mail alla Prof.ssa Bonini con domande logistiche sulla discussione (formato slide, portatile proprio o fornito, template, tempo a disposizione, lingua, scadenze).
+
+**Decisione sulla strategia per produrre le slide**: chat dedicata separata (non questa), a cui caricare tutti i pacchetti verificati. Scartata l'opzione di usare l'add-in "Claude for PowerPoint" nonostante disponibile (piano Max) — preferita la generazione diretta di un file `.pptx` in chat, per evitare un passaggio manuale di trasferimento contenuti che rischierebbe di reintrodurre imprecisioni nei numeri/nomi file già verificati. Procedura scelta: una slide alla volta, con conferma esplicita prima di ciascuna successiva; le modifiche del relatore (attese dopo un confronto del 15 settembre 2026) verranno date nella stessa chat, non in una nuova. Documento di procedura prodotto (`procedura_slide.tex`) con esempi di formulazione delle richieste.

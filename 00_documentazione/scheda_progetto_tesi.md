@@ -644,3 +644,13 @@ la Parte 2, il trimero, né `punti_di_lavoro_riepilogo.tex` --- dettaglio
 completo in `log_decisioni.md`.
 
 **Prossimo passo**: non stabilito con urgenza.
+
+## Aggiornamento 14 settembre 2026 --- verifica finale documenti unificati e preparazione presentazione
+
+Verificati punto per punto i due documenti unificati finali (dimero e trimero), prodotti dalle rispettive chat di sintesi. Dimero: 2 correzioni minori (formula fidelity, riferimento "cinque volte più forte"). Trimero: correzioni più estese (disambiguazione $W$/$W_{ij}$, tabella delle 12 combinazioni di segno del DM, nota su $R_0$ non ancora validato come punto VQE, "sedici"$\to$"undici" ordini di grandezza, spiegazioni aggiunte su due fenomeni fisici già presenti ma non spiegati nel testo, derivazione perturbativa dello spostamento dell'incrocio) più tre nuove figure (struttura a blocchi di Kambe, spostamento dell'incrocio, matrice con riferimenti) verificate numericamente prima e dopo la consegna.
+
+Prodotti: struttura della presentazione (12 slide, Introduzione/Risultati 6-6), selezione delle figure per slide (corretta due volte: Slide 7 aveva una figura con solo 2 curve su 3 necessarie; Slide 11 aggiornata con i nuovi diagrammi di circuito RBS/$W$ del trimero), abstract di tesi IT/EN, mail al relatore con domande logistiche.
+
+Decisa la strategia per le 15 slide PowerPoint: chat dedicata separata, generazione diretta di `.pptx` (non l'add-in Claude for PowerPoint, per evitare un passaggio manuale rischioso), procedura una slide alla volta con conferma esplicita, modifiche del relatore da dare nella stessa chat dopo il confronto previsto.
+
+**Prossimo passo**: aprire la chat dedicata alle slide, caricare i pacchetti verificati, procedere slide per slide.

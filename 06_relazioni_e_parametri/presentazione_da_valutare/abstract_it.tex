@@ -1,0 +1,63 @@
+\documentclass[11pt,a4paper]{article}
+
+\usepackage[T1]{fontenc}
+\usepackage[utf8]{inputenc}
+\usepackage[main=italian,provide=*]{babel}
+\usepackage{amsmath,amssymb}
+\usepackage[a4paper,margin=3cm]{geometry}
+\usepackage[colorlinks=true,linkcolor=black,citecolor=black,urlcolor=blue!55!black]{hyperref}
+\usepackage{setspace}
+
+\pagestyle{empty}
+
+\begin{document}
+
+\begin{center}
+{\large\bfseries Università degli Studi di Parma}\\[2pt]
+{\normalsize Dipartimento di Scienze Matematiche, Fisiche e Informatiche}\\[4pt]
+{\normalsize Corso di Laurea in Fisica}\\[18pt]
+
+{\Large\bfseries Quantum simulation of molecular spin systems\\ on quantum hardware}\\[6pt]
+{\normalsize\itshape Simulazione quantistica di sistemi di spin molecolari su hardware quantistico}\\[18pt]
+
+{\normalsize Candidato: \textbf{Samuele Schiavi}}\\[4pt]
+{\normalsize Relatore: \textbf{Prof. Alessandro Chiesa}}\\[18pt]
+{\normalsize\bfseries Presentazione}
+\end{center}
+
+\vspace{6pt}
+\onehalfspacing
+\noindent
+I magneti molecolari costituiscono piattaforme privilegiate per lo
+studio di fenomeni quantistici, ma la loro simulazione tramite computer
+classici diventa rapidamente intrattabile al crescere del numero di spin
+coinvolti. I computer quantistici, mappando ciascuno spin $1/2$ direttamente
+su un qubit, offrono un percorso naturale per aggirare questo limite.
+Questo lavoro presenta la simulazione quantistica, su simulatori sia ideali
+sia affetti da rumore realistico, di sistemi di spin $1/2$ accoppiati
+tramite interazione di Heisenberg e di scambio antisimmetrico di
+Dzyaloshinskii--Moriya, di sistemi modello di due o tre spin interagenti con
+topologia a catena e ad anello. Lo stato fondamentale è determinato con
+l'algoritmo variazionale Variational Quantum Eigensolver (VQE), confrontando
+un ansatz generico hardware-efficient con ansatz costruiti tenendo conto
+delle simmetrie fisiche del problema; l'evoluzione temporale è simulata
+tramite decomposizione di Suzuki--Trotter, e le correlazioni dinamiche
+spin-spin sono estratte con un circuito di tipo Hadamard test, che combina
+la simulazione dell'evoluzione temporale dei qubit del sistema target con un
+qubit ausiliario per estrarre le correlazioni. L'intera pipeline è poi
+ripetuta sotto un modello di rumore calibrato su hardware quantistico reale,
+individuando il numero di passi di Trotter che bilancia l'errore di
+approssimazione con quello accumulato dal rumore, e verificandone la
+stabilità rispetto a ottimizzazione sotto rumore e a errore di lettura
+asimmetrico. I risultati mostrano che un ansatz allineato alle simmetrie
+dell'Hamiltoniana riduce drasticamente il numero di parametri necessari
+rispetto a un ansatz generico, un vantaggio che permane, con un costo
+maggiore, passando da due a tre spin --- un criterio di progettazione
+candidato a estendersi verso sistemi molecolari di dimensione superiore.
+
+\vspace{12pt}
+\noindent\textbf{Parole chiave:} simulazione quantistica; sistemi di spin;
+Variational Quantum Eigensolver (VQE); decomposizione di Suzuki--Trotter;
+rumore quantistico; hardware IBM Quantum.
+
+\end{document}

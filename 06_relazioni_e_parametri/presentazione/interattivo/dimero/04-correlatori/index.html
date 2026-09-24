@@ -1,0 +1,192 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>4 · Correlatori — dimero di spin</title>
+<link rel="stylesheet" href="../assets/stile-comune.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<nav class="topnav" id="topnav"></nav>
+<div class="handoff" id="handoff"></div>
+
+<div class="sheet">
+<header>
+  <div class="eyebrow">Stadio 4 di 4 &middot; Correlatori</div>
+  <h1>Il circuito che trasforma<br>un numero complesso in interferenza</h1>
+  <p class="lede"><span class="formula-inline-ktx" data-tex="C(t) = \langle\psi_0|\sigma_i^{\alpha}(t)\,\sigma_j^{\beta}(0)|\psi_0\rangle"></span> &egrave; un numero complesso, e nessuno strumento misura numeri complessi. Il qubit ausiliario lo trasforma in interferenza. Sceglie il punto di lavoro e la coppia di operatori: il circuito si ricalcola dal vivo.</p>
+</header>
+
+<div class="sezioni-grid">
+<section>
+  <h2>1 &middot; Punto di lavoro e correlatore da misurare</h2>
+  <div class="ctl">
+    <label for="bJ">B / J</label>
+    <input type="range" id="bJ" min="0" max="4" step="0.01" value="0.35">
+    <span class="tval" id="bJv">0.35</span>
+  </div>
+  <div class="ctl">
+    <label for="DJ">D / J</label>
+    <input type="range" id="DJ" min="0" max="1.5" step="0.01" value="0.80">
+    <span class="tval" id="DJv">0.80</span>
+  </div>
+  <div class="ctl">
+    <label for="stato">stato di riferimento |&psi;&#8320;&rang;</label>
+    <select id="stato">
+      <option value="su">|&uarr;&uarr;&rang;</option>
+      <option value="esatto" selected>fondamentale esatto</option>
+      <option value="vqe">fondamentale dal VQE (stadio 2)</option>
+    </select>
+  </div>
+  <p class="note" id="notaStato" style="color:var(--soft)"></p>
+  <div class="ctl">
+    <label for="evo">evoluzione</label>
+    <select id="evo">
+      <option value="esatto" selected>esatta</option>
+      <option value="trotter">Trotter (N passi)</option>
+    </select>
+  </div>
+  <div class="ctl" id="ctlN" style="display:none">
+    <label for="N">passi N</label>
+    <input type="range" id="N" min="1" max="200" step="1" value="40">
+    <span class="tval" id="Nv">40</span>
+  </div>
+  <div class="ctl">
+    <label>&sigma;<sub>i</sub><sup>&alpha;</sup> &nbsp;(misurato dopo)</label>
+    <select id="site1"><option value="1">sito 1</option><option value="2" selected>sito 2</option></select>
+    <select id="comp1"><option value="x" selected>x</option><option value="y">y</option><option value="z">z</option></select>
+  </div>
+  <div class="ctl">
+    <label>&sigma;<sub>j</sub><sup>&beta;</sup> &nbsp;(perturbazione a t=0)</label>
+    <select id="site2"><option value="1" selected>sito 1</option><option value="2">sito 2</option></select>
+    <select id="comp2"><option value="x" selected>x</option><option value="y">y</option><option value="z">z</option></select>
+  </div>
+
+  <div class="mathpanel">
+    <h4>Le 36 combinazioni, in un colpo d'occhio</h4>
+    <p class="sub" style="margin-top:0">Ogni cella &egrave; una coppia (&sigma;<sub>i</sub><sup>&alpha;</sup>, &sigma;<sub>j</sub><sup>&beta;</sup>). Il colore mostra |C(t)| (adimensionale) con la modalit&agrave; di evoluzione scelta qui sopra, all'istante t selezionato in sezione 2 &mdash; si aggiorna muovendo il tempo. Clicchi una cella per impostarla come correlatore corrente nei controlli qui sopra.</p>
+    <div id="heat36" style="text-align:center"></div>
+  </div>
+</section>
+
+<section>
+  <h2>2 &middot; Lo stato, stadio per stadio</h2>
+  <p class="sub">Scorra gli stadi del circuito. A sinistra lo stato totale in notazione di Dirac, con i due rami dell'ancilla in colori distinti; a destra le quattro ampiezze del registro in ciascun ramo.</p>
+
+  <div class="stagebar" role="tablist" id="stagebar"></div>
+
+  <div class="stagewrap">
+    <div>
+      <h3>Stato totale</h3>
+      <div class="ketline" id="ket"></div>
+      <div class="what" id="what" style="font-size:14.5px;color:#2C4257;min-height:5.4em"></div>
+    </div>
+    <div>
+      <h3>Ampiezze del registro</h3>
+      <div style="font-family:var(--mono);font-size:11px;color:#0E7C86;margin-bottom:4px">ramo ancilla |0&rang;</div>
+      <div class="amps" id="ampsA"></div>
+      <div style="font-family:var(--mono);font-size:11px;color:#A4306B;margin:14px 0 4px">ramo ancilla |1&rang;</div>
+      <div class="amps" id="ampsB"></div>
+    </div>
+  </div>
+
+  <div class="ctl" style="margin-top:24px">
+    <label for="ts">tempo t</label>
+    <input type="range" id="ts" min="0" max="120" value="40" step="1">
+    <span class="tval" id="tv">4.0</span>
+  </div>
+  <div class="ctl">
+    <label for="tmax">t massimo (intervallo del grafico)</label>
+    <input type="range" id="tmax" min="4" max="16" step="0.5" value="12">
+    <span class="tval" id="tmaxv">12.0</span>
+  </div>
+
+  <div class="mathpanel">
+    <h4><span class="formula-inline-ktx" data-tex="C(t) = \langle A|B\rangle"></span></h4>
+    <div class="mathgrid">
+      <div>
+        <h4>H(B/J,D/J)</h4>
+        <div id="matH" style="text-align:center"></div>
+      </div>
+      <div>
+        <h4>ramo A e ramo B, per esteso</h4>
+        <div style="font-family:var(--mono);font-size:11px;color:#0E7C86;margin-bottom:3px">|A&rang;</div>
+        <div class="ketline-live" id="ketA" style="margin-bottom:10px">&mdash;</div>
+        <div style="font-family:var(--mono);font-size:11px;color:#A4306B;margin-bottom:3px">|B&rang;</div>
+        <div class="ketline-live" id="ketB">&mdash;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3 &middot; L'equatore dell'ancilla &egrave; il piano complesso</h2>
+  <p class="sub">&lang;&sigma;<sub>z</sub>&rang; dell'ancilla &egrave; sempre zero: il suo vettore di Bloch giace sul piano equatoriale, e quel piano &egrave; il piano complesso di C(t).</p>
+
+  <div class="dialwrap">
+    <div><svg id="dial" viewBox="0 0 420 420" width="100%" role="img" aria-label="Piano complesso con il vettore di Bloch dell'ancilla"></svg></div>
+    <div>
+      <div class="readout">
+        <div class="rd"><div class="k">&lang;&sigma;<sub>x</sub>&rang; = Re C</div><div class="v" id="vre">&mdash;</div></div>
+        <div class="rd"><div class="k">&lang;&sigma;<sub>y</sub>&rang; = Im C</div><div class="v" id="vim">&mdash;</div></div>
+        <div class="rd"><div class="k">|C(t)|</div><div class="v" id="vmod">&mdash;</div></div>
+        <div class="rd"><div class="k">&lang;&sigma;<sub>z</sub>&rang;</div><div class="v" id="vz">0.0000</div></div>
+      </div>
+      <div class="ctl">
+        <button class="act" id="play">Avvia</button>
+        <button class="act ghost" id="clear">Cancella scia</button>
+      </div>
+    </div>
+  </div>
+
+  <h3 style="margin-top:26px">Le due componenti nel tempo</h3>
+  <svg id="traces" viewBox="0 0 980 240" width="100%" role="img" aria-label="Parte reale e immaginaria di C(t) in funzione del tempo"></svg>
+  <div class="legend">
+    <span><i style="background:#0E7C86"></i>Re C(t)</span>
+    <span><i style="background:#A4306B"></i>Im C(t)</span>
+    <span><i style="background:#A8560C"></i>istante corrente</span>
+  </div>
+</section>
+
+<section>
+  <h2>4 &middot; Il circuito, porta per porta</h2>
+  <p class="sub">Lo stesso circuito, disegnato per intero: H sull'ancilla, il controllo su &sigma;<sub>j</sub><sup>&beta;</sup>, l'evoluzione U(t) &mdash; espansa nelle sue porte elementari se sceglie Trotter in sezione 1 &mdash; e l'anti-controllo su &sigma;<sub>i</sub><sup>&alpha;</sup>. Scorra le porte una alla volta e guardi i due rami A e B cambiare a ogni passaggio.</p>
+
+  <svg id="circuitoCorr" viewBox="0 0 400 150" width="100%" role="img" aria-label="Diagramma del circuito con il qubit ausiliario"></svg>
+  <p class="note" style="margin:6px 0 0;color:var(--soft);font-size:12.5px" id="notaCircuitoCorr"></p>
+
+  <div class="ctl" style="margin-top:14px">
+    <button class="act ghost" id="ccInizio">&#9198; inizio</button>
+    <button class="act ghost" id="ccIndietro">&#9664; indietro</button>
+    <button class="act" id="ccPlay">Avvia</button>
+    <button class="act ghost" id="ccAvanti">avanti &#9654;</button>
+    <button class="act ghost" id="ccFine">fine &#9197;</button>
+  </div>
+
+  <div class="readout" style="margin-top:14px">
+    <div class="rd"><div class="k">passo</div><div class="v" id="ccPasso">&mdash;</div></div>
+    <div class="rd"><div class="k">porta applicata</div><div class="v" id="ccPorta" style="font-size:15px">&mdash;</div></div>
+  </div>
+
+  <div style="font-family:var(--mono);font-size:11px;color:#0E7C86;margin:10px 0 4px">ramo A</div>
+  <div class="amps" id="ampsCircA"></div>
+  <div class="ketline-live" id="ketCircA" style="margin-top:8px">&mdash;</div>
+  <div style="font-family:var(--mono);font-size:11px;color:#A4306B;margin:14px 0 4px">ramo B</div>
+  <div class="amps" id="ampsCircB"></div>
+  <div class="ketline-live" id="ketCircB" style="margin-top:8px">&mdash;</div>
+</section>
+</div>
+
+<footer>Stadio 4 di 4 &middot; tesi triennale in Fisica, UniPR</footer>
+</div>
+
+<script src="../assets/fisica.js"></script>
+<script src="../assets/componenti.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/matematica.js"></script>
+<script src="../assets/staffetta.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

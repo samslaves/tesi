@@ -1,0 +1,151 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>3 · Dinamica — dimero di spin</title>
+<link rel="stylesheet" href="../assets/stile-comune.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<nav class="topnav" id="topnav"></nav>
+<div class="handoff" id="handoff"></div>
+
+<div class="sheet">
+<header>
+  <div class="eyebrow">Stadio 3 di 4 &middot; Dinamica</div>
+  <h1>Far evolvere il sistema,<br>un passo di Trotter alla volta</h1>
+  <p class="lede">H = H<sub>1</sub> + H<sub>2</sub>, con H<sub>1</sub> = scambio+campo e H<sub>2</sub> = solo il termine DM. I due non commutano: e<sup>&minus;iHt</sup> &ne; e<sup>&minus;iH&#8322;t</sup>e<sup>&minus;iH&#8321;t</sup>. Trascini N e guardi l'approssimazione avvicinarsi all'esatta.</p>
+</header>
+
+<div class="sezioni-grid">
+<section>
+  <h2>1 &middot; Stato iniziale e punto di lavoro</h2>
+  <div class="ctl">
+    <label for="bJ">B / J</label>
+    <input type="range" id="bJ" min="-2" max="4" step="0.01" value="-0.18">
+    <span class="tval" id="bJv">&minus;0.18</span>
+  </div>
+  <div class="ctl">
+    <label for="DJ">D / J</label>
+    <input type="range" id="DJ" min="0" max="1.5" step="0.01" value="1.0">
+    <span class="tval" id="DJv">1.00</span>
+  </div>
+  <div class="ctl">
+    <label for="stato">stato iniziale</label>
+    <select id="stato">
+      <option value="su" selected>|&uarr;&uarr;&rang; (banco di prova standard)</option>
+      <option value="esatto">fondamentale esatto</option>
+      <option value="vqe">fondamentale dal VQE (stadio 2)</option>
+    </select>
+  </div>
+  <p class="note" id="notaStato" style="color:var(--soft)"></p>
+
+  <div class="mathpanel">
+    <h4>H = H<sub>1</sub> + H<sub>2</sub> &mdash; i due pezzi che il circuito sa esponenziare</h4>
+    <div class="formula-static" data-tex="H = \underbrace{J(X_1X_2+Y_1Y_2+Z_1Z_2) + b(Z_1+Z_2)}_{H_1} \;+\; \underbrace{D(X_1Z_2-Z_1X_2)}_{H_2}"></div>
+    <div class="mathgrid">
+      <div><h4>H<sub>1</sub> (scambio + campo)</h4><div id="matH1" style="text-align:center"></div></div>
+      <div><h4>H<sub>2</sub> (solo DM)</h4><div id="matH2" style="text-align:center"></div></div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2 &middot; &#10216;S<sub>z</sub><sup>tot</sup>&#10217;(t): esatta vs Trotter</h2>
+  <p class="sub">La curva nera &egrave; l'evoluzione esatta (diagonalizzazione diretta). Quella colorata &egrave; l'approssimazione di Trotter con N passi. Muova N e osservi la curva colorata avvicinarsi a quella nera.</p>
+
+  <div class="ctl">
+    <label for="N">passi N</label>
+    <input type="range" id="N" min="1" max="80" step="1" value="8">
+    <span class="tval" id="Nv">8</span>
+  </div>
+  <div class="ctl">
+    <label for="tmax">t massimo (grafico)</label>
+    <input type="range" id="tmax" min="4" max="16" step="0.5" value="10">
+    <span class="tval" id="tmaxv">10.0</span>
+  </div>
+  <div class="ctl">
+    <label for="t">istante t (per ket e matrice)</label>
+    <input type="range" id="t" min="0" max="10" step="0.1" value="6">
+    <span class="tval" id="tv">6.0</span>
+  </div>
+
+  <svg id="szplot" viewBox="0 0 700 260" width="100%" role="img" aria-label="Sz totale in funzione del tempo"></svg>
+  <div class="legend">
+    <span><i style="background:#14273A"></i>esatta</span>
+    <span><i style="background:#A4306B"></i>Trotter, N passi</span>
+    <span><i style="background:#A8560C"></i>istante t corrente</span>
+  </div>
+
+  <div class="mathpanel">
+    <h4><span class="formula-inline-ktx" data-tex="M(\tau) = e^{-iH_2\tau}\,e^{-iH_1\tau}"></span> &mdash; il passo di Trotter, &tau; = t/N</h4>
+    <div class="mathgrid">
+      <div><h4>|M(&tau;)| (modulo di ciascuna voce)</h4><div id="matM" style="text-align:center"></div></div>
+      <div>
+        <h4>stato a t = <span id="ketTlabel">&mdash;</span></h4>
+        <div style="font-family:var(--mono);font-size:11px;color:#14273A;margin-bottom:3px">esatto</div>
+        <div class="ketline-live" id="ketExact" style="margin-bottom:10px">&mdash;</div>
+        <div style="font-family:var(--mono);font-size:11px;color:#A4306B;margin-bottom:3px">Trotter (N passi)</div>
+        <div class="ketline-live" id="ketTrot">&mdash;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3 &middot; Convergenza dell'errore</h2>
+  <p class="sub">A tempo fissato t = t<sub>max</sub>, l'errore in funzione di N, in scala doppio-logaritmica. La teoria prevede pendenza &minus;1 per la distanza fra gli operatori e &minus;2 per la fidelity.</p>
+
+  <div class="readout">
+    <div class="rd"><div class="k">1&minus;fidelity a N corrente</div><div class="v" id="rErrN">&mdash;</div></div>
+    <div class="rd"><div class="k">CNOT per passo (compilato)</div><div class="v" id="rCnot">3</div></div>
+    <div class="rd"><div class="k">CNOT totali (N passi)</div><div class="v" id="rCnotTot">&mdash;</div></div>
+  </div>
+
+  <svg id="errplot" viewBox="0 0 700 220" width="100%" role="img" aria-label="Errore in funzione del numero di passi, scala log-log"></svg>
+
+  <div class="callout" id="ccTradeoff"></div>
+</section>
+
+<section>
+  <h2>4 &middot; Il circuito di Trotter, passo per passo</h2>
+  <p class="sub">Un periodo di Trotter, per esteso nelle sue porte elementari: prima cinque porte per U&#8321;(&tau;)=e<sup>&minus;iH&#8321;&tau;</sup> (due Rz per il campo, poi Rxx, Ryy, Rzz per lo scambio isotropo), poi sei per U&#8322;(&tau;)=e<sup>&minus;iH&#8322;&tau;</sup> (due Rzz coniugate da Hadamard, per il termine DM). &Egrave; una fattorizzazione esatta, non un'ulteriore approssimazione: lo abbiamo verificato numericamente. Il periodo si ripete N volte &mdash; lo stesso identico calcolo della sezione 2.</p>
+
+  <svg id="circuitoTrotter" viewBox="0 0 300 100" width="100%" role="img" aria-label="Diagramma di un periodo del circuito di Trotter, in porte elementari"></svg>
+  <p class="note" style="margin:6px 0 0;color:var(--soft);font-size:12.5px" id="notaPeriodo"></p>
+
+  <div class="ctl" style="margin-top:14px">
+    <button class="act ghost" id="tsInizio">&#9198; inizio</button>
+    <button class="act ghost" id="tsIndietro">&#9664; indietro</button>
+    <button class="act" id="tsPlay">Avvia</button>
+    <button class="act ghost" id="tsAvanti">avanti &#9654;</button>
+    <button class="act ghost" id="tsFine">fine &#9197;</button>
+  </div>
+
+  <div class="readout" style="margin-top:14px">
+    <div class="rd"><div class="k">passo</div><div class="v" id="tsPasso">&mdash;</div></div>
+    <div class="rd"><div class="k">porta applicata</div><div class="v" id="tsBlocco" style="font-size:15px">&mdash;</div></div>
+  </div>
+
+  <div class="amps" id="ampsTrotterStep" style="margin-top:10px"></div>
+  <div class="ketline-live" id="ketTrotterStep" style="margin-top:10px">&mdash;</div>
+
+  <div class="avanti">
+    <a class="act" id="prosegui" href="#">Prosegui &rarr; 4 &middot; Correlatori</a>
+  </div>
+</section>
+</div>
+
+<footer>Stadio 3 di 4 &middot; tesi triennale in Fisica, UniPR</footer>
+</div>
+
+<script src="../assets/fisica.js"></script>
+<script src="../assets/componenti.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/matematica.js"></script>
+<script src="../assets/staffetta.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

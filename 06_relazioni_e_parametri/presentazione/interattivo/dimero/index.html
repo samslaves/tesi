@@ -1,0 +1,78 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Il dimero di spin — percorso interattivo</title>
+<link rel="stylesheet" href="assets/stile-comune.css">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<style>
+.hero-eq{font-family:var(--mono);font-size:15px;background:#fff;border:1px solid var(--rule);padding:16px 18px;margin:18px 0 0;overflow-x:auto;white-space:nowrap}
+.flow{display:flex;align-items:center;gap:6px;flex-wrap:wrap;margin:22px 0 6px;font-family:var(--mono);font-size:12px;color:var(--soft)}
+.flow .step{padding:5px 10px;border:1px solid var(--rule);background:#fff}
+.flow .arrow{color:var(--rule)}
+</style>
+</head>
+<body>
+<div class="sheet">
+<header>
+  <div class="eyebrow">Dimero di spin-1/2 con termine DM &middot; percorso interattivo</div>
+  <h1>Dallo spettro al correlatore,<br>un parametro alla volta</h1>
+  <p class="lede">Quattro pagine, ognuna indipendente ma collegata alla successiva: l'uscita di una diventa l'ingresso della prossima. Tutta la fisica &egrave; calcolata dal vivo nel browser — nessun dato precalcolato, nessuna dipendenza esterna, nessun server. Trascini gli slider e guardi cosa succede.</p>
+  <div class="formula-static hero-eq" data-tex="H = J\left(X_1X_2+Y_1Y_2+Z_1Z_2\right) + b\left(Z_1+Z_2\right) + D\left(X_1Z_2-Z_1X_2\right)"></div>
+</header>
+
+<div class="sezioni-grid">
+<section>
+  <h2>1 &middot; La mappa dei quattro stadi</h2>
+  <p class="sub">Ogni scheda porta alla pagina corrispondente. Si pu&ograve; entrare da qualunque stadio: la barra di navigazione in cima resta sempre disponibile per saltare avanti e indietro, portando con s&eacute; il punto di lavoro (B/J, D/J) scelto.</p>
+
+  <div class="hub-grid" id="hub"></div>
+
+  <div class="flow" id="flow"></div>
+</section>
+
+<section>
+  <h2>2 &middot; Come si passano i dati fra le pagine</h2>
+  <p class="sub">Non c'&egrave; un server che tenga memoria: il passaggio avviene attraverso l'indirizzo della pagina stessa (la query string dell'URL). Ogni pagina legge i parametri con cui &egrave; stata aperta, mostra da dove viene con un piccolo cassetto in cima, e costruisce il link alla pagina successiva incorporando ci&ograve; che ha prodotto.</p>
+  <div class="callout">Esempio: nella pagina 2 (VQE) sceglie B/J e D/J e fa convergere un ansatz. Il pulsante "Prosegui" in fondo alla pagina porta alla pagina 3 con quegli stessi B/J, D/J gi&agrave; impostati, e con lo stato ottenuto dal VQE pronto per essere fatto evolvere nel tempo &mdash; oppure, se preferisce, con lo stato fondamentale esatto, per isolare l'errore di Trotter da quello del VQE.</div>
+</section>
+
+<section>
+  <h2>3 &middot; Manuale d'uso</h2>
+  <p class="sub">Per ogni controllo di ogni pagina: cosa fa, e cosa succede davvero dietro le quinte quando lo muove.</p>
+  <div class="avanti" style="justify-content:flex-start">
+    <a class="act" href="manuale.html">Apri il manuale &rarr;</a>
+  </div>
+</section>
+</div>
+
+<footer>Tesi triennale in Fisica &middot; UniPR &middot; motore fisico calcolato interamente nel browser</footer>
+</div>
+<script src="assets/katex/katex.min.js"></script>
+<script src="assets/matematica.js"></script>
+<script src="assets/staffetta.js"></script>
+<script>
+const HUB = [
+  {num:"1", nome:"Il sistema", dir:"01-sistema",
+   testo:"Spettro esatto del dimero, l'incrocio a B/J=2, e cosa fa davvero il termine DM: chiudere o aprire quel punto."},
+  {num:"2", nome:"VQE", dir:"02-vqe",
+   testo:"Tre circuiti a confronto per trovare lo stato fondamentale: uno generico e due costruiti sulla fisica del problema."},
+  {num:"3", nome:"Dinamica", dir:"03-dinamica",
+   testo:"L'evoluzione temporale via Suzuki-Trotter: quanto conta il numero di passi, e a che prezzo in porte quantistiche."},
+  {num:"4", nome:"Correlatori", dir:"04-correlatori",
+   testo:"Il circuito con il qubit ausiliario che trasforma una correlazione a due tempi in un'interferenza misurabile."},
+];
+document.getElementById("hub").innerHTML = HUB.map(h => `
+  <a class="hub-card" href="${h.dir}/index.html">
+    <div class="num">STADIO ${h.num}</div>
+    <h3>${h.nome}</h3>
+    <p>${h.testo}</p>
+    <div class="hub-arrow">&rarr;</div>
+  </a>`).join("");
+document.getElementById("flow").innerHTML =
+  HUB.map(h => `<span class="step">${h.num} &middot; ${h.nome}</span>`).join(`<span class="arrow">&rarr;</span>`);
+Matematica.renderStaticFormulas();
+</script>
+</body>
+</html>

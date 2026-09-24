@@ -1,0 +1,131 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>2 · VQE — dimero di spin</title>
+<link rel="stylesheet" href="../assets/stile-comune.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<nav class="topnav" id="topnav"></nav>
+<div class="handoff" id="handoff"></div>
+
+<div class="sheet">
+<header>
+  <div class="eyebrow">Stadio 2 di 4 &middot; VQE</div>
+  <h1>Tre circuiti in cerca<br>dello stato fondamentale</h1>
+  <p class="lede">Lo stesso principio variazionale, tre strutture di circuito diverse. Scelga l'ansatz e guardi l'ottimizzatore scendere verso l'energia esatta &mdash; e, con il termine DM acceso, guardi quale dei tre non ce la fa.</p>
+</header>
+
+<div class="sezioni-grid">
+<section>
+  <h2>1 &middot; Punto di lavoro e ansatz</h2>
+  <div class="ctl">
+    <label for="bJ">B / J</label>
+    <input type="range" id="bJ" min="0" max="4" step="0.01" value="2.0">
+    <span class="tval" id="bJv">2.00</span>
+  </div>
+  <div class="ctl">
+    <label for="DJ">D / J</label>
+    <input type="range" id="DJ" min="0" max="1" step="0.01" value="0.2">
+    <span class="tval" id="DJv">0.20</span>
+  </div>
+  <div class="ctl">
+    <label for="ansatz">ansatz</label>
+    <select id="ansatz">
+      <option value="ha">generico (hardware-efficient, 6 par.)</option>
+      <option value="pma1">PMA base (1 par.)</option>
+      <option value="pma3" selected>PMA esteso (3 par.)</option>
+    </select>
+    <button class="act" id="ottimizza">Ottimizza</button>
+  </div>
+
+  <svg id="fidcurve" viewBox="0 0 700 260" width="100%" role="img" aria-label="Fidelity in funzione di B/J per l'ansatz scelto"></svg>
+  <div class="legend">
+    <span><i style="background:#A4306B"></i>fidelity dell'ansatz scelto, al variare di B/J</span>
+    <span><i style="background:#A8560C"></i>punto corrente</span>
+  </div>
+  <p class="note" id="curvaStato" style="margin-top:8px;color:var(--soft);font-family:var(--mono);font-size:12px"></p>
+</section>
+
+<section>
+  <h2>2 &middot; L'ottimizzazione, passo per passo</h2>
+  <p class="sub">L'energia scende verso E&#8320; mentre gli angoli del circuito si muovono. La riproduzione qui sotto rallenta apposta la discesa, che nella realt&agrave; richiede una frazione di secondo.</p>
+
+  <div class="readout">
+    <div class="rd"><div class="k">iterazione</div><div class="v" id="rIter">&mdash;</div></div>
+    <div class="rd"><div class="k">energia E(&theta;)/J</div><div class="v" id="rE">&mdash;</div></div>
+    <div class="rd"><div class="k">E&#8320;/J esatta</div><div class="v" id="rE0">&mdash;</div></div>
+    <div class="rd"><div class="k">fidelity</div><div class="v" id="rFid">&mdash;</div></div>
+  </div>
+  <svg id="convergenza" viewBox="0 0 700 180" width="100%" role="img" aria-label="Energia in funzione dell'iterazione"></svg>
+
+  <div class="mathpanel">
+    <h4><span class="formula-inline-ktx" data-tex="E(\theta) = \langle\psi(\theta)|H|\psi(\theta)\rangle"></span></h4>
+    <div class="mathgrid">
+      <div>
+        <h4>H(B/J,D/J) &mdash; per riferimento</h4>
+        <div id="matH"></div>
+      </div>
+      <div>
+        <h4>&#968;(&theta;) durante l'ottimizzazione</h4>
+        <div class="ketline-live" id="ketVqe">&mdash;</div>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>3 &middot; Stato esatto vs stato del circuito</h2>
+  <p class="sub">Le quattro ampiezze del fondamentale esatto (verde) e di quello prodotto dal circuito al termine dell'ottimizzazione (rosa). Quando coincidono le frecce si sovrappongono.</p>
+  <div style="font-family:var(--mono);font-size:11px;color:#0E7C86;margin-bottom:4px">esatto</div>
+  <div class="amps" id="ampsExact"></div>
+  <div style="font-family:var(--mono);font-size:11px;color:#A4306B;margin:14px 0 4px">circuito (VQE)</div>
+  <div class="amps" id="ampsVqe"></div>
+
+  <div class="callout" id="ccEsito"></div>
+</section>
+
+<section>
+  <h2>4 &middot; Il circuito, porta per porta</h2>
+  <p class="sub">Lo stesso circuito che l'ottimizzatore ha appena usato, disegnato per intero. Scorra le porte una alla volta e guardi le quattro ampiezze cambiare a ogni passaggio: &egrave; letteralmente lo stesso calcolo, rallentato.</p>
+
+  <svg id="circuito" viewBox="0 0 400 120" width="100%" role="img" aria-label="Diagramma del circuito dell'ansatz scelto"></svg>
+
+  <div class="ctl" style="margin-top:16px">
+    <button class="act ghost" id="stepInizio">&#9198; inizio</button>
+    <button class="act ghost" id="stepIndietro">&#9664; indietro</button>
+    <button class="act" id="stepPlay">Avvia</button>
+    <button class="act ghost" id="stepAvanti">avanti &#9654;</button>
+    <button class="act ghost" id="stepFine">fine &#9197;</button>
+  </div>
+
+  <div class="readout" style="margin-top:14px">
+    <div class="rd"><div class="k">passo</div><div class="v" id="rPasso">&mdash;</div></div>
+    <div class="rd"><div class="k">porta applicata</div><div class="v" id="rPorta" style="font-size:15px">&mdash;</div></div>
+  </div>
+
+  <div class="amps" id="ampsCircuito" style="margin-top:10px"></div>
+  <div class="ketline-live" id="ketCircuito" style="margin-top:10px">&mdash;</div>
+  <p class="note" id="notaCircuito" style="margin-top:10px;color:var(--soft)"></p>
+
+  <div class="avanti">
+    <a class="act" id="prosegui" href="#">Prosegui &rarr; 3 &middot; Dinamica</a>
+  </div>
+</section>
+
+</div>
+
+<footer>Stadio 2 di 4 &middot; tesi triennale in Fisica, UniPR</footer>
+</div>
+
+<script src="../assets/fisica.js"></script>
+<script src="../assets/componenti.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/matematica.js"></script>
+<script src="../assets/staffetta.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

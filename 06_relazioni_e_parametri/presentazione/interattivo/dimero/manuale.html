@@ -1,0 +1,277 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Manuale d'uso — dimero di spin</title>
+<link rel="stylesheet" href="assets/stile-comune.css">
+<link rel="stylesheet" href="assets/katex/katex.min.css">
+<style>
+.toc{columns:2;column-gap:32px;font-family:var(--mono);font-size:13px;margin:14px 0 0}
+.toc li{break-inside:avoid;margin-bottom:5px}
+.toc a{color:var(--ink);text-decoration:none;border-bottom:1px dotted var(--rule)}
+.toc a:hover{border-bottom-color:var(--ink)}
+.ctrl-row{display:grid;grid-template-columns:150px 1fr;gap:14px;padding:12px 0;border-bottom:1px solid var(--rule)}
+.ctrl-row:last-child{border-bottom:none}
+.ctrl-name{font-family:var(--mono);font-size:12.5px;color:var(--live);font-weight:600;align-self:start}
+.ctrl-body p{margin:0 0 8px;font-size:14px}
+.ctrl-body p:last-child{margin-bottom:0}
+.succede{border-left:3px solid var(--br0);background:var(--panel);padding:2px 12px;margin-top:6px}
+.succede b{color:var(--br0);font-size:12px;font-family:var(--mono);text-transform:uppercase;letter-spacing:.04em}
+h2 a.backlink{float:right;font-size:11px;font-family:var(--mono);color:var(--soft);text-decoration:none;font-weight:400;text-transform:none;letter-spacing:0;border:none}
+</style>
+</head>
+<body>
+<nav class="topnav">
+  <span class="brand">tesi dimero &middot;</span>
+  <a class="navbtn" href="index.html">&#8962; indice</a>
+  <a class="navbtn" href="01-sistema/index.html"><span class="num">1</span> Sistema</a>
+  <a class="navbtn" href="02-vqe/index.html"><span class="num">2</span> VQE</a>
+  <a class="navbtn" href="03-dinamica/index.html"><span class="num">3</span> Dinamica</a>
+  <a class="navbtn" href="04-correlatori/index.html"><span class="num">4</span> Correlatori</a>
+  <a class="navbtn current"><span class="num">?</span> Guida</a>
+</nav>
+
+<div class="sheet">
+<header>
+  <div class="eyebrow">Manuale d'uso</div>
+  <h1>Come usare il sito, e cosa succede<br>ogni volta che tocca qualcosa</h1>
+  <p class="lede">Questa guida copre le quattro pagine nell'ordine in cui compaiono. Per ogni controllo: cosa fa e, in un riquadro a parte, <em>cosa succede davvero</em> &mdash; il calcolo che scatta dietro le quinte. Non serve installare nulla: tutte le pagine sono file statici, si aprono col doppio click su <code>index.html</code>.</p>
+</header>
+
+<section>
+  <h2>Indice</h2>
+  <ul class="toc">
+    <li><a href="#principio">Il principio generale</a></li>
+    <li><a href="#staffetta">Come i dati passano da una pagina all'altra</a></li>
+    <li><a href="#stadio1">Stadio 1 &middot; Il sistema</a></li>
+    <li><a href="#stadio2">Stadio 2 &middot; VQE</a></li>
+    <li><a href="#stadio3">Stadio 3 &middot; Dinamica</a></li>
+    <li><a href="#stadio4">Stadio 4 &middot; Correlatori</a></li>
+    <li><a href="#convenzioni">Convenzioni e unit&agrave; di misura</a></li>
+    <li><a href="#limiti">Limiti dichiarati</a></li>
+  </ul>
+</section>
+
+<section id="principio">
+  <h2>Il principio generale</h2>
+  <p>Ogni numero che vede &egrave; calcolato nel momento in cui muove un controllo, non letto da una tabella precalcolata. Il motore fisico (un file JavaScript unico, condiviso da tutte le pagine) diagonalizza la matrice <span class="formula-inline-ktx" data-tex="4\times4"></span> dell'Hamiltoniana, esegue l'ottimizzazione VQE, calcola l'evoluzione di Trotter e i correlatori dal vivo, ogni volta.</p>
+  <p>Questo ha una conseguenza diretta su come leggere l'interfaccia: se uno slider sembra "non fare nulla", quasi sempre significa che quella grandezza non dipende dal parametro che ha appena mosso &mdash; non che qualcosa sia rotto. In ogni sezione di questa guida indico esplicitamente da cosa dipende ciascun controllo.</p>
+  <div class="callout">Regola pratica: se un numero non cambia quando muove uno slider, controlli prima in questa guida se quel numero <em>dovrebbe</em> dipendere da quello slider.</div>
+</section>
+
+<section id="staffetta">
+  <h2>Come i dati passano da una pagina all'altra</h2>
+  <p>Le quattro pagine sono collegate da pulsanti "Prosegui": il punto di lavoro (B/J, D/J) e alcune scelte (l'ansatz usato, lo stato di riferimento, il numero di passi di Trotter) viaggiano da una pagina alla successiva scritti nell'indirizzo stesso della pagina &mdash; li vede comparire dopo il <code>?</code> nella barra degli indirizzi. Non c'&egrave; nessun salvataggio: se copia il link, lo condivide gi&agrave; con quei valori impostati.</p>
+  <p>La barra di navigazione in alto (sempre visibile) porta con s&eacute; il punto di lavoro corrente: pu&ograve; saltare a un altro stadio in qualunque momento senza perdere B/J e D/J.</p>
+</section>
+
+<!-- ============================================================ STADIO 1 -->
+<section id="stadio1">
+  <h2>Stadio 1 &middot; Il sistema <a class="backlink" href="01-sistema/index.html">apri &rarr;</a></h2>
+  <p class="sub">Qui si sceglie il punto di lavoro (B/J, D/J) e si osserva lo spettro esatto del dimero: quattro livelli, un incrocio, e cosa fa il termine DM.</p>
+
+  <div class="ctrl-row">
+    <div class="ctrl-name">B / J</div>
+    <div class="ctrl-body">
+      <p>Il rapporto fra campo magnetico e scambio isotropo. Copre l'intervallo <span class="formula-inline-ktx" data-tex="[0,4]"></span>, che include il valore <span class="formula-inline-ktx" data-tex="B/J=2"></span> dove (a D=0) i due livelli pi&ugrave; bassi si incrociano.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricostruisce la matrice <span class="formula-inline-ktx" data-tex="H(B/J,D/J)"></span>, la ridiagonalizza, e ridisegna: la posizione del pallino arancione sullo spettro, i tre riquadri energia/gap/&#10216;M<sub>z</sub>&#10217;, la matrice H nel pannello sotto, il ket &psi;&#8320;. Le celle della matrice che dipendono da B/J (solo le due sulla diagonale, posizioni (0,0) e (3,3)) si illuminano brevemente.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">D / J</div>
+    <div class="ctrl-body">
+      <p>L'intensit&agrave; del termine di Dzyaloshinskii&ndash;Moriya, l'unico che rompe la conservazione della magnetizzazione totale.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Oltre a tutto quello che fa B/J, ricalcola anche il grafico dello spettro per intero (non solo il pallino: le curve stesse cambiano forma, perch&eacute; a D&ne;0 l'incrocio si apre), i due commutatori &#10216;[H<sub>D</sub>,S<sub>z</sub>]&#10217; e &#10216;[H<sub>D</sub>,S&sup2;]&#10217; con le rispettive matrici, e il testo del riquadro esplicativo. Le otto celle fuori diagonale della matrice H (quelle del termine DM) si illuminano.</div>
+    </div>
+  </div>
+
+  <div class="callout">Il punto pi&ugrave; interessante da esplorare qui: porti D/J a zero, muova B/J fino a 2, e guardi il gap chiudersi esattamente. Poi rialzi D/J e lo veda restare finito. &Egrave; l'intero argomento del documento 1 in una manciata di secondi.</div>
+</section>
+
+<!-- ============================================================ STADIO 2 -->
+<section id="stadio2">
+  <h2>Stadio 2 &middot; VQE <a class="backlink" href="02-vqe/index.html">apri &rarr;</a></h2>
+  <p class="sub">Tre circuiti diversi in cerca dello stesso stato fondamentale. Qui si vede quale regge quando si rompe la simmetria, e quale no.</p>
+
+  <div class="ctrl-row">
+    <div class="ctrl-name">B / J, D / J</div>
+    <div class="ctrl-body">
+      <p>Come nello stadio 1. Muoverli <strong>invalida</strong> l'ultima ottimizzazione fatta: gli angoli del circuito tornano a zero finch&eacute; non preme di nuovo "Ottimizza".</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola la matrice H (pannello e curva di fidelity di sfondo), azzera fidelity/stato del circuito, e mostra un avviso ("punto di lavoro cambiato: prema Ottimizza") al posto del giudizio precedente sulla qualit&agrave; dell'ansatz.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">ansatz</div>
+    <div class="ctrl-body">
+      <p>Tre opzioni: il circuito <em>generico</em> (6 parametri, nessuna struttura fisica), il <em>PMA base</em> (1 parametro, costruito per conservare la magnetizzazione), il <em>PMA esteso</em> (3 parametri, corregge il difetto del base).</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola da zero la curva di fidelity-vs-B/J (richiede diverse ottimizzazioni, impiega una frazione di secondo), e ridisegna il circuito nello stadio 4 di questa pagina con la sequenza di porte giusta per l'ansatz scelto.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">Ottimizza</div>
+    <div class="ctrl-body">
+      <p>Avvia la discesa del gradiente sul punto di lavoro corrente, con 6 riavvii casuali per evitare minimi locali.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; L'ottimizzazione vera dura pochi millisecondi; l'animazione che vede (energia che scende, ampiezze che si muovono) &egrave; una riproduzione rallentata apposta, su ~50 fotogrammi campionati dalla traiettoria reale. Al termine: il callout finale valuta la fidelity raggiunta, il pulsante "Prosegui" si attiva con quello stato pronto per lo stadio 3, e la sezione 4 (il circuito) si aggiorna con i parametri appena trovati.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">Il circuito, porta per porta<br><span style="font-weight:400;color:var(--soft)">(inizio / indietro / avvia / avanti / fine)</span></div>
+    <div class="ctrl-body">
+      <p>Scorre la sequenza di porte del circuito scelto, una alla volta, a partire da |00&#10217;. "Avvia" anima l'intera sequenza da sola.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ogni porta (X, H, Ry, CZ, CX, o il blocco RBS del PMA esteso) viene applicata allo stato corrente; le quattro ampiezze e il ket si aggiornano di conseguenza. Prima di premere "Ottimizza" almeno una volta, i parametri Ry sono a zero: il circuito si vede, ma non fa ancora nulla di interessante.</div>
+    </div>
+  </div>
+
+  <div class="callout">Al punto critico B/J=2 con D/J acceso: scelga "PMA base", prema Ottimizza, e guardi la fidelity fermarsi a 0.70 qualunque cosa faccia. Poi passi a "PMA esteso" con lo stesso punto: torna a 1. La differenza non &egrave; nell'ottimizzatore, &egrave; nella struttura del circuito.</div>
+</section>
+
+<!-- ============================================================ STADIO 3 -->
+<section id="stadio3">
+  <h2>Stadio 3 &middot; Dinamica <a class="backlink" href="03-dinamica/index.html">apri &rarr;</a></h2>
+  <p class="sub">L'evoluzione temporale del dimero, calcolata esattamente e approssimata con Suzuki&ndash;Trotter, con il circuito che la implementa mostrato porta per porta.</p>
+
+  <div class="ctrl-row">
+    <div class="ctrl-name">B / J, D / J</div>
+    <div class="ctrl-body">
+      <p>Qui l'intervallo di B/J include valori negativi (fino a &minus;2): a differenza degli stadi 1&ndash;2, qui non interessa l'incrocio ma un regime dove la dinamica ha pi&ugrave; frequenze visibili.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola H<sub>1</sub> e H<sub>2</sub> (pannello matrici), l'intera curva &#10216;S<sub>z</sub>&#10217;(t) sia esatta che Trotter, la matrice del passo M(&tau;), e l'intero circuito porta per porta nello stadio 4.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">stato iniziale</div>
+    <div class="ctrl-body">
+      <p>Tre scelte: |&uarr;&uarr;&rang; (uno stato di prova qualunque, non autostato di nulla), il fondamentale esatto, o quello prodotto dal VQE allo stadio 2 (con la sua eventuale imperfezione).</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Se sceglie "dal VQE", il sito rilancia l'ottimizzazione con gli stessi identici parametri (ansatz, punto di lavoro) usati nello stadio 2: se la fidelity l&igrave; non era 1, qui lo stato di partenza sar&agrave; leggermente diverso da quello esatto, e lo si vede propagarsi in tutta la dinamica successiva.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">passi N</div>
+    <div class="ctrl-body">
+      <p>Il numero di ripetizioni del passo di Trotter, da 1 a 80.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola la curva Trotter (che si avvicina a quella esatta all'aumentare di N), il conteggio dei CNOT totali (3 per passo, quindi 3N), e allunga o accorcia il circuito porta per porta dello stadio 4 (11 porte per periodo, ripetuto N volte).</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">t massimo</div>
+    <div class="ctrl-body">
+      <p>L'estremo destro dell'asse del tempo nel grafico &#10216;S<sub>z</sub>&#10217;(t). Non &egrave; l'istante osservato: &egrave; solo quanto lontano arriva il grafico.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ridisegna l'intera curva su un intervallo diverso; se l'istante t (vedi sotto) superava il nuovo massimo, viene riportato indietro automaticamente.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">istante t</div>
+    <div class="ctrl-body">
+      <p>Il punto preciso del tempo mostrato nel pannello "M(&tau;)" e nei due ket (esatto/Trotter). &Egrave; anche l'istante marcato con la linea tratteggiata arancione sul grafico.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola solo lo stato a quell'istante (non l'intera curva, gi&agrave; disegnata): i due ket "esatto" e "Trotter" si aggiornano, mostrando quanto sono vicini a quel preciso momento.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">Il circuito di Trotter<br><span style="font-weight:400;color:var(--soft)">(inizio / indietro / avvia / avanti / fine)</span></div>
+    <div class="ctrl-body">
+      <p>Scorre le 11 porte elementari di <em>un periodo</em> di Trotter (due R<sub>z</sub> per il campo, poi R<sub>xx</sub>, R<sub>yy</sub>, R<sub>zz</sub> per lo scambio, poi due coppie H&ndash;R<sub>zz</sub>&ndash;H per il termine DM), ripetuto N volte.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ogni porta viene applicata per davvero: la scomposizione non &egrave; un'approssimazione ulteriore, l'ho verificata numericamente contro il calcolo esatto (scarto a precisione macchina). Con N grande lo stepper attraversa centinaia di porte; "Avvia" limita comunque la durata dell'animazione a circa 6 secondi, qualunque sia N.</div>
+    </div>
+  </div>
+
+  <div class="callout">Con N=1 o 2, guardi la curva Trotter (magenta tratteggiata) separarsi visibilmente da quella esatta (nera) dopo pochi secondi di tempo simulato. Con N=80 le due curve si sovrappongono quasi ovunque: il prezzo &egrave; nel conteggio dei CNOT, che passa da pochi a 240.</div>
+</section>
+
+<!-- ============================================================ STADIO 4 -->
+<section id="stadio4">
+  <h2>Stadio 4 &middot; Correlatori <a class="backlink" href="04-correlatori/index.html">apri &rarr;</a></h2>
+  <p class="sub">Il circuito con il qubit ausiliario che trasforma la correlazione a due tempi C(t) in un'interferenza misurabile.</p>
+
+  <div class="ctrl-row">
+    <div class="ctrl-name">B / J, D / J</div>
+    <div class="ctrl-body">
+      <p>Il punto di lavoro. Il valore predefinito (0.35, 0.80) &egrave; il punto "test 2" gi&agrave; usato nei documenti scritti del progetto.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola H, tutte e 36 le combinazioni della heatmap, la traiettoria completa di C(t) per il quadrante e il grafico delle tracce, e il circuito nello stadio 4 (di questa stessa pagina).</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">stato di riferimento |&psi;&#8320;&rang;</div>
+    <div class="ctrl-body">
+      <p>Lo stato rispetto a cui si misura il correlatore: |&uarr;&uarr;&rang;, il fondamentale esatto, o quello del VQE.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Se sceglie "dal VQE" con un ansatz che in quel punto non converge bene, ogni numero di questa pagina (heatmap, quadrante, tracce, circuito) rifletter&agrave; quell'imperfezione: il testo sotto il menu mostra la fidelity esatta, cos&igrave; sa quanto fidarsi dei numeri.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">evoluzione</div>
+    <div class="ctrl-body">
+      <p>"Esatta" o "Trotter (N passi)": quale U(t) usa il circuito per far evolvere lo stato fra la perturbazione e la misura.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Con "Trotter" selezionato, il blocco U(t) nel diagramma del circuito (stadio 4 di questa pagina) si espande nelle sue 11 porte elementari per periodo, esattamente come nello stadio 3. Con "esatta" resta un blocco unico, perch&eacute; H<sub>1</sub> e H<sub>2</sub> non commutano in generale e quindi U(t) esatta non ha una scomposizione elementare da mostrare.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">&sigma;<sub>i</sub><sup>&alpha;</sup>, &sigma;<sub>j</sub><sup>&beta;</sup></div>
+    <div class="ctrl-body">
+      <p>Sito e componente di Pauli dei due operatori del correlatore: quale si misura dopo (i,&alpha;) e quale perturba a t=0 (j,&beta;). 36 combinazioni possibili.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ricalcola l'intera traiettoria di C(t) per la coppia scelta, il circuito (le porte controllate mostrano X, Y o Z a seconda della scelta &mdash; X viene disegnata come CNOT canonico, Y e Z come box etichettati), e sposta il marcatore evidenziato nella heatmap sulla cella corrispondente.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">Le 36 combinazioni</div>
+    <div class="ctrl-body">
+      <p>Una heatmap 6&times;6: ogni cella &egrave; |C(t)| per quella coppia di operatori. Cliccando una cella, imposta quella coppia nei controlli sopra.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Mostra il valore <em>all'istante e con la modalit&agrave; di evoluzione correnti</em>: si aggiorna muovendo il tempo (con un breve ritardo voluto, per non appesantire il trascinamento a N alto) o cambiando evoluzione/N.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">tempo t <span style="font-weight:400">(sezione 2)</span></div>
+    <div class="ctrl-body">
+      <p>L'istante mostrato ovunque nella pagina: quadrante, marcatore sulle tracce, ket dei due rami, heatmap, circuito.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; &Egrave; il controllo pi&ugrave; "costoso" della pagina: aggiorna in tempo reale quadrante e tracce (economico), e con un breve ritardo la heatmap e il circuito porta-per-porta (pi&ugrave; pesanti, specialmente con Trotter a N alto).</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">Avvia / Cancella scia <span style="font-weight:400">(quadrante)</span></div>
+    <div class="ctrl-body">
+      <p>"Avvia" anima il tempo da 0 a t<sub>max</sub> lasciando una scia sul quadrante; "Cancella scia" la rimuove senza fermare l'animazione.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; Ogni fotogramma sposta l'istante t di un passo e ridisegna; la scia &egrave; solo un tracciato grafico dei punti gi&agrave; visitati, non richiede ricalcoli aggiuntivi.</div>
+    </div>
+  </div>
+  <div class="ctrl-row">
+    <div class="ctrl-name">Il circuito, porta per porta <span style="font-weight:400">(sezione 4)</span></div>
+    <div class="ctrl-body">
+      <p>H sull'ancilla, il controllo su &sigma;<sub>j</sub><sup>&beta;</sup>, l'evoluzione U(t), l'anti-controllo su &sigma;<sub>i</sub><sup>&alpha;</sup> &mdash; scomposti in porte elementari e con i due rami A e B mostrati separatamente ad ogni passo.</p>
+      <div class="succede"><b>Cosa succede</b> &mdash; I due rami evolvono in parallelo attraverso la stessa sequenza di porte (l'evoluzione non &egrave; controllata dall'ancilla, quindi agisce identicamente su entrambi); solo l'ultima porta li tratta in modo diverso. Con Trotter e N grande, lo stepper pu&ograve; attraversare oltre 2000 passi: "Avvia" resta comunque limitato a pochi secondi.</div>
+    </div>
+  </div>
+
+  <div class="callout">Provi a cliccare la cella (1z, 2z) nella heatmap, poi scorra lo stadio "per stadio": vedr&agrave; che &egrave; l'unica combinazione, insieme a poche altre, dove il segnale resta forte per tutto l'intervallo &mdash; il resto della griglia mostra combinazioni via via pi&ugrave; deboli.</div>
+</section>
+
+<section id="convenzioni">
+  <h2>Convenzioni e unit&agrave; di misura</h2>
+  <table>
+    <thead><tr><th>Simbolo</th><th>Significato</th><th>Unit&agrave;</th></tr></thead>
+    <tbody>
+      <tr><td>B/J, D/J</td><td>campo e termine DM, in rapporto allo scambio</td><td class="n">adimensionale</td></tr>
+      <tr><td>E/J</td><td>energia</td><td class="n">in unit&agrave; di J</td></tr>
+      <tr><td>t</td><td>tempo</td><td class="n">in unit&agrave; di 1/J</td></tr>
+      <tr><td>fidelity, |C(t)|, &#10216;S<sub>z</sub>&#10217;</td><td>ampiezze, probabilit&agrave;, correlatori</td><td class="n">adimensionali</td></tr>
+      <tr><td>J</td><td>scambio isotropo</td><td class="n">fissato a 1 ovunque</td></tr>
+    </tbody>
+  </table>
+  <p class="note" style="margin-top:14px">Convenzione dei qubit: il qubit 0 corrisponde al sito 2, il qubit 1 al sito 1 (indice di base = 2&middot;q<sub>1</sub>+q<sub>0</sub>, la stessa usata da Qiskit). L'ordine compare esplicitamente nelle etichette dei fili di ogni circuito disegnato.</p>
+</section>
+
+<section id="limiti">
+  <h2>Limiti dichiarati</h2>
+  <ul style="font-size:14px;line-height:1.7;padding-left:22px">
+    <li>Tutto il sito riguarda il <strong>dimero</strong> (N=2): anello e catena a N=3 non sono coperti da queste pagine interattive.</li>
+    <li>Nessun rumore: le simulazioni sono a stato puro, senza decoerenza n&eacute; errori di gate o di lettura (la Parte 2 della tesi, sul sistema aperto, &egrave; sviluppata separatamente).</li>
+    <li>La heatmap delle 36 combinazioni, come tutto il resto, &egrave; ricalcolata dal vivo: con Trotter e N molto alto il ritardo voluto (circa 90 millisecondi) &egrave; percepibile durante il trascinamento del tempo.</li>
+    <li>Il circuito dei correlatori usa sempre il fondamentale esatto o il VQE come |&psi;&#8320;&rang;: non eredita uno stato gi&agrave; evoluto nel tempo dallo stadio 3.</li>
+  </ul>
+</section>
+
+<footer>Manuale d'uso &middot; tesi triennale in Fisica, UniPR</footer>
+</div>
+
+<script src="assets/katex/katex.min.js"></script>
+<script src="assets/matematica.js"></script>
+<script>Matematica.renderStaticFormulas();</script>
+</body>
+</html>

@@ -1,0 +1,103 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>1 · Il sistema — dimero di spin</title>
+<link rel="stylesheet" href="../assets/stile-comune.css">
+<link rel="stylesheet" href="../assets/katex/katex.min.css">
+<link rel="stylesheet" href="stile.css">
+</head>
+<body>
+<nav class="topnav" id="topnav"></nav>
+<div class="handoff" id="handoff"></div>
+
+<div class="sheet">
+<header>
+  <div class="eyebrow">Stadio 1 di 4 &middot; Il sistema</div>
+  <h1>Due spin, quattro livelli,<br>un incrocio</h1>
+  <p class="lede"><span class="formula-inline-ktx" data-tex="H = J(X_1X_2+Y_1Y_2+Z_1Z_2) + b(Z_1+Z_2) + D(X_1Z_2-Z_1X_2)"></span>, con J=1. Trascini i due slider: lo spettro si ridisegna dal vivo, punto per punto, diagonalizzando la matrice 4&times;4 nel browser.</p>
+</header>
+
+<div class="sezioni-grid">
+<section>
+  <h2>1 &middot; Lo spettro</h2>
+  <p class="sub">Le quattro curve grigie sono i quattro livelli al variare di B/J, con D/J fissato allo slider. Il punto arancione segue lo stato fondamentale nel punto di lavoro corrente.</p>
+
+  <div class="ctl">
+    <label for="bJ">B / J</label>
+    <input type="range" id="bJ" min="0" max="4" step="0.01" value="1.2">
+    <span class="tval" id="bJv">1.20</span>
+  </div>
+  <div class="ctl">
+    <label for="DJ">D / J</label>
+    <input type="range" id="DJ" min="0" max="1" step="0.01" value="0.2">
+    <span class="tval" id="DJv">0.20</span>
+  </div>
+
+  <svg id="spettro" viewBox="0 0 700 320" width="100%" role="img" aria-label="Spettro del dimero in funzione di B/J"></svg>
+  <div class="legend">
+    <span><i style="background:#8FA2B5"></i>i quattro livelli</span>
+    <span><i style="background:#A8560C"></i>stato fondamentale, punto corrente</span>
+    <span><i style="background:#BDC9D7"></i>B/J = 2 (incrocio senza DM)</span>
+  </div>
+
+  <div class="readout" style="margin-top:20px">
+    <div class="rd"><div class="k">energia E&#8320;/J</div><div class="v" id="rE0">&mdash;</div></div>
+    <div class="rd"><div class="k">gap &Delta;E&#8320;&#8321;/J</div><div class="v" id="rGap">&mdash;</div></div>
+    <div class="rd"><div class="k">&#10216;M<sub>z</sub>&#10217;</div><div class="v" id="rMz">&mdash;</div></div>
+  </div>
+
+  <div class="mathpanel">
+    <h4>La matrice H(B/J, D/J), e lo stato fondamentale che ne esce</h4>
+    <div class="formula-static" data-tex="H = J\left(X_1X_2+Y_1Y_2+Z_1Z_2\right) + b\left(Z_1+Z_2\right) + D\left(X_1Z_2-Z_1X_2\right)"></div>
+    <div class="mathgrid">
+      <div id="matH"></div>
+      <div>
+        <h4>&#968;&#8320; in notazione di Dirac</h4>
+        <div class="ketline-live" id="ketPsi0"></div>
+        <p class="note" style="margin-top:10px;font-size:13px">Le celle che si illuminano quando muove B/J sono la diagonale (0,0) e (3,3): solo quelle dipendono dal campo. Quando muove D/J si illuminano le otto posizioni fuori diagonale del termine DM.</p>
+      </div>
+    </div>
+  </div>
+</section>
+
+<section>
+  <h2>2 &middot; Che cosa fa il termine DM</h2>
+  <p class="sub">Con D=0 l'Hamiltoniana conserva la magnetizzazione totale M; il termine DM no. La misura diretta &egrave; il commutatore: se &egrave; diverso da zero, il DM pu&ograve; mescolare settori di M diversi e aprire l'incrocio.</p>
+
+  <div class="readout">
+    <div class="rd"><div class="k">&Vert;[H<sub>D</sub>,S<sub>z</sub>]&Vert;</div><div class="v" id="rComSz">&mdash;</div></div>
+    <div class="rd"><div class="k">&Vert;[H<sub>D</sub>,S&sup2;]&Vert;</div><div class="v" id="rComS2">&mdash;</div></div>
+  </div>
+  <div class="callout" id="ccDM"></div>
+
+  <div class="mathpanel">
+    <h4>Il commutatore [H<sub>D</sub>, S<sub>z</sub>] come matrice</h4>
+    <p class="note" style="margin-bottom:10px">Se questa matrice fosse tutta a zero, H<sub>D</sub> conserverebbe la magnetizzazione. Le celle colorate sono l'evidenza diretta, riga per riga e colonna per colonna, che non lo fa.</p>
+    <div id="matCom" style="text-align:center"></div>
+  </div>
+</section>
+
+<section>
+  <h2>3 &middot; Lo stato fondamentale, come vettori</h2>
+  <p class="sub">Le quattro ampiezze &lang;00|&psi;&#8320;&rang; ... &lang;11|&psi;&#8320;&rang; nel piano complesso. Con D=0 sono tutte reali per costruzione; il DM pu&ograve; solo cambiarne il peso relativo, non introduce fase (l'Hamiltoniana resta reale su questa base).</p>
+  <div class="amps" id="amps"></div>
+
+  <div class="avanti">
+    <a class="act" id="prosegui" href="#">Prosegui &rarr; 2 &middot; VQE</a>
+  </div>
+</section>
+</div>
+
+<footer>Stadio 1 di 4 &middot; tesi triennale in Fisica, UniPR</footer>
+</div>
+
+<script src="../assets/fisica.js"></script>
+<script src="../assets/componenti.js"></script>
+<script src="../assets/katex/katex.min.js"></script>
+<script src="../assets/matematica.js"></script>
+<script src="../assets/staffetta.js"></script>
+<script src="script.js"></script>
+</body>
+</html>

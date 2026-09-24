@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="UTF-8">
+<title>Trimero a catena aperta — spettro in campo</title>
+<style>
+  :root{
+    --bg:#ffffff; --panel:#f7f7f5; --border:#d8d6cd; --text:#2c2c2a; --muted:#6b6a63;
+    --colA:#ba7517; --colB:#185fa5; --colC:#0f6e56; --accent:#993c1d;
+    --afm:#a53d3d; --fm:#2f6fb0; --zero:#9a988e;
+  }
+  @media (prefers-color-scheme: dark){
+    :root{
+      --bg:#1c1c1a; --panel:#242422; --border:#45443e; --text:#e7e5da; --muted:#a6a498;
+      --colA:#f2b06a; --colB:#7fb2e8; --colC:#5dcaa5; --accent:#e8a087;
+      --afm:#e08585; --fm:#7fb2e8; --zero:#8c8a80;
+    }
+  }
+  body{
+    font-family: -apple-system, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+    background:var(--bg); color:var(--text); margin:0; padding:24px;
+  }
+  h1{font-size:20px; font-weight:500; margin:0 0 4px;}
+  p.sub{color:var(--muted); font-size:14px; margin:0 0 20px;}
+  .wrap{max-width:920px; margin:0 auto;}
+  .layout{display:flex; gap:24px; flex-wrap:wrap;}
+  .plotcol{flex:1 1 560px; min-width:320px;}
+  .panel{
+    background:var(--panel); border:1px solid var(--border); border-radius:12px;
+    padding:16px 20px; margin-bottom:16px;
+  }
+  .controls{flex:0 0 300px; min-width:260px;}
+  label{display:flex; justify-content:space-between; font-size:13px; margin-bottom:4px;}
+  label span.val{font-variant-numeric:tabular-nums; color:var(--accent); font-weight:500;}
+  input[type=range]{width:100%; margin-bottom:16px;}
+  .presets{display:flex; flex-wrap:wrap; gap:8px; margin-top:4px;}
+  button{
+    font-family:inherit; font-size:12px; padding:6px 10px; border-radius:8px;
+    border:1px solid var(--border); background:var(--bg); color:var(--text); cursor:pointer;
+  }
+  button:hover{border-color:var(--accent);}
+  .legend{display:flex; gap:16px; flex-wrap:wrap; font-size:12px; margin-top:10px; color:var(--muted);}
+  .legend .dot{display:inline-block; width:10px; height:10px; border-radius:2px; margin-right:5px; vertical-align:middle;}
+  .status{font-size:13px; line-height:1.6;}
+  .status b{color:var(--text);}
+  svg{width:100%; height:auto; display:block;}
+  .axis line{stroke:var(--muted); stroke-width:1;}
+  .axis text{fill:var(--muted); font-size:11px;}
+  .gridline{stroke:var(--border); stroke-width:0.5;}
+  .lineA{stroke:var(--colA);}
+  .lineB{stroke:var(--colB);}
+  .lineC{stroke:var(--colC);}
+  .crossdot{fill:var(--text);}
+  .crosslabel{fill:var(--text); font-size:12px;}
+  .obsline{stroke:var(--accent); stroke-width:1; stroke-dasharray:3,3; opacity:0.75;}
+  .obsdot{stroke:var(--bg); stroke-width:1.5;}
+  .obslabel{fill:var(--accent); font-size:11px; font-weight:500;}
+  .qn{color:var(--muted); font-size:11px; margin-top:2px;}
+  .note{color:var(--muted); font-size:12px; margin-top:10px; line-height:1.5;}
+  hr.sep{border:none; border-top:1px solid var(--border); margin:12px 0;}
+  .subpanels{display:flex; gap:16px; flex-wrap:wrap;}
+  .subpanels .panel{flex:1 1 240px; min-width:220px; margin-bottom:0;}
+  .subpanels h3{font-size:12.5px; font-weight:600; margin:0 0 8px; color:var(--muted); text-transform:uppercase; letter-spacing:0.02em;}
+  .bondAFM{stroke:var(--afm);}
+  .bondFM{stroke:var(--fm);}
+  .bondZero{stroke:var(--zero); stroke-dasharray:2,2;}
+  .sitedot{fill:var(--bg); stroke:var(--text); stroke-width:1.5;}
+  .sitelabel{fill:var(--text); font-size:11px;}
+  .bondlabel{font-size:10.5px;}
+  .bondlabel.afm{fill:var(--afm);}
+  .bondlabel.fm{fill:var(--fm);}
+  .bondlabel.zero{fill:var(--zero);}
+  .rl-region-A{fill:var(--colA); opacity:0.14;}
+  .rl-region-B{fill:var(--colB); opacity:0.12;}
+  .rl-bound{stroke:var(--muted); stroke-width:1;}
+  .rl-axis{stroke:var(--muted); stroke-width:1;}
+  .rl-tick{fill:var(--muted); font-size:9px;}
+  .rl-label{font-size:11px; font-weight:600;}
+  .rl-dot{stroke:var(--bg); stroke-width:1.5;}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>Trimero a catena aperta uniforme: spettro in campo</h1>
+  <p class="sub">Otto livelli E(S13,S,M) al variare del campo b, per J regolabile (con segno), legami 1&harr;2 e 2&harr;3 uguali, nessun legame 1&harr;3. Il pallino nero segna l'incrocio del fondamentale, se esiste; la linea tratteggiata verticale mostra lo stato al campo osservato.</p>
+
+  <div class="layout">
+    <div class="plotcol">
+      <div class="panel">
+        <svg id="plot" viewBox="0 0 560 420" role="img" aria-label="Grafico dello spettro in campo"></svg>
+      </div>
+      <div class="panel">
+        <div class="legend">
+          <span><span class="dot" style="background:var(--colA)"></span>A': S13=1, S=3/2 (quadrupletto)</span>
+          <span><span class="dot" style="background:var(--colB)"></span>B': S13=1, S=1/2 (doppietto)</span>
+          <span><span class="dot" style="background:var(--colC)"></span>C': S13=0, S=1/2 (doppietto, coppia 1,3 in singoletto)</span>
+        </div>
+        <div class="note">
+          Tratto continuo = ramo M&lt;0 (rilevante per il fondamentale a b&gt;0); tratteggio corto = ramo M&gt;0.
+          Assi: <i>b</i> orizzontale, <i>E</i> verticale, entrambi nelle stesse unità di energia di J (convenzione di Pauli: nessuna unità fisica fissata, solo il rapporto b/J ha significato).
+          S13=s1+s3 è lo spin totale della coppia <i>non legata</i> 1,3 — un'etichetta di simmetria, non un'interazione fisica: l'unico legame è quello disegnato sotto.
+        </div>
+      </div>
+
+      <div class="subpanels">
+        <div class="panel">
+          <h3>Geometria e legami</h3>
+          <svg id="chain" viewBox="0 0 200 100" role="img" aria-label="Catena aperta 1-2-3 con legami J uguali, nessun legame 1-3"></svg>
+        </div>
+        <div class="panel">
+          <h3>Regime (segno di J)</h3>
+          <svg id="regimeline" viewBox="0 0 200 90" role="img" aria-label="Regime antiferromagnetico o ferromagnetico e posizione corrente"></svg>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <div class="panel">
+        <label>J <span class="val" id="Jval">1.00</span></label>
+        <input type="range" id="J" min="-3" max="3" step="0.05" value="1">
+        <div class="presets">
+          <button data-j="1">AFM (J=1)</button>
+          <button data-j="2.5">AFM forte (J=2.5)</button>
+          <button data-j="0.3">AFM debole (J=0.3)</button>
+          <button data-j="-1">FM (J=-1)</button>
+        </div>
+        <hr class="sep">
+        <label>b osservato <span class="val" id="bobsval">0.00</span></label>
+        <input type="range" id="bfrac" min="0" max="1" step="0.002" value="0.42">
+      </div>
+      <div class="panel status" id="status"></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const svg = document.getElementById('plot');
+const chainSvg = document.getElementById('chain');
+const rlSvg = document.getElementById('regimeline');
+const Jin = document.getElementById('J');
+const Jval = document.getElementById('Jval');
+const bfracIn = document.getElementById('bfrac');
+const bobsval = document.getElementById('bobsval');
+const statusBox = document.getElementById('status');
+
+const W = 560, H = 420;
+const padL = 62, padR = 20, padT = 24, padB = 38;
+const plotW = W - padL - padR, plotH = H - padT - padB;
+
+const QN = {A:{S13:1, S:1.5}, B:{S13:1, S:0.5}, C:{S13:0, S:0.5}};
+
+function lines(J){
+  // ciascuna linea: {mult, M, base, cls}; E(b) = base + 2*M*b
+  return [
+    {mult:'A', M:1.5,  base:2*J,  cls:'lineA'},
+    {mult:'A', M:0.5,  base:2*J,  cls:'lineA'},
+    {mult:'A', M:-0.5, base:2*J,  cls:'lineA'},
+    {mult:'A', M:-1.5, base:2*J,  cls:'lineA'},
+    {mult:'B', M:0.5,  base:-4*J, cls:'lineB'},
+    {mult:'B', M:-0.5, base:-4*J, cls:'lineB'},
+    {mult:'C', M:0.5,  base:0,    cls:'lineC'},
+    {mult:'C', M:-0.5, base:0,    cls:'lineC'},
+  ];
+}
+
+function stateAt(J, b){
+  const es = lines(J).map(l=>({mult:l.mult, M:l.M, E:l.base+2*l.M*b, cls:l.cls}));
+  es.sort((a,c)=>a.E-c.E);
+  return {ground: es[0], gap: es[1].E-es[0].E};
+}
+
+function groundEnergyAt(J, b){
+  // rami M<0 rilevanti per b>=0
+  const EA = 2*J-3*b, EB = -4*J-b, EC = -b;
+  const vals = [['A',EA],['B',EB],['C',EC]];
+  vals.sort((a,b)=>a[1]-b[1]);
+  return vals[0]; // [mult, energy]
+}
+
+function findCrossing(J){
+  const E0 = {A: 2*J, B: -4*J, C: 0};
+  let gs0 = Object.keys(E0).reduce((a,b)=>E0[a]<=E0[b]?a:b);
+  if (gs0 === 'A') return null; // A' già fondamentale, nessun crossing per b>0
+  const bc = J - E0[gs0]/2; // incrocio col ramo A', M=-3/2
+  if (bc <= 0) return null;
+  return {from: gs0, to: 'A', bc: bc};
+}
+
+function bondClass(val){
+  if (val > 1e-9) return {cls:'bondAFM', tag:'afm', word:'AFM'};
+  if (val < -1e-9) return {cls:'bondFM', tag:'fm', word:'FM'};
+  return {cls:'bondZero', tag:'zero', word:'nullo'};
+}
+
+function drawChain(J){
+  const p1={x:30,y:55}, p2={x:100,y:55}, p3={x:170,y:55};
+  const wJ = 1.5 + 4.5*Math.min(Math.abs(J)/3,1);
+  const bJ = bondClass(J);
+  let s = '';
+  // legame assente 1-3, arco tratteggiato sotto
+  s += `<path d="M ${p1.x} ${p1.y} Q ${(p1.x+p3.x)/2} ${p1.y+34} ${p3.x} ${p3.y}" class="bondZero" fill="none" stroke-width="1.3"/>`;
+  s += `<text x="${(p1.x+p3.x)/2}" y="${p1.y+42}" text-anchor="middle" class="bondlabel zero">(assente)</text>`;
+  // legami fisici
+  s += `<line x1="${p1.x}" y1="${p1.y}" x2="${p2.x}" y2="${p2.y}" class="${bJ.cls}" stroke-width="${wJ}"/>`;
+  s += `<line x1="${p2.x}" y1="${p2.y}" x2="${p3.x}" y2="${p3.y}" class="${bJ.cls}" stroke-width="${wJ}"/>`;
+  // siti
+  [p1,p2,p3].forEach(p=>{ s += `<circle cx="${p.x}" cy="${p.y}" r="7" class="sitedot"/>`; });
+  s += `<text x="${p1.x}" y="${p1.y-13}" class="sitelabel" text-anchor="middle">1</text>`;
+  s += `<text x="${p2.x}" y="${p2.y-13}" class="sitelabel" text-anchor="middle">2</text>`;
+  s += `<text x="${p3.x}" y="${p3.y-13}" class="sitelabel" text-anchor="middle">3</text>`;
+  // etichette legami
+  s += `<text x="${(p1.x+p2.x)/2}" y="${p1.y+16}" text-anchor="middle" class="bondlabel ${bJ.tag}">J=${J.toFixed(2)}</text>`;
+  s += `<text x="${(p2.x+p3.x)/2}" y="${p2.y+16}" text-anchor="middle" class="bondlabel ${bJ.tag}">J=${J.toFixed(2)}</text>`;
+  chainSvg.innerHTML = s;
+}
+
+function drawRegimeLine(J){
+  const range = 3;
+  const pl=14, pr=14, pt=14, pb=26, W2=200, H2=90;
+  const X = v => pl + (v+range)/(2*range)*(W2-pl-pr);
+  let s = '';
+  // regione FM (J<0) -> A' sempre fondamentale, nessun incrocio
+  s += `<rect x="${X(-range)}" y="${pt}" width="${X(0)-X(-range)}" height="${H2-pt-pb}" class="rl-region-A"/>`;
+  // regione AFM (J>0) -> B' fondamentale a b=0, incrocio con A' a b_c=3J
+  s += `<rect x="${X(0)}" y="${pt}" width="${X(range)-X(0)}" height="${H2-pt-pb}" class="rl-region-B"/>`;
+  s += `<line x1="${pl}" y1="${H2-pb}" x2="${W2-pr}" y2="${H2-pb}" class="rl-axis"/>`;
+  s += `<line x1="${X(0)}" y1="${pt}" x2="${X(0)}" y2="${H2-pb}" class="rl-bound"/>`;
+  [-range,0,range].forEach(v=>{
+    s += `<text x="${X(v)}" y="${H2-pb+12}" text-anchor="middle" class="rl-tick">${v}</text>`;
+  });
+  s += `<text x="${W2-pr}" y="${pt-2}" text-anchor="end" font-style="italic" class="rl-tick">J</text>`;
+  s += `<text x="${X(-range)+6}" y="${pt+16}" class="rl-label" fill="var(--colA)">FM</text>`;
+  s += `<text x="${X(0)+6}" y="${pt+16}" class="rl-label" fill="var(--colB)">AFM</text>`;
+  const Jc = Math.max(-range, Math.min(range, J));
+  const reg = Jc >= 0 ? 'B' : 'A';
+  const regColorVar = reg==='A' ? '--colA' : '--colB';
+  s += `<line x1="${X(Jc)}" y1="${pt}" x2="${X(Jc)}" y2="${H2-pb}" stroke="var(--muted)" stroke-width="0.6" stroke-dasharray="2,2"/>`;
+  s += `<circle cx="${X(Jc)}" cy="${(pt+H2-pb)/2}" r="5" class="rl-dot" fill="var(${regColorVar})"/>`;
+  rlSvg.innerHTML = s;
+}
+
+function draw(){
+  const J = parseFloat(Jin.value);
+  Jval.textContent = J.toFixed(2);
+
+  drawChain(J);
+  drawRegimeLine(J);
+
+  const L = lines(J);
+  const cross = findCrossing(J);
+
+  let bmax = cross ? cross.bc*1.35 : 4;
+  bmax = Math.max(bmax, 1.5);
+
+  let ymin = Infinity, ymax = -Infinity;
+  L.forEach(l=>{
+    const y0 = l.base + 2*l.M*0;
+    const y1 = l.base + 2*l.M*bmax;
+    ymin = Math.min(ymin,y0,y1); ymax = Math.max(ymax,y0,y1);
+  });
+  const pad = (ymax-ymin)*0.08 || 1;
+  ymin -= pad; ymax += pad;
+
+  function X(b){ return padL + (b/bmax)*plotW; }
+  function Y(e){ return padT + plotH - ((e-ymin)/(ymax-ymin))*plotH; }
+
+  let svgContent = '';
+
+  const nGrid = 5;
+  for(let i=0;i<=nGrid;i++){
+    const yy = ymin + (ymax-ymin)*i/nGrid;
+    svgContent += `<line class="gridline" x1="${padL}" y1="${Y(yy)}" x2="${W-padR}" y2="${Y(yy)}"/>`;
+  }
+
+  svgContent += `<g class="axis">`;
+  svgContent += `<line x1="${padL}" y1="${padT}" x2="${padL}" y2="${H-padB}"/>`;
+  svgContent += `<line x1="${padL}" y1="${H-padB}" x2="${W-padR}" y2="${H-padB}"/>`;
+  for(let i=0;i<=nGrid;i++){
+    const yy = ymin + (ymax-ymin)*i/nGrid;
+    svgContent += `<line x1="${padL-4}" y1="${Y(yy)}" x2="${padL}" y2="${Y(yy)}"/>`;
+    svgContent += `<text x="${padL-7}" y="${Y(yy)+4}" text-anchor="end">${yy.toFixed(1)}</text>`;
+  }
+  const nTicksX = 5;
+  for(let i=0;i<nTicksX;i++){
+    const bb = bmax*i/nTicksX;
+    svgContent += `<line x1="${X(bb)}" y1="${H-padB}" x2="${X(bb)}" y2="${H-padB+4}"/>`;
+    svgContent += `<text x="${X(bb)}" y="${H-padB+16}" text-anchor="middle">${bb.toFixed(1)}</text>`;
+  }
+  svgContent += `<text x="${W-padR}" y="${H-padB+16}" text-anchor="end" font-style="italic" font-size="13">b</text>`;
+  svgContent += `<text x="${padL-7}" y="${padT-4}" text-anchor="end" font-style="italic" font-size="13">E</text>`;
+  svgContent += `</g>`;
+
+  L.forEach(l=>{
+    const dash = l.M < 0 ? '' : '4,3';
+    const x1=X(0), y1=Y(l.base), x2=X(bmax), y2=Y(l.base+2*l.M*bmax);
+    svgContent += `<line x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}" class="${l.cls}" stroke-width="2" stroke-dasharray="${dash}" fill="none"/>`;
+  });
+
+  if(cross){
+    const yAtBc = 2*J-3*cross.bc;
+    svgContent += `<circle cx="${X(cross.bc)}" cy="${Y(yAtBc)}" r="4" class="crossdot"/>`;
+    svgContent += `<text x="${X(cross.bc)}" y="${Y(yAtBc)-10}" text-anchor="middle" class="crosslabel">b_c=${cross.bc.toFixed(2)}</text>`;
+  }
+
+  const frac = parseFloat(bfracIn.value);
+  const bObs = frac*bmax;
+  bobsval.textContent = bObs.toFixed(2);
+  const st = stateAt(J, bObs);
+  svgContent += `<line x1="${X(bObs)}" y1="${padT}" x2="${X(bObs)}" y2="${H-padB}" class="obsline"/>`;
+  svgContent += `<circle cx="${X(bObs)}" cy="${Y(st.ground.E)}" r="4.5" class="${st.ground.cls} obsdot" style="fill:currentColor"/>`;
+
+  svg.innerHTML = svgContent;
+  const obsCircle = svg.querySelector('.obsdot');
+  if(obsCircle){
+    const colorVar = st.ground.cls === 'lineA' ? '--colA' : (st.ground.cls === 'lineB' ? '--colB' : '--colC');
+    obsCircle.style.fill = getComputedStyle(document.documentElement).getPropertyValue(colorVar);
+  }
+
+  const g = groundEnergyAt(J, 0);
+  let html = `<b>A b=0:</b> fondamentale ${g[0]} (S13=${QN[g[0]].S13}, S=${QN[g[0]].S}), E=${g[1].toFixed(2)}<br>`;
+  if(cross){
+    html += `<b>Incrocio:</b> ${cross.from} &rarr; ${cross.to} a b<sub>c</sub> = ${cross.bc.toFixed(3)}`;
+  } else {
+    html += `<b>Nessun incrocio</b> per b&gt;0: A' è già fondamentale (ferromagnete, nessuna frustrazione).`;
+  }
+  html += `<hr class="sep">`;
+  html += `<b>Al campo osservato b=${bObs.toFixed(2)}:</b><br>`;
+  html += `fondamentale ${st.ground.mult} (S13=${QN[st.ground.mult].S13}, S=${QN[st.ground.mult].S}, M=${st.ground.M})<br>`;
+  html += `gap al primo eccitato: &Delta;E=${st.gap.toFixed(3)}<br>`;
+  html += `magnetizzazione: &lang;S<sub>z</sub>&rang;=${st.ground.M} (${Math.round(Math.abs(st.ground.M)/1.5*100)}% della saturazione)`;
+  statusBox.innerHTML = html;
+}
+
+Jin.addEventListener('input', draw);
+bfracIn.addEventListener('input', draw);
+document.querySelectorAll('.presets button').forEach(btn=>{
+  btn.addEventListener('click', ()=>{
+    Jin.value = btn.dataset.j;
+    draw();
+  });
+});
+
+draw();
+</script>
+</body>
+</html>
